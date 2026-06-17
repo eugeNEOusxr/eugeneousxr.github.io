@@ -121,6 +121,12 @@
       else if(kind==="hline")g+=plot(function(){return -2;});
       else if(kind==="ellipse")g+='<ellipse cx="'+sx(-0.7)+'" cy="'+sy(-2)+'" rx="'+(1.2*S).toFixed(1)+'" ry="'+(1*S).toFixed(1)+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>';
       else if(kind==="sideways")g+=plotX(function(y){return 0.6*y*y-2;});
+      else if(kind==="wave")g+=plot(function(x){return 1.2*Math.sin(Math.PI*x/2);});
+      else if(kind==="parabup")g+=plot(function(x){return 1.6*(x+2.5)*(x+2.5)+2.2;},-4.2,-0.8);
+      else if(kind==="cubicS")g+=plot(function(x){return 0.12*x*x*x-0.7*x;},-4.3,4.3);
+      else if(kind==="sqrtcurve")g+=plot(function(x){return Math.sqrt(x+1)+2;},-1,5);
+      else if(kind==="ellipseR")g+='<ellipse cx="'+sx(2)+'" cy="'+sy(-1)+'" rx="'+(1*S).toFixed(1)+'" ry="'+(2*S).toFixed(1)+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>';
+      else if(kind==="linedown")g+=plot(function(x){return -x+2;});
       return '<svg viewBox="0 0 '+W+' '+W+'" width="100%" style="display:block">'+g+'</svg>';
     }
 
@@ -169,6 +175,12 @@
           { x: [1, 8, 8], y: [5, 7, 12] }
         ],
         answer: [true, false, false], points: 10
+      },
+      {
+        type: "select", media: "graph", layout: "vertical",
+        prompt: "Select all of the following graphs which are <strong>one-to-one functions</strong>.",
+        items: ["wave", "parabup", "cubicS", "sqrtcurve", "ellipseR", "linedown"],
+        answer: [false, false, false, true, false, true], points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
