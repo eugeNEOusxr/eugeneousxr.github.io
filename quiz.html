@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <title>Flashcards — Inkling</title>
+  <link rel="icon" href="/icons/inkling-icon.svg" type="image/svg+xml" />
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{
+      font:400 16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      height:100dvh;display:flex;flex-direction:column;overflow:hidden;
+      --bg:#0b0f1a;--surface:#121a2e;--line:rgba(255,255,255,.13);--text:#e6edf3;--muted:#8b949e;
+      --pill:rgba(158,203,255,.16);--pilltx:#9ecbff;--earn:rgba(34,197,94,.16);--earntx:#4ade80;
+      --ok:#22c55e;--bad:#ef4444;--accent:#5b9bf0;--grid:rgba(255,255,255,.09);--axis:rgba(255,255,255,.5);--curve:#5b9bf0;
+      background:var(--bg);color:var(--text);
+      padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)
+    }
+    body[data-theme=light]{--bg:#f4f7fc;--surface:#fff;--line:rgba(0,0,0,.13);--text:#0d1117;--muted:#5b6470;--pill:rgba(31,111,235,.12);--pilltx:#1f6feb;--earn:rgba(22,128,61,.12);--earntx:#15803d;--grid:rgba(0,0,0,.08);--axis:rgba(0,0,0,.45);--curve:#1f6feb}
+    header{flex:0 0 auto;padding:12px 15px 10px;border-bottom:.5px solid var(--line)}
+    .row{display:flex;align-items:flex-start;gap:10px}
+    .ic{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;font-size:17px;flex:0 0 auto}
+    .title{flex:1;font-size:16px;font-weight:500;padding-top:7px}
+    .badges{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex:0 0 auto}
+    .pts{background:var(--pill);color:var(--pilltx);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:500;white-space:nowrap}
+    .earned{background:var(--earn);color:var(--earntx);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:500;white-space:nowrap}
+    .sub{margin-top:11px}
+    .sel{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:9px;padding:7px 12px;color:var(--text);font-size:14px;cursor:pointer}
+    main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:15px}
+    .prompt{margin:0 0 16px;font-size:15px;line-height:1.6}
+    .opt{display:flex;align-items:center;gap:12px;padding:13px 13px;margin:9px 0;border:.5px solid var(--line);border-radius:11px;cursor:pointer;background:var(--surface)}
+    .opt.ok{background:rgba(34,197,94,.12);box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
+    .opt.bad{background:rgba(239,68,68,.12);box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
+    .opt input{width:21px;height:21px;flex:0 0 auto;cursor:pointer;accent-color:var(--accent)}
+    .otext{flex:1;font-size:16px}
+    .mark{flex:0 0 auto;font-size:18px;width:20px;text-align:center}
+    footer{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-top:.5px solid var(--line)}
+    .btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--text);border:.5px solid var(--line);border-radius:10px;padding:10px 17px;font-size:14px;font-weight:500;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+    .score{font-size:15px;font-weight:500;margin-left:2px}
+    em{font-style:italic}
+  </style>
+</head>
+<body data-theme="dark">
+  <header>
+    <div class="row">
+      <button class="ic" id="theme" aria-label="Toggle light or dark theme">☀️</button>
+      <span class="title">1.1 · Functions and Function Notation</span>
+      <span class="badges">
+        <span class="pts">200 pts</span>
+        <span class="earned" id="earned">🏆 Earned 0 / 200</span>
+      </span>
+    </div>
+    <div class="sub"><span class="sel" id="sel">Question 1 ▾</span></div>
+  </header>
+  <main>
+    <p class="prompt" id="prompt"></p>
+    <div id="opts"></div>
+  </main>
+  <footer>
+    <button class="btn primary" id="submit">Submit</button>
+    <button class="btn" id="answer">Get answer</button>
+    <span class="score" id="score"></span>
+    <button class="btn" id="next" style="margin-left:auto">Next question →</button>
+  </footer>
+
+  <script>
+  (function () {
+    var DECK = [
+      {
+        type: "mc",
+        prompt: "The amount of garbage, <em>G</em>, produced by a city with population <em>p</em> is given by <em>G</em> = <em>f</em>(<em>p</em>). <em>G</em> is measured in tons per week, and <em>p</em> is measured in thousands of people.<br><br>The town of Tola has a population of 25,000 and produces 10 tons of garbage each week. Express this information in terms of the function <em>f</em>.",
+        options: ["<em>f</em>(10) = 25", "<em>f</em>(25) = 10", "<em>f</em> = 10/25"],
+        correct: 1,
+        points: 10
+      }
+    ];
+    var DECK_TOTAL = 200;
+    var idx = 0, earned = 0, graded = {};
+
+    var promptEl = document.getElementById("prompt");
+    var optsEl = document.getElementById("opts");
+    var scoreEl = document.getElementById("score");
+    var selEl = document.getElementById("sel");
+    var earnedEl = document.getElementById("earned");
+
+    function setEarned() { earnedEl.textContent = "🏆 Earned " + earned + " / " + DECK_TOTAL; }
+
+    function render() {
+      var q = DECK[idx];
+      scoreEl.textContent = "";
+      selEl.textContent = "Question " + (idx + 1) + " ▾";
+      promptEl.innerHTML = q.prompt;
+      optsEl.innerHTML = "";
+      q.options.forEach(function (t, i) {
+        var row = document.createElement("label");
+        row.className = "opt"; row.setAttribute("data-i", i);
+        row.innerHTML = '<input type="' + (q.type === "mc" ? "radio" : "checkbox") + '" name="q" aria-label="Option ' + (i + 1) + '">'
+          + '<span class="otext">' + t + '</span><span class="mark"></span>';
+        optsEl.appendChild(row);
+      });
+      document.querySelector("main").scrollTop = 0;
+    }
+
+    function clearMarks() {
+      [].forEach.call(optsEl.querySelectorAll(".opt"), function (r) {
+        r.classList.remove("ok", "bad"); r.querySelector(".mark").textContent = "";
+      });
+    }
+
+    function grade() {
+      var q = DECK[idx];
+      var rows = optsEl.querySelectorAll(".opt");
+      clearMarks();
+      if (q.type === "mc") {
+        var sel = -1;
+        [].forEach.call(rows, function (r, i) { if (r.querySelector("input").checked) sel = i; });
+        if (sel < 0) { scoreEl.textContent = "Pick an answer"; return; }
+        [].forEach.call(rows, function (row, i) {
+          if (i === q.correct) { row.classList.add("ok"); row.querySelector(".mark").textContent = "✓"; }
+          else if (i === sel) { row.classList.add("bad"); row.querySelector(".mark").textContent = "✗"; }
+        });
+        var pts = (sel === q.correct) ? q.points : 0;
+        finishGrade(pts, q.points);
+      }
+    }
+
+    function finishGrade(pts, max) {
+      if (graded[idx] != null) earned -= graded[idx];
+      graded[idx] = pts; earned += pts; setEarned();
+      scoreEl.textContent = pts + " / " + max + " (" + Math.round((pts / max) * 100) + "%)";
+      scoreEl.style.color = (pts === max) ? "var(--ok)" : "var(--text)";
+    }
+
+    function revealAnswer() {
+      var q = DECK[idx];
+      clearMarks();
+      [].forEach.call(optsEl.querySelectorAll(".opt"), function (row, i) {
+        var input = row.querySelector("input");
+        if (q.type === "mc") {
+          input.checked = (i === q.correct);
+          if (i === q.correct) { row.classList.add("ok"); row.querySelector(".mark").textContent = "✓"; }
+        }
+      });
+      scoreEl.textContent = "Answer key"; scoreEl.style.color = "var(--ok)";
+    }
+
+    document.getElementById("theme").addEventListener("click", function () {
+      var toLight = document.body.getAttribute("data-theme") !== "light";
+      document.body.setAttribute("data-theme", toLight ? "light" : "dark");
+      this.textContent = toLight ? "🌙" : "☀️";
+      try { localStorage.setItem("inkling-quiz-theme", toLight ? "light" : "dark"); } catch (e) {}
+    });
+    try {
+      var saved = localStorage.getItem("inkling-quiz-theme");
+      if (saved === "light") { document.body.setAttribute("data-theme", "light"); document.getElementById("theme").textContent = "🌙"; }
+    } catch (e) {}
+
+    document.getElementById("submit").addEventListener("click", grade);
+    document.getElementById("answer").addEventListener("click", revealAnswer);
+    document.getElementById("next").addEventListener("click", function () {
+      if (idx < DECK.length - 1) { idx++; render(); }
+      else {
+        promptEl.innerHTML = "You've reached the end of the deck. <strong>More questions are on the way.</strong>";
+        optsEl.innerHTML = "";
+        scoreEl.textContent = "Earned " + earned + " / " + DECK_TOTAL;
+        scoreEl.style.color = "var(--earntx)";
+        selEl.textContent = "Complete";
+      }
+    });
+
+    setEarned();
+    render();
+  })();
+  </script>
+</body>
+</html>
