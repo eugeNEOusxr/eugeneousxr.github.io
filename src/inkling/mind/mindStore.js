@@ -7,17 +7,51 @@
  * arrive. This is WordWeaver wired into the running app: every real chat turn
  * grows the on-device knowledge graph. No network, no LLM key.
  */
-import { createMind, ingestTurn, insights, snapshot, linkConcepts, addGoalNode, mergeConcepts } from "./cognition.js";
+import { createMind, ingestTurn, insights, snapshot, linkConcepts, addGoalNode, mergeConcepts, hydrate } from "./cognition.js";
 import { recentTurns } from "./conversations.js";
 import { putMany } from "./db.js";
+import { scheduleCloudSync } from "../../auth/cloudSync.js";
 
 let _mind = null;
 let _ready = null;
 
-/** Rebuild the graph from all captured conversations, then persist it. */
+// The graph is mirrored to this localStorage key so the account-sync bundle
+// (BUNDLE_KEYS.mind in cloudSync.js) carries it to the server — making the Mind
+// durable across cache clears and devices, not just on-device IndexedDB.
+const SNAPSHOT_KEY = "inkling:mind-snapshot-v1";
+
+function writeSyncSnapshot() {
+  if (!_mind || typeof localStorage === "undefined") return;
+  try {
+    const snap = snapshot(_mind);
+    if (snap.nodes.length > 4000) return; // keep within localStorage / bundle limits
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ v: 1, savedAt: Date.now(), nodes: snap.nodes, edges: snap.edges }));
+  } catch { /* quota / serialization — non-fatal */ }
+}
+
+function readSyncSnapshot() {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const obj = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || "null");
+    if (obj && Array.isArray(obj.nodes) && obj.nodes.length) return obj;
+  } catch { /* ignore */ }
+  return null;
+}
+
+/**
+ * Bring the graph into memory. Prefer a saved snapshot (carries AI-enriched
+ * nodes AND survives cache clears via account sync); otherwise replay the local
+ * conversation log through the lexicon.
+ */
 async function ensureReady() {
   if (_ready) return _ready;
   _ready = (async () => {
+    const saved = readSyncSnapshot();
+    if (saved) {
+      _mind = hydrate(saved);
+      try { await persist(); } catch { /* ignore */ }
+      return _mind;
+    }
     _mind = createMind();
     try {
       const turns = await recentTurns(0); // 0 = all, oldest→newest
@@ -33,7 +67,7 @@ async function ensureReady() {
   return _ready;
 }
 
-/** Write the current nodes + edges to IndexedDB (small graphs: full rewrite). */
+/** Persist nodes + edges to IndexedDB, mirror to the sync snapshot, and queue an account push. */
 async function persist() {
   if (!_mind) return;
   const { nodes, edges } = snapshot(_mind);
@@ -42,6 +76,8 @@ async function persist() {
   } catch {
     /* ignore persistence failures */
   }
+  writeSyncSnapshot();
+  try { scheduleCloudSync(); } catch { /* not signed in → no-op */ }
 }
 
 /**

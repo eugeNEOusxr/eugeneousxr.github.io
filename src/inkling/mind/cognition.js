@@ -277,4 +277,24 @@ export function snapshot(mind) {
   return { nodes: [...mind.nodes.values()], edges: [...mind.edges.values()] };
 }
 
+/**
+ * Rebuild a mind from a saved snapshot. Unlike replaying conversations through
+ * the local lexicon, this restores AI (Haiku) enriched nodes/edges exactly —
+ * so an account-synced graph comes back whole after a cache clear or on a new
+ * device. Tolerates partial/old snapshots.
+ */
+export function hydrate(snap) {
+  const mind = createMind();
+  for (const n of (snap?.nodes || [])) if (n && n.id) mind.nodes.set(n.id, n);
+  for (const e of (snap?.edges || [])) if (e && e.id) mind.edges.set(e.id, e);
+  for (const n of mind.nodes.values()) {
+    const f = n.props?.firstTs, l = n.props?.lastTs;
+    if (typeof f === "number" && f < mind.minTs) mind.minTs = f;
+    if (typeof l === "number" && l > mind.maxTs) mind.maxTs = l;
+  }
+  mind.turnCount = mind.nodes.size;
+  recomputeImportance(mind);
+  return mind;
+}
+
 export { conceptId, degreeOf };

@@ -10,7 +10,10 @@ export const BUNDLE_KEYS = {
   slotNotes: "notebookcalender:notesByDate",
   lastView: "notebookcalender:lastView",
   notificationSettings: "calendar3d-notification-settings-v1",
-  notificationHistory: "calendar3d-notification-history-v1"
+  notificationHistory: "calendar3d-notification-history-v1",
+  // The on-device Mind graph snapshot (written by mindStore) — so the knowledge
+  // graph is durable on the account and survives cache clears / new devices.
+  mind: "inkling:mind-snapshot-v1"
 };
 
 export function collectLocalBundle() {
