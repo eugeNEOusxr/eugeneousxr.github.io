@@ -63,6 +63,14 @@
     .grow{display:flex;align-items:flex-start;gap:8px;margin:4px 0 16px}
     .grow .qmedia.gfx{background:var(--bg)}
     .tscroll{overflow-x:auto;margin:6px 0 16px}
+    .matchwrap{display:flex;gap:20px;flex-wrap:wrap}
+    .mleft{display:flex;flex-direction:column;gap:11px;flex:1;min-width:210px}
+    .mright{display:flex;flex-direction:column;gap:9px;flex:1;min-width:160px;color:var(--muted)}
+    .mrow{display:flex;align-items:center;gap:10px}
+    .msel{font:500 14px system-ui;padding:7px 8px;border-radius:8px;border:.5px solid var(--line);background:var(--surface);color:var(--text);min-width:56px;cursor:pointer}
+    .meq{font-size:16px;flex:1}
+    .mopt{font-size:15px}
+    .mrow.ok .meq{color:var(--ok)} .mrow.bad .meq{color:var(--bad)}
     .ask{font-size:15px;margin:0 0 10px}
     .inwrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .inlabel{font-size:16px}
@@ -251,6 +259,22 @@
           { label: "B.) <em>f</em>(−4) − <em>f</em>(4) =", answer: 8 }
         ],
         points: 10
+      },
+      {
+        type: "match",
+        prompt: "Match each function name with its equation.",
+        options: ["Reciprocal", "Linear", "Quadratic", "Square Root", "Cube root", "Cubic", "Reciprocal Squared", "Absolute Value"],
+        items: [
+          { eq: "<em>y</em> = ∛<em>x</em>", answer: 4 },
+          { eq: "<em>y</em> = <em>x</em>", answer: 1 },
+          { eq: "<em>y</em> = <em>x</em>³", answer: 5 },
+          { eq: "<em>y</em> = <em>x</em>²", answer: 2 },
+          { eq: "<em>y</em> = 1/<em>x</em>", answer: 0 },
+          { eq: "<em>y</em> = 1/<em>x</em>²", answer: 6 },
+          { eq: "<em>y</em> = √<em>x</em>", answer: 3 },
+          { eq: "<em>y</em> = |<em>x</em>|", answer: 7 }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -344,6 +368,17 @@
         var mh = "";
         q.blanks.forEach(function(b,bi){ mh += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>'; });
         optsEl.innerHTML = mh;
+      } else if (q.type==="match") {
+        promptEl.innerHTML = q.prompt;
+        var L="abcdefghijkl".split("");
+        var leftH="", rightH="";
+        q.items.forEach(function(it,i){
+          var o='<option value=""></option>';
+          for(var k=0;k<q.options.length;k++){ o+='<option value="'+k+'">'+L[k]+'</option>'; }
+          leftH += '<div class="mrow"><select class="msel" aria-label="Match '+(i+1)+'">'+o+'</select><span class="meq">'+it.eq+'</span><span class="mark"></span></div>';
+        });
+        q.options.forEach(function(op,k){ rightH += '<div class="mopt">'+L[k]+'. '+op+'</div>'; });
+        optsEl.innerHTML = '<div class="matchwrap"><div class="mleft">'+leftH+'</div><div class="mright">'+rightH+'</div></div>';
       }
       if (!ph && graded[idx]!=null) { scoreEl.textContent = graded[idx]+" / "+q.points; scoreEl.style.color=(graded[idx]===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
@@ -378,6 +413,17 @@
           if(right)ok2++;
         });
         finishGrade(Math.round(ok2/q.blanks.length*q.points), q.points);
+        return;
+      }
+      if (q.type==="match") {
+        var mrows=optsEl.querySelectorAll(".mrow"), ok3=0;
+        [].forEach.call(mrows,function(row,i){
+          var sel=row.querySelector(".msel"); var v=(sel.value===""?-1:parseInt(sel.value,10));
+          var right=(v===q.items[i].answer);
+          row.classList.remove("ok","bad"); row.classList.add(right?"ok":"bad");
+          row.querySelector(".mark").textContent=right?"✓":"✗"; if(right)ok3++;
+        });
+        finishGrade(Math.round(ok3/q.items.length*q.points), q.points);
         return;
       }
       var rows=optsEl.querySelectorAll("[data-i]"); clearMarks();
@@ -415,6 +461,13 @@
           inp.classList.remove("bad"); inp.classList.add("ok");
           inp.value = (q.blanks[bi].answerText!=null?q.blanks[bi].answerText:q.blanks[bi].answer);
           var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent="✓";
+        });
+        scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
+      }
+      if (q.type==="match") {
+        [].forEach.call(optsEl.querySelectorAll(".mrow"),function(row,i){
+          row.querySelector(".msel").value=String(q.items[i].answer);
+          row.classList.remove("bad"); row.classList.add("ok"); row.querySelector(".mark").textContent="✓";
         });
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
       }
