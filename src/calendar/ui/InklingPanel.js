@@ -465,10 +465,23 @@ export class InklingPanel {
     this._studyPanel.show();
   }
 
-  /** Open the Flashcards surface (optionally jump straight to a deck). */
-  showFlashcards(setId) {
-    if (!this._flashcards) this._flashcards = new FlashcardsPanel();
-    this._flashcards.show(setId);
+  /** Open the new quiz deck (full-screen overlay; replaces the old flip-card flashcards). */
+  showFlashcards() {
+    if (this._quizOverlay) { this._quizOverlay.style.display = "block"; return; }
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;z-index:12000;background:#0b0f1a";
+    const frame = document.createElement("iframe");
+    frame.src = "/quiz.html";
+    frame.title = "Flashcards";
+    frame.style.cssText = "border:0;width:100%;height:100%;display:block";
+    const close = document.createElement("button");
+    close.textContent = "✕";
+    close.setAttribute("aria-label", "Close flashcards");
+    close.style.cssText = "position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px;width:34px;height:34px;border-radius:9px;border:0;background:rgba(8,12,22,0.7);color:#e6edf3;font-size:15px;cursor:pointer;z-index:2";
+    close.addEventListener("click", () => { ov.style.display = "none"; });
+    ov.append(frame, close);
+    document.body.appendChild(ov);
+    this._quizOverlay = ov;
   }
 
   /**
