@@ -4,7 +4,6 @@
  * 0 = new, 1 = review (got it wrong / again), 2 = known.
  */
 import { apiFetch } from "../../auth/cloudSync.js";
-import { SEED_DECKS } from "./seedDecks.js";
 
 const KEY = "inkling-flashcards-v1";
 
@@ -15,41 +14,6 @@ export function loadFlashcardSets() {
   catch { return []; }
 }
 function saveAll(sets) { try { localStorage.setItem(KEY, JSON.stringify(sets)); return true; } catch { return false; } }
-
-/**
- * Add any built-in decks that aren't already in the store, so there's always
- * something to study (works offline, no sign-in). Stable ids mean we never
- * duplicate; existing decks (and their progress) are left untouched.
- */
-export function ensureSeedDecks() {
-  const sets = loadFlashcardSets();
-  let changed = false;
-  for (const seed of SEED_DECKS) {
-    const ver = seed.seedVersion || 1;
-    const existing = sets.find((s) => s.id === seed.id);
-    if (existing && (existing.seedVersion || 1) >= ver) continue;
-    // Carry over per-card status (by stable card id) when refreshing.
-    const prevStatus = new Map((existing?.cards || []).map((c) => [c.id, c.status]));
-    const deck = {
-      id: seed.id,
-      seedVersion: ver,
-      topic: seed.topic,
-      section: seed.section || "",
-      mapId: null, branchId: null,
-      builtIn: true,
-      createdAt: existing?.createdAt || Date.now(),
-      cards: seed.cards.map((c) => ({ ...c, type: c.type || "concept", status: prevStatus.get(c.id) || 0 }))
-    };
-    if (existing) {
-      sets[sets.indexOf(existing)] = deck;
-    } else {
-      sets.unshift(deck);
-    }
-    changed = true;
-  }
-  if (changed) saveAll(sets);
-  return sets;
-}
 
 export function getFlashcardSet(id) { return loadFlashcardSets().find((s) => s.id === id) || null; }
 
