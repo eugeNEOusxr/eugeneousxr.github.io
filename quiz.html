@@ -48,6 +48,7 @@
     .dt{border-collapse:collapse;font:500 14px system-ui}
     .dt th,.dt td{border:.5px solid var(--line);padding:5px 14px;text-align:center;min-width:34px}
     .dt th{font-style:italic;color:var(--muted);font-weight:500}
+    .dt.plain th{font-style:normal;font-weight:600;color:var(--text)}
     .hgrid{display:grid;gap:10px;margin-top:4px}
     .hcell{display:flex;flex-direction:column;align-items:center;gap:9px;border:.5px solid var(--line);border-radius:11px;padding:10px 7px;background:var(--surface);min-width:0}
     .hcell.ok{background:rgba(34,197,94,.12);box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
@@ -177,7 +178,8 @@
         second.forEach(function(v){ hy+='<td>'+v+'</td>'; });
         return '<table class="dt">'+hx+'</tr>'+hy+'</tr></table>';
       }
-      var h='<table class="dt"><tr><th>x</th><th>y</th></tr>';
+      var hd = item.head || ["x","y"], cls = item.head ? "dt plain" : "dt";
+      var h='<table class="'+cls+'"><tr><th>'+hd[0]+'</th><th>'+hd[1]+'</th></tr>';
       (item.rows||[]).forEach(function(r){ h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'; });
       return h+'</table>';
     }
@@ -302,6 +304,27 @@
           { eq: "<em>y</em> = 1/<em>x</em>", answer: 4 }
         ],
         points: 10
+      },
+      {
+        type: "match", media: "table",
+        prompt: "Match each table with its equation.",
+        options: [
+          { head:["Input","Output"], rows:[["-2","_"],["-1","_"],["0","0"],["1","1"],["4","2"],["9","3"]] },
+          { head:["Input","Output"], rows:[["-2","-8"],["-1","-1"],["0","0"],["1","1"],["2","8"],["3","27"]] },
+          { head:["Input","Output"], rows:[["-2","2"],["-1","1"],["0","0"],["1","1"],["2","2"],["3","3"]] },
+          { head:["Input","Output"], rows:[["-2","4"],["-1","1"],["0","0"],["1","1"],["2","4"],["3","9"]] },
+          { head:["Input","Output"], rows:[["-2","-0.5"],["-1","-1"],["0","_"],["1","1"],["2","0.5"],["3","0.33"]] },
+          { head:["Input","Output"], rows:[["-2","-2"],["-1","-1"],["0","0"],["1","1"],["2","2"],["3","3"]] }
+        ],
+        items: [
+          { eq: "<em>y</em> = |<em>x</em>|", answer: 2 },
+          { eq: "<em>y</em> = 1/<em>x</em>", answer: 4 },
+          { eq: "<em>y</em> = √<em>x</em>", answer: 0 },
+          { eq: "<em>y</em> = <em>x</em>", answer: 5 },
+          { eq: "<em>y</em> = <em>x</em>²", answer: 3 },
+          { eq: "<em>y</em> = <em>x</em>³", answer: 1 }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -406,6 +429,7 @@
         });
         q.options.forEach(function(op,k){
           if (q.media==="graph") rightH += '<div class="mopt mgfx"><span class="mlbl">'+L[k]+'.</span><div class="qmedia gfx">'+graphSVG(op)+'</div><button class="zoom" aria-label="Zoom '+L[k]+'">🔍</button></div>';
+          else if (q.media==="table") rightH += '<div class="mopt mgfx"><span class="mlbl">'+L[k]+'.</span><div class="qmedia">'+tableHTML(op)+'</div></div>';
           else rightH += '<div class="mopt">'+L[k]+'. '+op+'</div>';
         });
         optsEl.innerHTML = '<div class="matchwrap"><div class="mleft">'+leftH+'</div><div class="mright">'+rightH+'</div></div>';
