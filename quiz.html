@@ -137,6 +137,7 @@
       else if(kind==="ellipseR")g+='<ellipse cx="'+sx(2)+'" cy="'+sy(-1)+'" rx="'+(1*S).toFixed(1)+'" ry="'+(2*S).toFixed(1)+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>';
       else if(kind==="linedown")g+=plot(function(x){return -x+2;});
       else if(kind==="steepneg")g+=plot(function(x){return -4*(x+1)-3;},-3,-0.5);
+      else if(kind==="f8line")g+=plot(function(x){return -0.2*x+3.8;});
       return '<svg viewBox="0 0 '+W+' '+W+'" width="100%" style="display:block">'+g+'</svg>';
     }
 
@@ -217,6 +218,16 @@
         blanks: [
           { ask: "Evaluate <em>f</em>(2):", label: "<em>f</em>(2) =", answer: 11 },
           { ask: "Solve <em>f</em>(<em>x</em>) = 6:", label: "<em>x</em> =", answer: 4 }
+        ],
+        points: 10
+      },
+      {
+        type: "graphinput",
+        prompt: "The plot below represents the function <em>f</em>(<em>x</em>):",
+        graph: "f8line",
+        blanks: [
+          { ask: "Evaluate <em>f</em>(4):", label: "<em>f</em>(4) =", answer: 3 },
+          { ask: "Solve <em>f</em>(<em>x</em>) = 4:", label: "<em>x</em> =", answer: -1, answerText: "-1" }
         ],
         points: 10
       }
@@ -300,6 +311,13 @@
           html += '<div class="ask">'+b.ask+'</div><div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
         });
         optsEl.innerHTML = html;
+      } else if (q.type==="graphinput") {
+        promptEl.innerHTML = q.prompt;
+        var gh = '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>';
+        q.blanks.forEach(function(b,bi){
+          gh += '<div class="ask">'+b.ask+'</div><div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+        });
+        optsEl.innerHTML = gh;
       }
       if (!ph && graded[idx]!=null) { scoreEl.textContent = graded[idx]+" / "+q.points; scoreEl.style.color=(graded[idx]===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
@@ -324,7 +342,7 @@
         finishGrade(correct?q.points:0, q.points);
         return;
       }
-      if (q.type==="tableinput") {
+      if (q.type==="tableinput" || q.type==="graphinput") {
         var inps=optsEl.querySelectorAll(".ansin"), ok2=0;
         [].forEach.call(inps,function(inp,bi){
           inp.classList.remove("ok","bad");
@@ -366,7 +384,7 @@
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)";
         return;
       }
-      if (q.type==="tableinput") {
+      if (q.type==="tableinput" || q.type==="graphinput") {
         [].forEach.call(optsEl.querySelectorAll(".ansin"),function(inp,bi){
           inp.classList.remove("bad"); inp.classList.add("ok");
           inp.value = (q.blanks[bi].answerText!=null?q.blanks[bi].answerText:q.blanks[bi].answer);
