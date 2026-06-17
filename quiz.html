@@ -26,9 +26,9 @@
     .badges{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:0 0 auto}
     .pts{background:var(--pill);color:var(--pilltx);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:500;white-space:nowrap}
     .earned{background:var(--earn);color:var(--earntx);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:500;white-space:nowrap}
-    .back{background:var(--surface);color:var(--text);border:.5px solid var(--line);border-radius:9px;padding:6px 13px;font:500 13px system-ui;cursor:pointer;white-space:nowrap}
-    .back[disabled]{opacity:.38;cursor:default}
-    .sub{margin-top:11px}
+    .sub{margin-top:11px;display:flex;align-items:center;gap:8px}
+    .arrow{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);font:500 20px system-ui;cursor:pointer;flex:0 0 auto}
+    .arrow[disabled]{opacity:.38;cursor:default}
     .seldrop{position:relative;display:inline-block}
     .sel{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:9px;padding:8px 13px;color:var(--text);font-size:14px;font-weight:500;cursor:pointer}
     .menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:.5px solid var(--line);border-radius:11px;padding:6px;max-height:58vh;overflow-y:auto;z-index:50;min-width:130px;display:none;box-shadow:0 14px 34px rgba(0,0,0,.45)}
@@ -38,11 +38,13 @@
     .menu .tag{font-size:11px;color:var(--muted)}
     main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:15px}
     .prompt{margin:0 0 16px;font-size:15px;line-height:1.6}
-    .opt{display:flex;align-items:center;gap:12px;padding:13px 13px;margin:9px 0;border:.5px solid var(--line);border-radius:11px;cursor:pointer;background:var(--surface)}
+    .opt{display:flex;align-items:center;gap:12px;padding:13px 13px;margin:9px 0;border:.5px solid var(--line);border-radius:11px;background:var(--surface)}
     .opt.ok{background:rgba(34,197,94,.12);box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
     .opt.bad{background:rgba(239,68,68,.12);box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
     .opt input{width:21px;height:21px;flex:0 0 auto;cursor:pointer;accent-color:var(--accent)}
     .otext{flex:1;font-size:16px}
+    .qgraph{flex:0 0 auto;width:148px;background:var(--bg);border:.5px solid var(--line);border-radius:9px;cursor:pointer}
+    .zoom{margin-left:auto;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;border:.5px solid var(--line);background:var(--surface);color:var(--muted);font-size:15px;cursor:pointer;flex:0 0 auto}
     .mark{flex:0 0 auto;font-size:18px;width:20px;text-align:center}
     .empty{color:var(--muted);line-height:1.6;padding:20px 4px}
     footer{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-top:.5px solid var(--line)}
@@ -50,6 +52,8 @@
     .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
     .btn[disabled]{opacity:.38;cursor:default}
     .score{font-size:15px;font-weight:500;margin-left:2px}
+    .zoomov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:22px}
+    .zoombox{width:min(92vw,520px);background:var(--surface);border:.5px solid var(--line);border-radius:14px;padding:12px}
     em{font-style:italic}
   </style>
 </head>
@@ -61,14 +65,15 @@
       <span class="badges">
         <span class="pts">200 pts</span>
         <span class="earned" id="earned">🏆 Earned 0 / 200</span>
-        <button class="back" id="back" aria-label="Previous question">← Back</button>
       </span>
     </div>
     <div class="sub">
+      <button class="arrow" id="prev" aria-label="Previous question">‹</button>
       <div class="seldrop">
         <button class="sel" id="sel" aria-haspopup="true">1.1.1 ▾</button>
         <div class="menu" id="menu" role="menu"></div>
       </div>
+      <button class="arrow" id="nextq" aria-label="Next question">›</button>
     </div>
   </header>
   <main>
@@ -84,125 +89,162 @@
 
   <script>
   (function () {
+    function graphSVG(kind) {
+      var S = 9, O = 60, W = 120;
+      function sx(x){ return (O + x*S).toFixed(1); } function sy(y){ return (O - y*S).toFixed(1); }
+      var g = "";
+      for (var i=-5;i<=5;i++){ g+='<line x1="'+sx(i)+'" y1="'+sy(-5)+'" x2="'+sx(i)+'" y2="'+sy(5)+'" style="stroke:var(--grid);stroke-width:.5"/>'; g+='<line x1="'+sx(-5)+'" y1="'+sy(i)+'" x2="'+sx(5)+'" y2="'+sy(i)+'" style="stroke:var(--grid);stroke-width:.5"/>'; }
+      g+='<line x1="'+sx(-5)+'" y1="'+sy(0)+'" x2="'+sx(5)+'" y2="'+sy(0)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      g+='<line x1="'+sx(0)+'" y1="'+sy(-5)+'" x2="'+sx(0)+'" y2="'+sy(5)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      [-4,-2,2,4].forEach(function(n){
+        g+='<text x="'+sx(n)+'" y="'+(parseFloat(sy(0))+9).toFixed(1)+'" text-anchor="middle" style="fill:var(--muted);font:7px system-ui">'+n+'</text>';
+        g+='<text x="'+(parseFloat(sx(0))-5).toFixed(1)+'" y="'+(parseFloat(sy(n))+2.6).toFixed(1)+'" text-anchor="end" style="fill:var(--muted);font:7px system-ui">'+n+'</text>';
+      });
+      function plot(f,a,b){ a=(a==null?-5:a); b=(b==null?5:b); var d="",pen=true; for(var x=a;x<=b+1e-9;x+=0.1){ var y=f(x); if(!isFinite(y)||y<-5.2||y>5.2){pen=true;continue;} d+=(pen?"M":"L")+sx(x)+" "+sy(y)+" "; pen=false; } return '<path d="'+d.trim()+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>'; }
+      function plotX(f,a,b){ a=(a==null?-5:a); b=(b==null?5:b); var d="",pen=true; for(var y=a;y<=b+1e-9;y+=0.1){ var x=f(y); if(!isFinite(x)||x<-5.2||x>5.2){pen=true;continue;} d+=(pen?"M":"L")+sx(x)+" "+sy(y)+" "; pen=false; } return '<path d="'+d.trim()+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>'; }
+      if(kind==="sine")g+=plot(function(x){return 2*Math.sin(Math.PI*x/2);});
+      else if(kind==="line")g+=plot(function(x){return -2.8*x+1.7;});
+      else if(kind==="cubic")g+=plot(function(x){return 6*x*x*x+9*x*x-2;},-1.7,1.05);
+      else if(kind==="hline")g+=plot(function(){return -2;});
+      else if(kind==="ellipse")g+='<ellipse cx="'+sx(-0.7)+'" cy="'+sy(-2)+'" rx="'+(1.2*S).toFixed(1)+'" ry="'+(1*S).toFixed(1)+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>';
+      else if(kind==="sideways")g+=plotX(function(y){return 0.6*y*y-2;});
+      return '<svg viewBox="0 0 '+W+' '+W+'" width="100%" style="display:block">'+g+'</svg>';
+    }
+
     var DECK = [
       {
         type: "mc",
         prompt: "The amount of garbage, <em>G</em>, produced by a city with population <em>p</em> is given by <em>G</em> = <em>f</em>(<em>p</em>). <em>G</em> is measured in tons per week, and <em>p</em> is measured in thousands of people.<br><br>The town of Tola has a population of 25,000 and produces 10 tons of garbage each week. Express this information in terms of the function <em>f</em>.",
         options: ["<em>f</em>(10) = 25", "<em>f</em>(25) = 10", "<em>f</em> = 10/25"],
-        correct: 1,
-        points: 10
+        correct: 1, points: 10
+      },
+      {
+        type: "select",
+        prompt: "Select all of the following graphs which represent <em>y</em> as a function of <em>x</em>.",
+        graphs: ["sine", "line", "cubic", "hline", "ellipse", "sideways"],
+        answer: [true, true, true, true, false, false], points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
     while (DECK.length < QCOUNT) DECK.push({ type: "placeholder", points: 10 });
-
-    function qnum(i) { return "1.1." + (i + 1); }
+    function qnum(i){ return "1.1." + (i + 1); }
 
     var idx = 0, earned = 0, graded = {};
-    var promptEl = document.getElementById("prompt");
-    var optsEl = document.getElementById("opts");
-    var scoreEl = document.getElementById("score");
-    var selEl = document.getElementById("sel");
-    var earnedEl = document.getElementById("earned");
-    var menuEl = document.getElementById("menu");
-    var backBtn = document.getElementById("back");
-    var nextBtn = document.getElementById("next");
-    var submitBtn = document.getElementById("submit");
-    var answerBtn = document.getElementById("answer");
+    var promptEl = document.getElementById("prompt"), optsEl = document.getElementById("opts");
+    var scoreEl = document.getElementById("score"), selEl = document.getElementById("sel");
+    var earnedEl = document.getElementById("earned"), menuEl = document.getElementById("menu");
+    var prevBtn = document.getElementById("prev"), nextqBtn = document.getElementById("nextq");
+    var nextBtn = document.getElementById("next"), submitBtn = document.getElementById("submit"), answerBtn = document.getElementById("answer");
 
-    function setEarned() { earnedEl.textContent = "🏆 Earned " + earned + " / " + DECK_TOTAL; }
+    function setEarned(){ earnedEl.textContent = "🏆 Earned " + earned + " / " + DECK_TOTAL; }
+    function openZoom(svg){ var ov=document.createElement("div"); ov.className="zoomov"; ov.innerHTML='<div class="zoombox">'+svg+'</div>'; ov.addEventListener("click",function(){ov.remove();}); document.body.appendChild(ov); }
 
-    function buildMenu() {
+    function buildMenu(){
       menuEl.innerHTML = "";
-      DECK.forEach(function (q, i) {
-        var b = document.createElement("button");
-        b.setAttribute("role", "menuitem");
-        if (i === idx) b.className = "cur";
-        var done = (graded[i] != null) ? '<span class="tag">' + graded[i] + "/10</span>" : (q.type === "placeholder" ? '<span class="tag">soon</span>' : "");
-        b.innerHTML = "<span>" + qnum(i) + "</span>" + done;
-        b.addEventListener("click", function () { idx = i; closeMenu(); render(); });
+      DECK.forEach(function(q,i){
+        var b=document.createElement("button"); b.setAttribute("role","menuitem"); if(i===idx)b.className="cur";
+        var tag = (graded[i]!=null) ? '<span class="tag">'+graded[i]+'/10</span>' : (q.type==="placeholder" ? '<span class="tag">soon</span>' : "");
+        b.innerHTML="<span>"+qnum(i)+"</span>"+tag;
+        b.addEventListener("click",function(){ idx=i; closeMenu(); render(); });
         menuEl.appendChild(b);
       });
     }
-    function openMenu() { buildMenu(); menuEl.classList.add("open"); }
-    function closeMenu() { menuEl.classList.remove("open"); }
+    function openMenu(){ buildMenu(); menuEl.classList.add("open"); }
+    function closeMenu(){ menuEl.classList.remove("open"); }
 
-    function render() {
+    function render(){
       var q = DECK[idx];
-      scoreEl.textContent = ""; scoreEl.style.color = "var(--text)";
+      scoreEl.textContent=""; scoreEl.style.color="var(--text)";
       selEl.textContent = qnum(idx) + " ▾";
-      optsEl.innerHTML = "";
-      backBtn.disabled = (idx === 0);
-      nextBtn.disabled = (idx >= DECK.length - 1);
-      var placeholder = (q.type === "placeholder");
-      submitBtn.disabled = placeholder; answerBtn.disabled = placeholder;
-      if (placeholder) {
-        promptEl.innerHTML = "Question <strong>" + qnum(idx) + "</strong>";
+      optsEl.innerHTML="";
+      prevBtn.disabled = (idx===0); nextqBtn.disabled = (idx>=DECK.length-1); nextBtn.disabled = (idx>=DECK.length-1);
+      var ph = (q.type==="placeholder");
+      submitBtn.disabled = ph; answerBtn.disabled = ph;
+      if (ph) {
+        promptEl.innerHTML = "Question <strong>"+qnum(idx)+"</strong>";
         optsEl.innerHTML = '<div class="empty">This question hasn’t been built yet.<br>Send it over and it’ll drop right into this slot.</div>';
-      } else {
+      } else if (q.type==="mc") {
         promptEl.innerHTML = q.prompt;
-        q.options.forEach(function (t, i) {
-          var row = document.createElement("label");
-          row.className = "opt"; row.setAttribute("data-i", i);
-          row.innerHTML = '<input type="' + (q.type === "mc" ? "radio" : "checkbox") + '" name="q" aria-label="Option ' + (i + 1) + '">'
-            + '<span class="otext">' + t + '</span><span class="mark"></span>';
+        q.options.forEach(function(t,i){
+          var row=document.createElement("label"); row.className="opt"; row.setAttribute("data-i",i);
+          row.innerHTML='<input type="radio" name="q" aria-label="Option '+(i+1)+'"><span class="otext">'+t+'</span><span class="mark"></span>';
           optsEl.appendChild(row);
         });
-        if (graded[idx] != null) { scoreEl.textContent = graded[idx] + " / " + q.points; scoreEl.style.color = (graded[idx] === q.points) ? "var(--ok)" : "var(--text)"; }
+      } else if (q.type==="select") {
+        promptEl.innerHTML = q.prompt;
+        q.graphs.forEach(function(kind,i){
+          var row=document.createElement("div"); row.className="opt"; row.setAttribute("data-i",i);
+          row.innerHTML='<input type="checkbox" aria-label="Graph '+(i+1)+'"><div class="qgraph">'+graphSVG(kind)+'</div><button class="zoom" aria-label="Zoom graph '+(i+1)+'">🔍</button><span class="mark"></span>';
+          optsEl.appendChild(row);
+        });
       }
+      if (!ph && graded[idx]!=null) { scoreEl.textContent = graded[idx]+" / "+q.points; scoreEl.style.color=(graded[idx]===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
     }
 
-    function clearMarks() {
-      [].forEach.call(optsEl.querySelectorAll(".opt"), function (r) { r.classList.remove("ok", "bad"); r.querySelector(".mark").textContent = ""; });
+    function clearMarks(){ [].forEach.call(optsEl.querySelectorAll(".opt"),function(r){ r.classList.remove("ok","bad"); r.querySelector(".mark").textContent=""; }); }
+    function finishGrade(pts,max){
+      if (graded[idx]!=null) earned -= graded[idx];
+      graded[idx]=pts; earned+=pts; setEarned();
+      scoreEl.textContent = pts+" / "+max+" ("+Math.round((pts/max)*100)+"%)";
+      scoreEl.style.color = (pts===max)?"var(--ok)":"var(--text)";
     }
-    function finishGrade(pts, max) {
-      if (graded[idx] != null) earned -= graded[idx];
-      graded[idx] = pts; earned += pts; setEarned();
-      scoreEl.textContent = pts + " / " + max + " (" + Math.round((pts / max) * 100) + "%)";
-      scoreEl.style.color = (pts === max) ? "var(--ok)" : "var(--text)";
-    }
-    function grade() {
-      var q = DECK[idx]; if (q.type === "placeholder") return;
-      var rows = optsEl.querySelectorAll(".opt"); clearMarks();
-      if (q.type === "mc") {
-        var sel = -1;
-        [].forEach.call(rows, function (r, i) { if (r.querySelector("input").checked) sel = i; });
-        if (sel < 0) { scoreEl.textContent = "Pick an answer"; return; }
-        [].forEach.call(rows, function (row, i) {
-          if (i === q.correct) { row.classList.add("ok"); row.querySelector(".mark").textContent = "✓"; }
-          else if (i === sel) { row.classList.add("bad"); row.querySelector(".mark").textContent = "✗"; }
+    function grade(){
+      var q=DECK[idx]; if(q.type==="placeholder") return;
+      var rows=optsEl.querySelectorAll(".opt"); clearMarks();
+      if (q.type==="mc") {
+        var sel=-1; [].forEach.call(rows,function(r,i){ if(r.querySelector("input").checked) sel=i; });
+        if (sel<0){ scoreEl.textContent="Pick an answer"; return; }
+        [].forEach.call(rows,function(row,i){
+          if(i===q.correct){row.classList.add("ok");row.querySelector(".mark").textContent="✓";}
+          else if(i===sel){row.classList.add("bad");row.querySelector(".mark").textContent="✗";}
         });
-        finishGrade(sel === q.correct ? q.points : 0, q.points);
+        finishGrade(sel===q.correct?q.points:0, q.points);
+      } else if (q.type==="select") {
+        var tc=q.answer.filter(Boolean).length, ti=q.answer.length-tc, cs=0, is=0;
+        [].forEach.call(rows,function(row,i){
+          var checked=row.querySelector("input").checked, right=(checked===q.answer[i]);
+          if(q.answer[i]&&checked)cs++; if(!q.answer[i]&&checked)is++;
+          row.classList.add(right?"ok":"bad"); row.querySelector(".mark").textContent=right?"✓":"✗";
+        });
+        var frac=Math.max(0, cs/tc - (ti?is/ti:0));
+        finishGrade(Math.round(frac*q.points), q.points);
       }
     }
-    function revealAnswer() {
-      var q = DECK[idx]; if (q.type === "placeholder") return;
+    function revealAnswer(){
+      var q=DECK[idx]; if(q.type==="placeholder") return;
       clearMarks();
-      [].forEach.call(optsEl.querySelectorAll(".opt"), function (row, i) {
-        var input = row.querySelector("input");
-        if (q.type === "mc") { input.checked = (i === q.correct); if (i === q.correct) { row.classList.add("ok"); row.querySelector(".mark").textContent = "✓"; } }
+      [].forEach.call(optsEl.querySelectorAll(".opt"),function(row,i){
+        var input=row.querySelector("input");
+        if (q.type==="mc"){ input.checked=(i===q.correct); if(i===q.correct){row.classList.add("ok");row.querySelector(".mark").textContent="✓";} }
+        else if (q.type==="select"){ input.checked=!!q.answer[i]; if(q.answer[i]){row.classList.add("ok");row.querySelector(".mark").textContent="✓";} }
       });
-      scoreEl.textContent = "Answer key"; scoreEl.style.color = "var(--ok)";
+      scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)";
     }
 
-    document.getElementById("theme").addEventListener("click", function () {
-      var toLight = document.body.getAttribute("data-theme") !== "light";
-      document.body.setAttribute("data-theme", toLight ? "light" : "dark");
-      this.textContent = toLight ? "🌙" : "☀️";
-      try { localStorage.setItem("inkling-quiz-theme", toLight ? "light" : "dark"); } catch (e) {}
+    optsEl.addEventListener("click",function(e){
+      var z=e.target.closest(".zoom");
+      if(z){ openZoom(z.parentElement.querySelector(".qgraph").innerHTML); return; }
+      var gph=e.target.closest(".qgraph");
+      if(gph){ var cb=gph.closest(".opt").querySelector("input"); if(cb) cb.checked=!cb.checked; }
     });
-    try { if (localStorage.getItem("inkling-quiz-theme") === "light") { document.body.setAttribute("data-theme", "light"); document.getElementById("theme").textContent = "🌙"; } } catch (e) {}
+    document.getElementById("theme").addEventListener("click",function(){
+      var toLight=document.body.getAttribute("data-theme")!=="light";
+      document.body.setAttribute("data-theme",toLight?"light":"dark");
+      this.textContent=toLight?"🌙":"☀️";
+      try{ localStorage.setItem("inkling-quiz-theme",toLight?"light":"dark"); }catch(e){}
+    });
+    try{ if(localStorage.getItem("inkling-quiz-theme")==="light"){ document.body.setAttribute("data-theme","light"); document.getElementById("theme").textContent="🌙"; } }catch(e){}
+    selEl.addEventListener("click",function(e){ e.stopPropagation(); menuEl.classList.contains("open")?closeMenu():openMenu(); });
+    document.addEventListener("click",function(e){ if(!menuEl.contains(e.target)&&e.target!==selEl) closeMenu(); });
+    submitBtn.addEventListener("click",grade);
+    answerBtn.addEventListener("click",revealAnswer);
+    function go(d){ var n=idx+d; if(n>=0&&n<DECK.length){ idx=n; render(); } }
+    nextBtn.addEventListener("click",function(){ go(1); });
+    nextqBtn.addEventListener("click",function(){ go(1); });
+    prevBtn.addEventListener("click",function(){ go(-1); });
 
-    selEl.addEventListener("click", function (e) { e.stopPropagation(); menuEl.classList.contains("open") ? closeMenu() : openMenu(); });
-    document.addEventListener("click", function (e) { if (!menuEl.contains(e.target) && e.target !== selEl) closeMenu(); });
-    submitBtn.addEventListener("click", grade);
-    answerBtn.addEventListener("click", revealAnswer);
-    nextBtn.addEventListener("click", function () { if (idx < DECK.length - 1) { idx++; render(); } });
-    backBtn.addEventListener("click", function () { if (idx > 0) { idx--; render(); } });
-
-    setEarned();
-    render();
+    setEarned(); render();
   })();
   </script>
 </body>
