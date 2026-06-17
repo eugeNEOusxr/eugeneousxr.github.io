@@ -23,11 +23,19 @@
     .row{display:flex;align-items:flex-start;gap:10px}
     .ic{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;font-size:17px;flex:0 0 auto}
     .title{flex:1;font-size:16px;font-weight:500;padding-top:7px}
-    .badges{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex:0 0 auto}
+    .badges{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:0 0 auto}
     .pts{background:var(--pill);color:var(--pilltx);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:500;white-space:nowrap}
     .earned{background:var(--earn);color:var(--earntx);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:500;white-space:nowrap}
+    .back{background:var(--surface);color:var(--text);border:.5px solid var(--line);border-radius:9px;padding:6px 13px;font:500 13px system-ui;cursor:pointer;white-space:nowrap}
+    .back[disabled]{opacity:.38;cursor:default}
     .sub{margin-top:11px}
-    .sel{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:9px;padding:7px 12px;color:var(--text);font-size:14px;cursor:pointer}
+    .seldrop{position:relative;display:inline-block}
+    .sel{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:.5px solid var(--line);border-radius:9px;padding:8px 13px;color:var(--text);font-size:14px;font-weight:500;cursor:pointer}
+    .menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:.5px solid var(--line);border-radius:11px;padding:6px;max-height:58vh;overflow-y:auto;z-index:50;min-width:130px;display:none;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+    .menu.open{display:block}
+    .menu button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:transparent;color:var(--text);border:0;border-radius:7px;padding:9px 12px;font:500 14px system-ui;cursor:pointer}
+    .menu button.cur{background:var(--pill);color:var(--pilltx)}
+    .menu .tag{font-size:11px;color:var(--muted)}
     main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:15px}
     .prompt{margin:0 0 16px;font-size:15px;line-height:1.6}
     .opt{display:flex;align-items:center;gap:12px;padding:13px 13px;margin:9px 0;border:.5px solid var(--line);border-radius:11px;cursor:pointer;background:var(--surface)}
@@ -36,9 +44,11 @@
     .opt input{width:21px;height:21px;flex:0 0 auto;cursor:pointer;accent-color:var(--accent)}
     .otext{flex:1;font-size:16px}
     .mark{flex:0 0 auto;font-size:18px;width:20px;text-align:center}
+    .empty{color:var(--muted);line-height:1.6;padding:20px 4px}
     footer{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-top:.5px solid var(--line)}
     .btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--text);border:.5px solid var(--line);border-radius:10px;padding:10px 17px;font-size:14px;font-weight:500;cursor:pointer}
     .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+    .btn[disabled]{opacity:.38;cursor:default}
     .score{font-size:15px;font-weight:500;margin-left:2px}
     em{font-style:italic}
   </style>
@@ -51,9 +61,15 @@
       <span class="badges">
         <span class="pts">200 pts</span>
         <span class="earned" id="earned">🏆 Earned 0 / 200</span>
+        <button class="back" id="back" aria-label="Previous question">← Back</button>
       </span>
     </div>
-    <div class="sub"><span class="sel" id="sel">Question 1 ▾</span></div>
+    <div class="sub">
+      <div class="seldrop">
+        <button class="sel" id="sel" aria-haspopup="true">1.1.1 ▾</button>
+        <div class="menu" id="menu" role="menu"></div>
+      </div>
+    </div>
   </header>
   <main>
     <p class="prompt" id="prompt"></p>
@@ -77,43 +93,78 @@
         points: 10
       }
     ];
-    var DECK_TOTAL = 200;
-    var idx = 0, earned = 0, graded = {};
+    var QCOUNT = 20, DECK_TOTAL = 200;
+    while (DECK.length < QCOUNT) DECK.push({ type: "placeholder", points: 10 });
 
+    function qnum(i) { return "1.1." + (i + 1); }
+
+    var idx = 0, earned = 0, graded = {};
     var promptEl = document.getElementById("prompt");
     var optsEl = document.getElementById("opts");
     var scoreEl = document.getElementById("score");
     var selEl = document.getElementById("sel");
     var earnedEl = document.getElementById("earned");
+    var menuEl = document.getElementById("menu");
+    var backBtn = document.getElementById("back");
+    var nextBtn = document.getElementById("next");
+    var submitBtn = document.getElementById("submit");
+    var answerBtn = document.getElementById("answer");
 
     function setEarned() { earnedEl.textContent = "🏆 Earned " + earned + " / " + DECK_TOTAL; }
 
+    function buildMenu() {
+      menuEl.innerHTML = "";
+      DECK.forEach(function (q, i) {
+        var b = document.createElement("button");
+        b.setAttribute("role", "menuitem");
+        if (i === idx) b.className = "cur";
+        var done = (graded[i] != null) ? '<span class="tag">' + graded[i] + "/10</span>" : (q.type === "placeholder" ? '<span class="tag">soon</span>' : "");
+        b.innerHTML = "<span>" + qnum(i) + "</span>" + done;
+        b.addEventListener("click", function () { idx = i; closeMenu(); render(); });
+        menuEl.appendChild(b);
+      });
+    }
+    function openMenu() { buildMenu(); menuEl.classList.add("open"); }
+    function closeMenu() { menuEl.classList.remove("open"); }
+
     function render() {
       var q = DECK[idx];
-      scoreEl.textContent = "";
-      selEl.textContent = "Question " + (idx + 1) + " ▾";
-      promptEl.innerHTML = q.prompt;
+      scoreEl.textContent = ""; scoreEl.style.color = "var(--text)";
+      selEl.textContent = qnum(idx) + " ▾";
       optsEl.innerHTML = "";
-      q.options.forEach(function (t, i) {
-        var row = document.createElement("label");
-        row.className = "opt"; row.setAttribute("data-i", i);
-        row.innerHTML = '<input type="' + (q.type === "mc" ? "radio" : "checkbox") + '" name="q" aria-label="Option ' + (i + 1) + '">'
-          + '<span class="otext">' + t + '</span><span class="mark"></span>';
-        optsEl.appendChild(row);
-      });
+      backBtn.disabled = (idx === 0);
+      nextBtn.disabled = (idx >= DECK.length - 1);
+      var placeholder = (q.type === "placeholder");
+      submitBtn.disabled = placeholder; answerBtn.disabled = placeholder;
+      if (placeholder) {
+        promptEl.innerHTML = "Question <strong>" + qnum(idx) + "</strong>";
+        optsEl.innerHTML = '<div class="empty">This question hasn’t been built yet.<br>Send it over and it’ll drop right into this slot.</div>';
+      } else {
+        promptEl.innerHTML = q.prompt;
+        q.options.forEach(function (t, i) {
+          var row = document.createElement("label");
+          row.className = "opt"; row.setAttribute("data-i", i);
+          row.innerHTML = '<input type="' + (q.type === "mc" ? "radio" : "checkbox") + '" name="q" aria-label="Option ' + (i + 1) + '">'
+            + '<span class="otext">' + t + '</span><span class="mark"></span>';
+          optsEl.appendChild(row);
+        });
+        if (graded[idx] != null) { scoreEl.textContent = graded[idx] + " / " + q.points; scoreEl.style.color = (graded[idx] === q.points) ? "var(--ok)" : "var(--text)"; }
+      }
       document.querySelector("main").scrollTop = 0;
     }
 
     function clearMarks() {
-      [].forEach.call(optsEl.querySelectorAll(".opt"), function (r) {
-        r.classList.remove("ok", "bad"); r.querySelector(".mark").textContent = "";
-      });
+      [].forEach.call(optsEl.querySelectorAll(".opt"), function (r) { r.classList.remove("ok", "bad"); r.querySelector(".mark").textContent = ""; });
     }
-
+    function finishGrade(pts, max) {
+      if (graded[idx] != null) earned -= graded[idx];
+      graded[idx] = pts; earned += pts; setEarned();
+      scoreEl.textContent = pts + " / " + max + " (" + Math.round((pts / max) * 100) + "%)";
+      scoreEl.style.color = (pts === max) ? "var(--ok)" : "var(--text)";
+    }
     function grade() {
-      var q = DECK[idx];
-      var rows = optsEl.querySelectorAll(".opt");
-      clearMarks();
+      var q = DECK[idx]; if (q.type === "placeholder") return;
+      var rows = optsEl.querySelectorAll(".opt"); clearMarks();
       if (q.type === "mc") {
         var sel = -1;
         [].forEach.call(rows, function (r, i) { if (r.querySelector("input").checked) sel = i; });
@@ -122,27 +173,15 @@
           if (i === q.correct) { row.classList.add("ok"); row.querySelector(".mark").textContent = "✓"; }
           else if (i === sel) { row.classList.add("bad"); row.querySelector(".mark").textContent = "✗"; }
         });
-        var pts = (sel === q.correct) ? q.points : 0;
-        finishGrade(pts, q.points);
+        finishGrade(sel === q.correct ? q.points : 0, q.points);
       }
     }
-
-    function finishGrade(pts, max) {
-      if (graded[idx] != null) earned -= graded[idx];
-      graded[idx] = pts; earned += pts; setEarned();
-      scoreEl.textContent = pts + " / " + max + " (" + Math.round((pts / max) * 100) + "%)";
-      scoreEl.style.color = (pts === max) ? "var(--ok)" : "var(--text)";
-    }
-
     function revealAnswer() {
-      var q = DECK[idx];
+      var q = DECK[idx]; if (q.type === "placeholder") return;
       clearMarks();
       [].forEach.call(optsEl.querySelectorAll(".opt"), function (row, i) {
         var input = row.querySelector("input");
-        if (q.type === "mc") {
-          input.checked = (i === q.correct);
-          if (i === q.correct) { row.classList.add("ok"); row.querySelector(".mark").textContent = "✓"; }
-        }
+        if (q.type === "mc") { input.checked = (i === q.correct); if (i === q.correct) { row.classList.add("ok"); row.querySelector(".mark").textContent = "✓"; } }
       });
       scoreEl.textContent = "Answer key"; scoreEl.style.color = "var(--ok)";
     }
@@ -153,23 +192,14 @@
       this.textContent = toLight ? "🌙" : "☀️";
       try { localStorage.setItem("inkling-quiz-theme", toLight ? "light" : "dark"); } catch (e) {}
     });
-    try {
-      var saved = localStorage.getItem("inkling-quiz-theme");
-      if (saved === "light") { document.body.setAttribute("data-theme", "light"); document.getElementById("theme").textContent = "🌙"; }
-    } catch (e) {}
+    try { if (localStorage.getItem("inkling-quiz-theme") === "light") { document.body.setAttribute("data-theme", "light"); document.getElementById("theme").textContent = "🌙"; } } catch (e) {}
 
-    document.getElementById("submit").addEventListener("click", grade);
-    document.getElementById("answer").addEventListener("click", revealAnswer);
-    document.getElementById("next").addEventListener("click", function () {
-      if (idx < DECK.length - 1) { idx++; render(); }
-      else {
-        promptEl.innerHTML = "You've reached the end of the deck. <strong>More questions are on the way.</strong>";
-        optsEl.innerHTML = "";
-        scoreEl.textContent = "Earned " + earned + " / " + DECK_TOTAL;
-        scoreEl.style.color = "var(--earntx)";
-        selEl.textContent = "Complete";
-      }
-    });
+    selEl.addEventListener("click", function (e) { e.stopPropagation(); menuEl.classList.contains("open") ? closeMenu() : openMenu(); });
+    document.addEventListener("click", function (e) { if (!menuEl.contains(e.target) && e.target !== selEl) closeMenu(); });
+    submitBtn.addEventListener("click", grade);
+    answerBtn.addEventListener("click", revealAnswer);
+    nextBtn.addEventListener("click", function () { if (idx < DECK.length - 1) { idx++; render(); } });
+    backBtn.addEventListener("click", function () { if (idx > 0) { idx--; render(); } });
 
     setEarned();
     render();
