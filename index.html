@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111217" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icons/inkling-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/icons/favicon-64.png" sizes="64x64" type="image/png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <title>Inkling</title>
+  <!-- Runtime config (sets window.__EUGENEOUS_API__ = the backend URL). MUST load
+       before the module scripts, or apiBase() falls back to this origin and login
+       POSTs to github.io/api → 404. Classic script = runs before deferred modules. -->
+  <script src="/inkling-config.js"></script>
+  <!-- On-screen error reporter: surfaces JS errors as a visible banner so issues
+       on phones (esp. iOS, where there's no console without a Mac) can be seen and
+       screenshotted. Inline + first so it catches early module-load failures. -->
+  <script>
+    (function () {
+      function show(msg) {
+        try {
+          var box = document.getElementById("inkling-error-box");
+          if (!box) {
+            box = document.createElement("div");
+            box.id = "inkling-error-box";
+            box.setAttribute("role", "alert");
+            box.style.cssText =
+              "position:fixed;left:0;right:0;top:0;z-index:2147483647;max-height:45vh;overflow:auto;" +
+              "background:#7f1d1d;color:#fff;font:12px/1.4 -apple-system,system-ui,sans-serif;" +
+              "padding:10px 34px 10px 12px;white-space:pre-wrap;word-break:break-word;box-shadow:0 2px 12px rgba(0,0,0,.4)";
+            var x = document.createElement("button");
+            x.textContent = "✕";
+            x.setAttribute("aria-label", "Dismiss");
+            x.style.cssText =
+              "position:absolute;top:6px;right:8px;background:transparent;border:0;color:#fff;font-size:16px;cursor:pointer";
+            x.onclick = function () { box.remove(); };
+            box.appendChild(x);
+            var title = document.createElement("div");
+            title.textContent = "⚠ Something failed to load — please screenshot this:";
+            title.style.fontWeight = "700";
+            box.appendChild(title);
+            (document.body || document.documentElement).appendChild(box);
+          }
+          var line = document.createElement("div");
+          line.textContent = msg;
+          box.appendChild(line);
+        } catch (e) { /* nothing more we can do */ }
+      }
+      window.addEventListener("error", function (e) {
+        var m = e && e.message ? e.message : "Script error";
+        if (e && e.filename) m += "  @ " + e.filename + ":" + (e.lineno || "?");
+        show(m);
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        var r = e && e.reason;
+        show("Promise: " + (r && r.message ? r.message : String(r)));
+      });
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Outfit:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style-enhancements.css" />
+  <link rel="stylesheet" href="style-enhancements-inkling-nav.css" />
+  <link rel="stylesheet" href="style-enhancements-wordweaver.css" />
+  <link rel="stylesheet" href="style-enhancements-layers.css" />
+  <link rel="stylesheet" href="style-enhancements-shell.css" />
+  <link rel="stylesheet" href="style-appearance-palettes.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="three-canvas"></canvas>
+
+    <div id="ui-overlay">
+      <header id="top-chrome" class="top-chrome">
+        <div class="top-chrome__bar">
+          <div class="top-chrome__month-block">
+            <span id="calendar-nav-month" class="top-chrome__month">June 2026</span>
+            <span id="app-today-date" class="top-chrome__today" aria-label="Today's date"></span>
+          </div>
+          <div class="top-chrome__actions">
+            <button
+              type="button"
+              id="btn-top-login"
+              class="top-chrome__login hidden"
+              aria-label="Log in"
+              title="Log in or create an account"
+            >Log in</button>
+            <button
+              type="button"
+              id="btn-top-alerts"
+              class="top-chrome__alerts"
+              aria-label="Alerts"
+              title="Alerts"
+            >🔔<span id="top-alerts-badge" class="top-chrome__alerts-badge hidden" aria-hidden="true"></span></button>
+            <button
+              type="button"
+              id="btn-top-settings"
+              class="top-chrome__settings"
+              aria-label="Settings"
+              title="Settings"
+            >⚙</button>
+          </div>
+        </div>
+        <div id="wordweaver-embed" class="wordweaver-embed wordweaver-embed--topbar" aria-label="WordWeaver">
+          <div class="wordweaver-embed__bar">
+            <div class="wordweaver-embed__bar-titles">
+              <span class="wordweaver-embed__brand">Calendar</span>
+              <h2 id="wordweaver-embed-headline" class="wordweaver-embed__headline">Today</h2>
+            </div>
+            <div class="wordweaver-embed__date-nav" aria-label="Date">
+              <button type="button" id="wordweaver-date-prev" class="wordweaver-embed__date-btn" title="Previous day">‹</button>
+              <button type="button" id="wordweaver-date-today" class="wordweaver-embed__date-btn wordweaver-embed__date-btn--today" title="Today">Today</button>
+              <button type="button" id="wordweaver-date-next" class="wordweaver-embed__date-btn" title="Next day">›</button>
+            </div>
+            <span id="wordweaver-embed-date" class="wordweaver-embed__date"></span>
+            <label class="wordweaver-embed__layout-label">
+              <span class="sr-only">Layout mode</span>
+              <select id="wordweaver-layout-mode" class="wordweaver-embed__layout-select" aria-label="3D layout mode"></select>
+            </label>
+            <div class="wordweaver-embed__segments" role="tablist" aria-label="Day segment">
+              <button type="button" class="wordweaver-embed__seg is-active" data-segment="morning" role="tab" aria-pressed="true">Morning</button>
+              <button type="button" class="wordweaver-embed__seg" data-segment="afternoon" role="tab" aria-pressed="false">Afternoon</button>
+              <button type="button" class="wordweaver-embed__seg" data-segment="night" role="tab" aria-pressed="false">Night</button>
+            </div>
+            <button
+              type="button"
+              id="wordweaver-embed-size-btn"
+              class="wordweaver-embed__size-btn"
+              aria-label="Minimize WordWeaver"
+              title="Minimize WordWeaver"
+            >▾</button>
+          </div>
+          <div id="wordweaver-layout-editor" class="wordweaver-layout-editor hidden" role="dialog" aria-label="Custom layout editor" aria-modal="false"></div>
+          <div id="wordweaver-remarks" class="wordweaver-remarks" aria-live="polite"></div>
+          <div id="wordweaver-embed-mount" class="wordweaver-embed__mount"></div>
+          <div id="wordweaver-daily-panel" class="wordweaver-daily-panel" aria-label="Today's schedule"></div>
+        </div>
+      </header>
+
+      <div
+        id="inkling-layer-launcher"
+        class="inkling-layer-launcher"
+        aria-label="Open tools"
+      >
+        <button type="button" class="inkling-layer-launcher__btn" data-layer="calendar-max" title="Full-screen 3D month wall">📅</button>
+        <button type="button" class="inkling-layer-launcher__btn" data-layer="writer" title="Writer">✎</button>
+        <button type="button" class="inkling-layer-launcher__btn" data-layer="wordweaver" title="WordWeaver">🪡</button>
+        <button type="button" class="inkling-layer-launcher__btn" data-layer="inkling" title="Inkling">✦</button>
+      </div>
+
+      <aside id="calendar-sidebar" class="calendar-sidebar is-expanded" aria-label="Calendar">
+        <div class="calendar-sidebar__rail" data-sidebar-rail aria-hidden="true">
+          <button type="button" class="calendar-sidebar__rail-btn" data-sidebar-expand aria-label="Show small calendar" title="Show small calendar">+</button>
+          <span class="calendar-sidebar__rail-day" data-collapsed-day title="Selected day"></span>
+          <div class="calendar-sidebar__rail-alerts"></div>
+        </div>
+
+        <div id="calendar-sidebar-panel" class="calendar-sidebar__panel">
+          <header class="calendar-sidebar__head">
+            <button type="button" class="calendar-sidebar__drag" data-sidebar-drag aria-label="Drag calendar panel" title="Drag to move">⠿</button>
+            <span class="calendar-sidebar__head-title">Small calendar</span>
+            <div class="calendar-sidebar__head-tools">
+              <button type="button" class="calendar-sidebar__maximize-btn" data-calendar-maximize aria-label="Open full-screen 3D month wall" title="3D month wall">⛶</button>
+              <button type="button" class="calendar-sidebar__collapse-btn" data-sidebar-collapse aria-label="Minimize small calendar" title="Minimize small calendar">−</button>
+            </div>
+          </header>
+          <div id="notebook-calendar-dock" class="notebook-calendar-dock" aria-hidden="false">
+            <div class="notebook-calendar-dock__inner">
+              <div id="notebook-calendar-dock-mini" class="notebook-calendar-dock-mini" aria-label="Month grid"></div>
+              <span id="notebook-calendar-dock-date" class="notebook-calendar-dock__date">Today</span>
+              <div class="notebook-calendar-dock__actions">
+                <button type="button" class="notebook-calendar-dock__btn" data-delta="-1" title="Previous day">‹</button>
+                <button type="button" class="notebook-calendar-dock__btn" data-today title="Today">Today</button>
+                <button type="button" class="notebook-calendar-dock__btn" data-delta="1" title="Next day">›</button>
+                <button type="button" class="notebook-calendar-dock__btn notebook-calendar-dock__btn--primary" data-open-notes title="Notes for this day">Notes</button>
+                <button type="button" class="notebook-calendar-dock__btn" data-open-writer title="Open Writer">Write</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <div id="notification-bell-anchor" class="notification-bell-anchor" aria-label="Alerts">
+        <div id="notification-dropdown" class="notification-dropdown notification-dropdown--fixed">
+          <button
+            type="button"
+            id="btn-notification-bell"
+            class="notification-bell-btn"
+            aria-label="Upcoming alerts"
+            aria-expanded="false"
+            aria-haspopup="menu"
+          >
+            <span class="notification-bell-icon" aria-hidden="true">🔔</span>
+            <span id="notification-badge" class="notification-badge hidden">0</span>
+          </button>
+          <div id="notification-dropdown-menu" class="notification-dropdown-menu hidden" role="menu">
+            <header class="notification-dropdown-header">
+              <span>Upcoming</span>
+            </header>
+            <p id="notification-dropdown-empty" class="notification-dropdown-empty">Nothing scheduled soon.</p>
+            <div id="notification-dropdown-list" class="notification-dropdown-list"></div>
+            <footer class="notification-dropdown-footer">
+              <button type="button" id="btn-open-notification-settings" class="btn-ghost btn-ghost--sm">Notification settings</button>
+              <button type="button" id="btn-open-notification-wall" class="btn-ghost btn-ghost--sm">View notification wall</button>
+            </footer>
+          </div>
+        </div>
+      </div>
+
+      <div class="notify-bar">
+        <span id="auth-account-label" class="auth-account-label hidden" title="Signed-in account"></span>
+        <button type="button" id="btn-sign-out" class="btn-ghost btn-ghost--sm">Sign out</button>
+        <button type="button" id="btn-notify-permission" class="btn-ghost">Enable browser alerts</button>
+        <span id="notify-status" class="notify-status"></span>
+      </div>
+
+      <div id="day-hover-preview" class="day-hover-preview hidden" role="tooltip" aria-live="polite">
+        <header class="day-hover-preview__header">
+          <span class="day-hover-preview__title">Day notes</span>
+        </header>
+        <div class="day-hover-preview__list" role="list"></div>
+        <p class="day-hover-preview__empty hidden">No notes for this day.</p>
+      </div>
+
+      <!-- Unified day window (date, 3D hour strip, scrollable layers) -->
+      <div id="day-window" class="day-window hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="day-window-title">
+        <div class="day-window__backdrop" aria-hidden="true"></div>
+        <div class="day-window__frame">
+          <header class="day-window__header">
+            <button type="button" id="day-window-back" class="day-window__back" aria-label="Back to calendar">←</button>
+            <div class="day-window__title-block">
+              <h2 id="day-window-title">Selected day</h2>
+              <p id="day-window-subtitle" class="day-window__subtitle">Notebook</p>
+            </div>
+            <button type="button" id="day-window-minimize" class="day-window__minimize" aria-label="Minimize" title="Minimize">–</button>
+          </header>
+          <div class="day-window__preview panel-card">
+            <span class="day-window__preview-badge" aria-hidden="true">3D</span>
+            <p class="day-window__preview-hint">Scroll down through times · add a note beside each slot · tap a time to focus the 3D grid</p>
+            <div id="day-window-hour-scroller" class="day-window__hour-scroller" aria-label="Hours of the day"></div>
+          </div>
+          <div class="day-window__schedule-bar">
+            <button type="button" id="day-window-set-reminder" class="btn-outline btn-outline--reminder">🔔 Reminder</button>
+            <button type="button" id="day-window-set-alarm" class="btn-outline btn-outline--alarm">⏰ Alarm</button>
+          </div>
+          <div id="day-window-scroll" class="day-window__scroll"></div>
+        </div>
+      </div>
+
+      <!-- Hour editor (detail mode) -->
+      <div id="hour-editor-panel" class="hidden" aria-hidden="true">
+        <div class="hour-editor-inner panel-card">
+          <h3 class="panel-section-title">Hour notes</h3>
+          <p class="panel-hint">Synced with the 3D grid · selected thread</p>
+
+          <label for="overlay-hour">Hour</label>
+          <select id="overlay-hour"></select>
+
+          <label for="overlay-note">Note text</label>
+          <textarea id="overlay-note" rows="4" placeholder="Write notes for this hour…"></textarea>
+
+          <label for="overlay-insert-input" class="label-secondary">Quick insert</label>
+          <div class="action-row action-row--split">
+            <input type="text" id="overlay-insert-input" placeholder="Snippet to append…" autocomplete="off" />
+            <button type="button" id="overlay-insert-btn" class="btn-secondary">Insert</button>
+          </div>
+
+          <div class="action-row action-row--primary">
+            <button type="button" id="overlay-save" class="btn-primary btn-enter">
+              <span>Save note</span>
+              <kbd>↵</kbd>
+            </button>
+          </div>
+          <p id="overlay-status" class="note-status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div id="in-app-alerts" aria-live="polite"></div>
+
+      <!-- Notification wall (full history) -->
+      <div id="notification-wall-panel" class="hidden" aria-hidden="true">
+        <div class="notification-wall-inner reader-holographic glass-panel shine-effect">
+          <div class="reader-holographic__aurora" aria-hidden="true"></div>
+          <div class="reader-holographic__particles" aria-hidden="true"></div>
+          <header class="notification-wall-header">
+            <button type="button" id="btn-notification-wall-back" class="notification-wall-back-btn">
+              <span class="notification-wall-back-btn__chevron" aria-hidden="true">←</span>
+              <span class="notification-wall-back-btn__text">Back to calendar</span>
+            </button>
+            <div class="notification-wall-header__titles">
+              <h2 id="notification-wall-title" class="notification-wall-title reader-display-title">Notification Wall</h2>
+              <p class="notification-wall-header__sub">2D timeline · month grid · optional 3D spine</p>
+            </div>
+          </header>
+          <p class="panel-hint notification-wall-hint">Synced with the bell menu and alert sounds.</p>
+          <div id="notification-wall-list" class="notification-wall-list notebook-reader-panel__list"></div>
+        </div>
+      </div>
+
+      <!-- Notification settings -->
+      <div id="notification-settings-panel" class="hidden" aria-hidden="true">
+        <div id="btn-notification-settings-backdrop" class="modal-backdrop"></div>
+        <div class="modal-dialog panel-card notification-settings-dialog">
+          <header class="notification-settings-header">
+            <h3>Settings</h3>
+            <button type="button" id="btn-notification-settings-close" class="btn-ghost">Close</button>
+          </header>
+
+          <label for="notify-settings-sound">Default alert sound</label>
+          <select id="notify-settings-sound"></select>
+
+          <label for="notify-settings-volume">Volume <span id="notify-settings-volume-label">45%</span></label>
+          <input type="range" id="notify-settings-volume" min="0" max="1" step="0.05" value="0.45" />
+
+          <button type="button" id="btn-notify-test-sound" class="btn-secondary">Test sound</button>
+
+          <fieldset class="notification-toggles">
+            <legend>Reminder levels</legend>
+            <label class="toggle-row"><input type="checkbox" id="notify-toggle-soft" checked /> Soft (60 min)</label>
+            <label class="toggle-row"><input type="checkbox" id="notify-toggle-medium" checked /> Medium (15 min)</label>
+            <label class="toggle-row"><input type="checkbox" id="notify-toggle-urgent" checked /> Urgent (5 min)</label>
+            <label class="toggle-row"><input type="checkbox" id="notify-toggle-final" checked /> At time</label>
+          </fieldset>
+
+          <fieldset class="notification-toggles">
+            <legend>Other</legend>
+            <label class="toggle-row"><input type="checkbox" id="notify-toggle-sounds" checked /> Sound alerts</label>
+            <label class="toggle-row"><input type="checkbox" id="notify-toggle-browser" checked /> Browser notifications</label>
+          </fieldset>
+
+          <div class="action-row action-row--split">
+            <button type="button" id="btn-notify-settings-browser" class="btn-outline">Request browser permission</button>
+            <button type="button" id="btn-notify-clear-history" class="btn-ghost">Clear history</button>
+          </div>
+          <p id="notify-settings-status" class="note-status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <!-- Thread panel -->
+      <div id="thread-panel" class="hidden inkling-stage-panel" data-inkling-layer="day-notes" aria-hidden="true">
+        <div class="thread-panel-inner reader-holographic glass-panel shine-effect day-notes-panel-inner">
+          <div class="reader-holographic__aurora" aria-hidden="true"></div>
+          <div class="reader-holographic__particles" aria-hidden="true"></div>
+          <header class="thread-header">
+            <div class="thread-header-row">
+              <h2 id="thread-day-title">June 1</h2>
+              <button type="button" id="btn-back-month" class="btn-nav-back">← Back to month</button>
+            </div>
+
+            <div class="toolbar-group">
+              <span class="toolbar-group-label">Schedule</span>
+              <div class="toolbar-group-actions">
+                <button type="button" id="btn-set-reminder" class="btn-outline btn-outline--reminder">
+                  🔔 Set reminder
+                </button>
+                <button type="button" id="btn-set-alarm" class="btn-outline btn-outline--alarm">
+                  ⏰ Set alarm
+                </button>
+              </div>
+            </div>
+
+            <div class="toolbar-group">
+              <span class="toolbar-group-label">Browse</span>
+              <div class="toolbar-group-actions">
+                <button type="button" id="btn-view-all-notes" class="btn-ghost btn-toggle" aria-pressed="false">
+                  View all notes for this day
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <div id="all-notes-section" class="all-notes-section hidden">
+            <h3>All notes for this day</h3>
+            <div id="all-notes-list" class="all-notes-list"></div>
+          </div>
+
+          <div class="thread-body">
+            <aside class="thread-sidebar panel-card">
+              <div class="sidebar-head">
+                <h3>Threads</h3>
+              </div>
+
+              <div class="new-thread-box">
+                <label for="thread-label-input" class="label-secondary">New thread</label>
+                <input type="text" id="thread-label-input" placeholder="Label (optional)" autocomplete="off" />
+                <button type="button" id="btn-create-thread" class="btn-secondary btn-enter btn-block">
+                  <span>Create thread</span>
+                  <kbd>↵</kbd>
+                </button>
+              </div>
+
+              <div id="thread-list" class="thread-list"></div>
+
+              <h3 class="schedules-heading">Reminders &amp; alarms</h3>
+              <div id="day-reminders-list" class="day-reminders-list"></div>
+            </aside>
+
+            <section class="thread-main panel-card">
+              <h3>Notes in selected thread</h3>
+              <div id="thread-notes-list" class="thread-notes-list"></div>
+
+              <footer class="thread-compose">
+                <span class="toolbar-group-label">Add a note</span>
+                <div class="compose-row compose-row--split">
+                  <div class="compose-field">
+                    <label for="thread-note-hour">Hour</label>
+                    <select id="thread-note-hour"></select>
+                  </div>
+                </div>
+                <label for="thread-note-input">Note</label>
+                <textarea id="thread-note-input" rows="3" placeholder="Type your note…"></textarea>
+                <div class="action-row action-row--primary">
+                  <button type="button" id="btn-enter-note" class="btn-primary btn-enter btn-block">
+                    <span>Add note</span>
+                    <kbd>↵</kbd>
+                  </button>
+                </div>
+                <p class="compose-hint">Press <kbd>Enter</kbd> to add · <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line</p>
+                <p id="thread-compose-status" class="note-status" aria-live="polite"></p>
+              </footer>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <div id="inkling-stage-backdrop" class="inkling-stage-backdrop hidden" aria-hidden="true"></div>
+
+      <!-- NotebookWriter panel (centered stage modal) -->
+      <div id="notebook-writer-panel" class="hidden inkling-stage-panel" aria-hidden="true">
+        <div class="thread-panel-inner notebook-writer-panel-inner reader-holographic glass-panel shine-effect">
+          <div class="reader-holographic__aurora" aria-hidden="true"></div>
+          <div class="reader-holographic__particles" aria-hidden="true"></div>
+          <header class="thread-header">
+            <div class="thread-header-row">
+              <div class="notebook-writer-header-main">
+                <input type="date" id="notebook-writer-date-picker" class="notebook-writer-date-picker" aria-label="Choose date — links to the Calendar" />
+                <p id="notebook-writer-day-subtitle" class="notebook-writer-day-subtitle"></p>
+                <h2 id="notebook-writer-day-title" class="reader-display-title">Notebook Writer</h2>
+              </div>
+              <button type="button" id="btn-writer-back-month" class="btn-nav-back">← Back to month</button>
+            </div>
+            <div class="notebook-writer-mode-tabs" role="tablist" aria-label="Writer mode">
+              <button type="button" class="notebook-writer-mode-tab is-active" data-writer-mode="notebook" role="tab" aria-pressed="true">Notebook</button>
+              <button type="button" class="notebook-writer-mode-tab" data-writer-mode="appointments" role="tab" aria-pressed="false">Appointment</button>
+              <button type="button" class="notebook-writer-mode-tab" data-writer-mode="alarm" role="tab" aria-pressed="false">Alarm</button>
+            </div>
+            <div class="notebook-writer-time-picker-row">
+              <div id="notebook-writer-clock" class="notebook-writer-clock" aria-label="Selected time"></div>
+              <div id="notebook-writer-wheel-mount" class="notebook-writer-wheel-mount hidden" aria-hidden="true"></div>
+              <button type="button" id="btn-writer-time-toggle" class="notebook-writer-time-toggle btn-ghost btn-ghost--sm" title="Switch clock / wheel">Wheel</button>
+            </div>
+          </header>
+          <p id="notebook-writer-hint" class="panel-hint notebook-writer-hint">Pick a time on the clock · scroll the timeline · Enter saves the note (reminders sync from the slot)</p>
+          <div id="notebook-writer-hour-strip" class="notebook-writer-hour-strip" role="list" aria-label="Jump to hour"></div>
+          <div class="notebook-writer-body panel-card">
+            <div id="notebook-writer-scroller-mount" class="notebook-writer-scroller-mount"></div>
+          </div>
+          <section class="notebook-writer-schedules panel-card">
+            <h3 id="notebook-writer-schedules-title" class="panel-section-title">Reminders &amp; alarms</h3>
+            <div id="notebook-writer-reminders" class="notebook-writer-reminders"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Appointment modal -->
+      <div id="appointment-modal" class="hidden" aria-hidden="true">
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog panel-card">
+          <h3 id="appointment-modal-title">Add appointment</h3>
+          <label for="appointment-title">Title</label>
+          <input type="text" id="appointment-title" placeholder="Appointment title" />
+          <label for="appointment-description">Description</label>
+          <textarea id="appointment-description" rows="3" placeholder="Details…"></textarea>
+          
+          <div class="time-picker-section">
+            <label>Time</label>
+            <div id="appointment-circular-clock" class="circular-clock-mount"></div>
+            <select id="appointment-hour" hidden aria-hidden="true"></select>
+          </div>
+          
+          <div class="action-row action-row--end">
+            <button type="button" id="appointment-cancel" class="btn-ghost">Cancel</button>
+            <button type="button" id="appointment-save" class="btn-primary btn-enter">
+              <span>Save</span>
+              <kbd>↵</kbd>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reminder / Alarm modal -->
+      <div id="schedule-modal" class="hidden" aria-hidden="true">
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog panel-card reader-holographic glass-panel">
+          <h3 id="schedule-modal-title">Set reminder</h3>
+          
+          <div class="time-picker-section">
+            <label>Time</label>
+            <div id="schedule-circular-clock" class="circular-clock-mount"></div>
+            <select id="schedule-hour" hidden aria-hidden="true"></select>
+          </div>
+          
+          <label for="schedule-message">Message</label>
+          <input type="text" id="schedule-message" placeholder="What should we remind you?" />
+          <div class="action-row action-row--end">
+            <button type="button" id="schedule-cancel" class="btn-ghost">Cancel</button>
+            <button type="button" id="schedule-save" class="btn-primary btn-enter">
+              <span>Save</span>
+              <kbd>↵</kbd>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <aside id="chrome-rail" class="chrome-rail" aria-label="Restore minimized panels">
+    <div class="chrome-rail__pills" id="chrome-rail-pills" role="list"></div>
+  </aside>
+
+  <nav id="inkling-bottom-nav" class="inkling-bottom-nav" aria-label="Main navigation">
+    <button type="button" class="inkling-bottom-nav__btn" data-tab="wordweaver" aria-pressed="false">
+      <span class="inkling-bottom-nav__icon" aria-hidden="true">📅</span>
+      <span class="inkling-bottom-nav__label">Calendar</span>
+    </button>
+    <button type="button" class="inkling-bottom-nav__btn" data-tab="writer" aria-pressed="false">
+      <span class="inkling-bottom-nav__icon" aria-hidden="true">🕐</span>
+      <span class="inkling-bottom-nav__label">Schedule</span>
+    </button>
+    <button type="button" class="inkling-bottom-nav__btn" data-tab="alerts" aria-pressed="false">
+      <span class="inkling-bottom-nav__icon" aria-hidden="true">🔔</span>
+      <span class="inkling-bottom-nav__label">Alerts</span>
+    </button>
+    <button type="button" class="inkling-bottom-nav__btn" data-tab="alarm" aria-pressed="false">
+      <span class="inkling-bottom-nav__icon" aria-hidden="true">⏰</span>
+      <span class="inkling-bottom-nav__label">Alarm</span>
+    </button>
+    <button type="button" class="inkling-bottom-nav__btn" data-tab="mind" aria-pressed="false">
+      <span class="inkling-bottom-nav__icon" aria-hidden="true">🧠</span>
+      <span class="inkling-bottom-nav__label">Mind</span>
+    </button>
+    <button type="button" class="inkling-bottom-nav__btn" data-tab="goals" aria-pressed="false">
+      <span class="inkling-bottom-nav__icon" aria-hidden="true">🎯</span>
+      <span class="inkling-bottom-nav__label">Goals</span>
+    </button>
+  </nav>
+
+  <button type="button" id="inkling-fab" class="inkling-fab inkling-avatar" aria-label="Open Inkling assistant">✦</button>
+
+  <aside id="inkling-panel" class="inkling-panel hidden inkling-panel--minimized" aria-label="Inkling assistant">
+    <header class="inkling-panel__header reader-holographic glass-panel">
+      <div class="inkling-panel__title-wrap">
+        <span class="inkling-panel__glyph" aria-hidden="true">✦</span>
+        <h2 class="inkling-panel__title">Inkling</h2>
+        <span class="inkling-panel__tagline">your calendar whisperer</span>
+      </div>
+      <div class="inkling-panel__chrome">
+        <button type="button" id="inkling-minimize" class="inkling-panel__btn" title="Minimize">–</button>
+        <button type="button" id="inkling-close" class="inkling-panel__btn" title="Close">×</button>
+      </div>
+    </header>
+    <div id="inkling-messages" class="inkling-panel__messages"></div>
+    <div id="inkling-confirm" class="inkling-confirm hidden">
+      <p>Add this to your calendar?</p>
+      <div class="inkling-confirm__actions">
+        <button type="button" id="inkling-confirm-yes" class="btn-primary btn-sm">Yes, add it</button>
+        <button type="button" id="inkling-confirm-no" class="btn-ghost btn-sm">Not now</button>
+      </div>
+    </div>
+    <form id="inkling-form" class="inkling-panel__form">
+      <button type="button" id="inkling-attach" class="inkling-panel__attach btn-ghost btn-sm" title="Attach image">📷</button>
+      <button type="button" id="inkling-mic" class="inkling-panel__mic btn-ghost btn-sm hidden" title="Voice to text" aria-label="Voice to text">🎤</button>
+      <input type="file" id="inkling-file" class="hidden" accept="image/*" />
+      <input type="text" id="inkling-input" class="inkling-panel__input" placeholder="Talk naturally — what’s on Tuesday? remind me at 3…" autocomplete="off" />
+      <button type="submit" id="inkling-send" class="btn-primary inkling-panel__send">Send</button>
+    </form>
+  </aside>
+
+  <!-- Import-map polyfill so the app loads on Safari/iOS < 16.4 (and other older
+       browsers) that don't support native import maps. Must precede the map. -->
+  <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js" crossorigin="anonymous"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.164.0/build/three.module.js",
+        "three/": "https://unpkg.com/three@0.164.0/"
+      }
+    }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+  <!-- Visitor analytics (GoatCounter — privacy-friendly, no cookies). Counts
+       unique visitors/day. Owner self-exclude: visit ?noviews once per device to
+       stop counting yourself (?countme to undo). Data: eugeneousxr.goatcounter.com -->
+  <script>
+    (function () {
+      try {
+        var p = new URLSearchParams(location.search);
+        if (p.has("noviews")) localStorage.setItem("skipgc", "t");
+        if (p.has("countme")) localStorage.removeItem("skipgc");
+        if (localStorage.getItem("skipgc") === "t") return;
+      } catch (e) { /* ignore */ }
+      var s = document.createElement("script");
+      s.async = true;
+      s.src = "//gc.zgo.at/count.js";
+      s.setAttribute("data-goatcounter", "https://eugeneousxr.goatcounter.com/count");
+      document.head.appendChild(s);
+    })();
+  </script>
+  <!-- Today's date in the top-left chrome (refreshes on focus so it rolls over at midnight). -->
+  <script>
+    (function () {
+      function setToday() {
+        var el = document.getElementById("app-today-date");
+        if (!el) return;
+        el.textContent = new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+      }
+      setToday();
+      document.addEventListener("visibilitychange", function () { if (!document.hidden) setToday(); });
+      window.addEventListener("focus", setToday);
+    })();
+  </script>
+</body>
+</html>

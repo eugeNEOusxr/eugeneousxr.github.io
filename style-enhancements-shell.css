@@ -1,0 +1,389 @@
+/* Milestone 3.1 — single-panel shell, cosmos idle, renderer visibility */
+
+:root {
+  --inkling-top-bar-h: 48px;
+}
+
+/* Hide the legacy Morning/Afternoon/Night segment buttons — the 3D day view's
+   own Day/Night/B&W theme toggle replaces them. */
+.wordweaver-embed__segments { display: none !important; }
+
+/* Hide the floating tool-launcher icons (📅 calendar, ✎ writer, 🪡 wordweaver,
+   ✦ inkling) — the cosmos intro + bottom nav + orb cover navigation now. */
+#inkling-layer-launcher { display: none !important; }
+
+/* Hide the Today/Week/Month/Year view-nav toggle — unused. */
+.inkling-view-nav { display: none !important; }
+
+/* Hide the leftover layout chrome (3D-layout dropdown "street signs" + Customize
+   + its editor) on the calendar/day view — not needed for now. */
+.wordweaver-embed__layout-label,
+.wordweaver-embed__layout-select,
+#wordweaver-layout-mode,
+.wordweaver-embed__layout-edit-btn,
+#wordweaver-layout-edit-btn,
+#wordweaver-layout-editor { display: none !important; }
+
+@media (min-width: 640px) {
+  :root {
+    --inkling-top-bar-h: 56px;
+  }
+}
+
+/* Top chrome = bar row only when WordWeaver tab uses stage embed */
+body.inkling-tab-wordweaver #top-chrome #wordweaver-embed.wordweaver-embed--topbar {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.inkling-tab-wordweaver .top-chrome__bar {
+  flex-shrink: 0;
+}
+
+/* The top bar must span full width so "June 2026" (left) can't overlap the
+   Login/bell/settings actions (right). It was collapsing to content width. */
+#top-chrome .top-chrome__bar {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  gap: 8px;
+}
+/* Month label keeps its natural width on the left; actions hug the right edge. */
+#top-chrome .top-chrome__month-block {
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+}
+#top-chrome .top-chrome__month {
+  white-space: nowrap;
+  /* Stay top-LEFT and never grow into the login/account on the right. */
+  max-width: 48vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#top-chrome .top-chrome__actions {
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+/* On the idle cosmos screen (incl. the "where would you like to start" intro),
+   the Calendar embed bar + its date arrows do nothing — hide them so only the
+   month (left) and login/account (right) sit over the cosmos. */
+body.inkling-surface-idle #wordweaver-embed.wordweaver-embed--topbar,
+body.cosmos-intro-active #wordweaver-embed.wordweaver-embed--topbar {
+  display: none !important;
+}
+
+/* Bell Alerts in view nav */
+.inkling-view-nav__bell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  color: #a8f7f7;
+}
+
+#btn-inkling-alerts.inkling-view-nav__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Notebook 3D canvas — only Calendar app tab */
+body:not(.inkling-tab-calendar) #three-canvas {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+body.inkling-tab-calendar #three-canvas,
+body.inkling-tab-constellation #three-canvas {
+  visibility: visible !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+}
+
+/* The WordWeaver helix renders into the main scene; show it on its tab. */
+body.inkling-tab-constellation.inkling-surface-idle #three-canvas {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Small-calendar dock removed everywhere — it's a distraction. Date nav lives
+   in the WordWeaver embed bar and the Schedule's date chooser. */
+#notebook-calendar-dock {
+  display: none !important;
+}
+
+/* Small-calendar sidebar removed entirely — its "enlarge" opened the old 3D
+   calendar system we no longer use, and it was covering the new 3D views. */
+.calendar-sidebar,
+#calendar-sidebar-panel {
+  display: none !important;
+}
+
+/* …and reclaim the sidebar's reserved left padding (~228px) so the top bar
+   spans full width — otherwise "June 2026" overlaps the Login/bell/settings.
+   Includes the IDLE cosmos surface so the month/date sits flush at the LEFT
+   edge (was shoved to ~x228 by the reserved sidebar gutter). */
+body.inkling-tab-wordweaver #top-chrome.top-chrome,
+body.inkling-tab-constellation #top-chrome.top-chrome,
+body.inkling-surface-idle #top-chrome.top-chrome {
+  padding-left: 12px !important;
+}
+/* On the cosmos surface, pin the month hard-left so it reads as the page title. */
+body.inkling-surface-idle .top-chrome__month-block {
+  margin-left: 0 !important;
+}
+
+/* WordWeaver Journal — keep the wall clean. The journal owns the body class
+   `weaver-journal-active` (the shell's inkling-tab-constellation gets stripped by
+   nav churn, so we don't rely on it). It has its own calendar navigator + Write
+   button, so hide the duplicate calendar chrome: the Today/Week/Month/Year view
+   switchers, the floating layer-launcher icon cluster (📅 ✎ 🪡 ✦), and the
+   "Month YYYY" label. Login / alerts / settings stay. */
+body.weaver-journal-active .inkling-view-nav,
+body.weaver-journal-active #inkling-layer-launcher,
+body.weaver-journal-active .top-chrome__month-block {
+  display: none !important;
+}
+
+/* Safeguard: keep the 3D canvas visible whenever the journal is active. */
+body.weaver-journal-active #three-canvas {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Inkling orb — a draggable, metallic, glowing assistant sphere (replaces the
+   Inkling bottom-nav tab). Hover glows; click pops an options menu; one option
+   expands the chat window. Always present except while the chat panel is open. */
+body.inkling-notebook-layout #inkling-fab.inkling-avatar {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  right: 16px;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  font-size: 26px;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(199, 210, 254, 0.9), 0 1px 2px rgba(0, 0, 0, 0.4);
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 34%),
+    radial-gradient(circle at 68% 80%, rgba(49, 46, 129, 0.95), rgba(49, 46, 129, 0) 60%),
+    radial-gradient(circle at 50% 42%, #a5b4fc 0%, #6366f1 42%, #4338ca 72%, #312e81 100%);
+  box-shadow:
+    0 10px 30px rgba(79, 70, 229, 0.55),
+    0 0 22px rgba(129, 140, 248, 0.65),
+    inset 0 2px 6px rgba(255, 255, 255, 0.55),
+    inset 0 -8px 14px rgba(30, 27, 75, 0.6);
+  cursor: grab;
+  /* Above the day-view note bar (11200/11220) so the orb is always reachable. */
+  z-index: 11250;
+  /* visible so the alerts badge can sit OUTSIDE the orb's circle without being
+     clipped; the sheen ::before self-clips to a circle below. */
+  overflow: visible;
+  animation: inkling-orb-float 4s ease-in-out infinite;
+  transition: transform 0.18s ease, box-shadow 0.25s ease;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Sweeping specular sheen — high-tech shine. */
+body.inkling-notebook-layout #inkling-fab.inkling-avatar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* self-clip the sweeping sheen to the orb circle (parent is overflow:visible). */
+  clip-path: circle(50% at 50% 50%);
+  background: conic-gradient(from 0deg, rgba(255,255,255,0) 0deg, rgba(255,255,255,0.6) 38deg, rgba(255,255,255,0) 86deg, rgba(255,255,255,0) 360deg);
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  animation: inkling-orb-sheen 5s linear infinite;
+  pointer-events: none;
+}
+body.inkling-notebook-layout #inkling-fab.inkling-avatar:hover {
+  transform: scale(1.08);
+  animation-play-state: paused;
+  box-shadow:
+    0 14px 40px rgba(79, 70, 229, 0.7),
+    0 0 40px rgba(129, 140, 248, 0.98),
+    inset 0 2px 6px rgba(255, 255, 255, 0.75),
+    inset 0 -8px 14px rgba(30, 27, 75, 0.6);
+}
+body.inkling-notebook-layout #inkling-fab.inkling-avatar.inkling-orb--dragging {
+  cursor: grabbing;
+  animation: none;
+  transition: none;
+}
+
+/* Inkling panel must sit above the Schedule overlay (z 11000) so it's usable
+   from the floating avatar while on Schedule. */
+#inkling-panel.inkling-panel {
+  z-index: 11060 !important;
+}
+body.inkling-notebook-layout.inkling-open #inkling-fab.inkling-avatar {
+  display: none !important;
+}
+@keyframes inkling-orb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes inkling-orb-sheen { to { transform: rotate(360deg); } }
+
+/* Options menu: icon BUBBLES that arc around the orb's left edge (top→left→bottom).
+   Positions are set in JS relative to the orb; left/top = each bubble's centre. */
+#inkling-orb-menu {
+  position: fixed;
+  inset: 0;
+  /* Above the quick-add note bar (11200) + the orb (11250) so the fanned-out
+     action icons overlap everything instead of hiding behind the note bar. */
+  z-index: 11300;
+  display: none;
+  pointer-events: none;
+}
+#inkling-orb-menu.open { display: block; }
+#inkling-orb-menu .inkling-orb-action {
+  position: fixed;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 38%),
+    radial-gradient(circle at 50% 50%, #a5b4fc 0%, #6366f1 46%, #4338ca 100%);
+  box-shadow: 0 5px 16px rgba(49, 46, 129, 0.55), inset 0 1px 4px rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  transition: transform 0.24s cubic-bezier(0.2, 1.3, 0.5, 1), opacity 0.18s ease, filter 0.15s ease;
+}
+#inkling-orb-menu.open .inkling-orb-action {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+#inkling-orb-menu .inkling-orb-action:hover {
+  filter: brightness(1.12);
+  transform: translate(-50%, -50%) scale(1.16);
+}
+/* readable label that appears to the left of each bubble on hover/focus */
+#inkling-orb-menu .inkling-orb-action::after {
+  content: attr(data-label);
+  position: absolute;
+  right: 54px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  background: rgba(10, 14, 26, 0.94);
+  color: #e6ebff;
+  font: 700 11px system-ui;
+  padding: 4px 9px;
+  border-radius: 7px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+#inkling-orb-menu .inkling-orb-action:hover::after,
+#inkling-orb-menu .inkling-orb-action:focus-visible::after { opacity: 1; }
+
+/* Hard gate: when the journal is NOT active, ALL its fixed overlays are gone —
+   they must never float on top of the regular calendar / writer / Inkling. */
+body:not(.weaver-journal-active) #weaver-journal-ui,
+body:not(.weaver-journal-active) #weaver-journal-move,
+body:not(.weaver-journal-active) #weaver-journal-handle,
+body:not(.weaver-journal-active) #weaver-journal-composer {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+body.inkling-surface-idle #three-canvas {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
+/* WordWeaver embed — only WordWeaver app tab */
+body:not(.inkling-tab-wordweaver) #wordweaver-embed {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body:not(.inkling-tab-wordweaver) #wordweaver-embed .wordweaver-canvas,
+body:not(.inkling-tab-wordweaver) #wordweaver-embed-mount {
+  display: none !important;
+}
+
+body.inkling-tab-wordweaver #wordweaver-embed.wordweaver-embed--stage {
+  visibility: visible !important;
+}
+
+/* Stage backdrop off when cosmos idle */
+body.inkling-surface-idle .inkling-stage-backdrop {
+  display: none !important;
+}
+
+body.inkling-surface-idle.inkling-stage-backdrop-on #three-canvas {
+  filter: none;
+}
+
+/* WebGL fallback notice */
+.inkling-webgl-notice {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(var(--inkling-top-bar-h, 48px) + env(safe-area-inset-top, 0px) + 8px);
+  z-index: 450;
+  max-width: min(420px, 92vw);
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+  font-size: 13px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* Mobile-first full-screen scrollable surfaces */
+@media (max-width: 639px) {
+  body.inkling-stage-open.inkling-tab-writer #notebook-writer-panel:not(.hidden),
+  body.inkling-stage-open.inkling-tab-inkling #inkling-panel:not(.hidden),
+  body.inkling-stage-open #week-view-panel:not(.hidden),
+  body.inkling-stage-open #month-view-panel:not(.hidden) {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: calc(var(--inkling-top-bar-h, 48px) + env(safe-area-inset-top, 0px)) !important;
+    bottom: calc(var(--inkling-bottom-nav-h, 62px) + env(safe-area-inset-bottom, 0px)) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    z-index: 10240 !important;
+  }
+
+  body.inkling-tab-calendar.inkling-layer--calendar-max #calendar-sidebar .calendar-sidebar__panel,
+  body.inkling-tab-calendar.inkling-layer--calendar-max .notebook-calendar-dock {
+    max-width: 100vw;
+    overflow-x: auto;
+  }
+}

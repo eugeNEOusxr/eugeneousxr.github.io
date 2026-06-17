@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "districtName": "Inkling Lane",
+  "spawn": {
+    "gridCols": 4,
+    "blockSpacing": 5.5,
+    "streetWidth": 3.2
+  },
+  "words": [
+    {
+      "id": "curiosity",
+      "word": "Curiosity",
+      "hash": "#Curiosity",
+      "definition": "A strong desire to know or learn something.",
+      "example": "Her curiosity led her down the lantern-lit alley.",
+      "addedAt": "2026-03-01"
+    },
+    {
+      "id": "adventure",
+      "word": "Adventure",
+      "hash": "#Adventure",
+      "definition": "An unusual, exciting, or daring experience.",
+      "example": "Every corner of the neighborhood promised a new adventure.",
+      "addedAt": "2026-03-05"
+    },
+    {
+      "id": "discovery",
+      "word": "Discovery",
+      "hash": "#Discovery",
+      "definition": "The act of finding something for the first time.",
+      "example": "The discovery waited behind the blue door on Maple Row.",
+      "addedAt": "2026-03-12"
+    },
+    {
+      "id": "wonder",
+      "word": "Wonder",
+      "hash": "#Wonder",
+      "definition": "A feeling of amazement and admiration.",
+      "example": "He paused in wonder at the glowing word above the roof.",
+      "addedAt": "2026-03-18"
+    },
+    {
+      "id": "belonging",
+      "word": "Belonging",
+      "hash": "#Belonging",
+      "definition": "An affinity for a place or group where one feels accepted.",
+      "example": "The porch light meant belonging on this block.",
+      "addedAt": "2026-04-02"
+    },
+    {
+      "id": "memory",
+      "word": "Memory",
+      "hash": "#Memory",
+      "definition": "Something remembered from the past.",
+      "example": "Each house held a memory like a photograph in the window.",
+      "addedAt": "2026-04-10"
+    },
+    {
+      "id": "hope",
+      "word": "Hope",
+      "hash": "#Hope",
+      "definition": "A feeling of expectation and desire for a positive outcome.",
+      "example": "Hope flickered in the hashtag above the chimney.",
+      "addedAt": "2026-04-22"
+    },
+    {
+      "id": "courage",
+      "word": "Courage",
+      "hash": "#Courage",
+      "definition": "The ability to do something that frightens you.",
+      "example": "It took courage to knock on the yellow house.",
+      "addedAt": "2026-05-01"
+    }
+  ]
+}

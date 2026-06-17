@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111217" />
+  <title>Sign in — Inkling</title>
+  <link rel="icon" href="/icons/inkling-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/icons/favicon-64.png" sizes="64x64" type="image/png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <!-- Backend URL config — MUST load before the module that calls the API, else
+       login posts to this origin (github.io) → 404 → "couldn't reach server". -->
+  <script src="/inkling-config.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style-enhancements.css" />
+  <link rel="stylesheet" href="style-appearance-palettes.css" />
+</head>
+<body class="auth-page">
+  <main class="auth-screen auth-screen--page">
+    <form id="auth-form" class="auth-card panel-card">
+      <h1 class="auth-card__title">Inkling</h1>
+      <p class="auth-card__lead">Sign in with your email or username to keep notes, appointments, and notification settings after every restart.</p>
+
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab is-active" data-auth-tab="signin" role="tab">Sign in</button>
+        <button type="button" class="auth-tab" data-auth-tab="register" role="tab">Create account</button>
+      </div>
+
+      <label for="auth-email" id="auth-email-label">Email or username</label>
+      <input type="text" id="auth-email" name="email" autocomplete="username" inputmode="email" required placeholder="you@example.com or your username" />
+
+      <label for="auth-password">Password</label>
+      <input type="password" id="auth-password" name="password" autocomplete="current-password" required placeholder="At least 6 characters" minlength="6" />
+
+      <div id="auth-username-wrap" class="auth-username-wrap hidden">
+        <label for="auth-username">Username <span class="label-secondary">(for username login)</span></label>
+        <input type="text" id="auth-username" name="username" autocomplete="username" placeholder="letters, numbers, underscore" pattern="[a-zA-Z0-9_]{3,24}" />
+      </div>
+
+      <p class="auth-forgot"><a href="/forgot-password.html">Forgot password?</a></p>
+
+      <p id="auth-error" class="auth-error hidden" role="alert"></p>
+      <p id="auth-sync-status" class="auth-sync-status" aria-live="polite"></p>
+
+      <button type="submit" id="auth-submit" class="btn-primary btn-enter auth-submit">
+        <span>Sign in</span>
+        <kbd>↵</kbd>
+      </button>
+
+      <p class="auth-hint">Your data is saved to this app server under your account. Use the same email on any device after signing in.</p>
+
+      <p class="auth-forgot">
+        <a href="#" id="auth-skip-login">Continue without signing in</a>
+      </p>
+      <p class="auth-forgot" style="opacity:.7;font-size:12px">
+        <a href="/privacy.html">Privacy Policy</a>
+      </p>
+    </form>
+  </main>
+
+  <script type="module">
+    import { setSession } from "./src/auth/session.js";
+    import { apiFetch, pullCloudBundle } from "./src/auth/cloudSync.js";
+    import { applyServerUserToClient } from "./src/auth/userSettingsSync.js";
+
+    const SKIP_LOGIN_KEY = "inklingSkipLogin";
+
+    if (localStorage.getItem(SKIP_LOGIN_KEY) === "true") {
+      window.location.replace("/index.html");
+    }
+
+    const form = document.getElementById("auth-form");
+    const emailInput = document.getElementById("auth-email");
+    const passwordInput = document.getElementById("auth-password");
+    const errorEl = document.getElementById("auth-error");
+    const submitBtn = document.getElementById("auth-submit");
+    const statusEl = document.getElementById("auth-sync-status");
+    const tabSignIn = document.querySelector('[data-auth-tab="signin"]');
+    const tabRegister = document.querySelector('[data-auth-tab="register"]');
+    const usernameWrap = document.getElementById("auth-username-wrap");
+    const usernameInput = document.getElementById("auth-username");
+    const emailLabel = document.getElementById("auth-email-label");
+
+    // Wake the free-tier backend early — cold starts take ~10-30s, so a login
+    // attempted against a sleeping server would otherwise time out / error.
+    try {
+      const base = window.__EUGENEOUS_API__;
+      if (base) {
+        statusEl.textContent = "Connecting to server…";
+        const done = () => { if (statusEl.textContent === "Connecting to server…") statusEl.textContent = ""; };
+        fetch(base + "/", { mode: "cors" }).then(done).catch(done);
+      }
+    } catch (e) { /* ignore */ }
+
+    let mode = "signin";
+
+    const setMode = (next) => {
+      mode = next;
+      tabSignIn?.classList.toggle("is-active", mode === "signin");
+      tabRegister?.classList.toggle("is-active", mode === "register");
+      usernameWrap?.classList.toggle("hidden", mode !== "register");
+      // Sign in accepts an email OR a username; registering needs a real email.
+      if (emailLabel) emailLabel.textContent = mode === "signin" ? "Email or username" : "Email";
+      if (emailInput) emailInput.placeholder =
+        mode === "signin" ? "you@example.com or your username" : "you@example.com";
+      if (submitBtn) submitBtn.querySelector("span").textContent =
+        mode === "signin" ? "Sign in" : "Create account";
+      errorEl?.classList.add("hidden");
+    };
+
+    tabSignIn?.addEventListener("click", () => setMode("signin"));
+    tabRegister?.addEventListener("click", () => setMode("register"));
+
+    document.getElementById("auth-skip-login")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      localStorage.setItem(SKIP_LOGIN_KEY, "true");
+      window.location.href = "/index.html";
+    });
+
+    form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const identifier = emailInput?.value?.trim().toLowerCase() ?? "";
+      const password = passwordInput?.value ?? "";
+      if (mode === "register" && !(identifier.includes("@") && identifier.includes("."))) {
+        errorEl.textContent = "Enter a valid email to create an account.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      if (!identifier || password.length < 6) {
+        errorEl.textContent = "Enter your email or username and a password (6+ characters).";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      submitBtn.disabled = true;
+      errorEl.classList.add("hidden");
+      statusEl.textContent = mode === "signin" ? "Signing in…" : "Creating account…";
+
+      try {
+        const path = mode === "signin" ? "/api/auth/login" : "/api/auth/register";
+        const payload = { email: identifier, password };
+        if (mode === "register" && usernameInput?.value?.trim()) {
+          payload.username = usernameInput.value.trim();
+        }
+        // Retry through a cold start: the first hit on a sleeping free-tier
+        // backend can 502/stall, so try a few times before surfacing an error.
+        let result;
+        for (let attempt = 0; ; attempt++) {
+          try {
+            result = await apiFetch(path, { method: "POST", body: JSON.stringify(payload), timeoutMs: 12000 });
+            break;
+          } catch (e) {
+            if (attempt < 2 && (e.status === undefined || e.status >= 500)) {
+              statusEl.textContent = "Server's waking up (free tier) — hang on…";
+              await new Promise((r) => setTimeout(r, 3500));
+              continue;
+            }
+            throw e;
+          }
+        }
+        // No token = no real backend (e.g. the static GitHub Pages build).
+        // Don't fake a sign-in and bounce back — say so clearly.
+        if (!result?.token) {
+          throw new Error(
+            "Couldn't reach the account server. Accounts need the local/hosted server — or use “Continue without signing in.”"
+          );
+        }
+        setSession({ token: result.token, email: result.email, user: result.user });
+        applyServerUserToClient(result.user);
+        statusEl.textContent = "Loading your calendar…";
+        // Don't let a slow/hanging cloud sync trap you on the login page after a
+        // successful sign-in — give it a few seconds, then go in regardless (the
+        // app re-syncs on load anyway).
+        await Promise.race([
+          pullCloudBundle().catch(() => {}),
+          new Promise((r) => setTimeout(r, 4000))
+        ]);
+        window.location.href = "/index.html";
+      } catch (err) {
+        errorEl.textContent = err.message || "Could not sign in.";
+        errorEl.classList.remove("hidden");
+        statusEl.textContent = "";
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+  <!-- Visitor analytics (GoatCounter). Owner self-exclude: ?noviews once per device. -->
+  <script>
+    (function () {
+      try {
+        var p = new URLSearchParams(location.search);
+        if (p.has("noviews")) localStorage.setItem("skipgc", "t");
+        if (p.has("countme")) localStorage.removeItem("skipgc");
+        if (localStorage.getItem("skipgc") === "t") return;
+      } catch (e) { /* ignore */ }
+      var s = document.createElement("script");
+      s.async = true;
+      s.src = "//gc.zgo.at/count.js";
+      s.setAttribute("data-goatcounter", "https://eugeneousxr.goatcounter.com/count");
+      document.head.appendChild(s);
+    })();
+  </script>
+</body>
+</html>
