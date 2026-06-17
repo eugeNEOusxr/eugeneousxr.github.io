@@ -62,6 +62,7 @@
     .empty{color:var(--muted);line-height:1.6;padding:20px 4px}
     .grow{display:flex;align-items:flex-start;gap:8px;margin:4px 0 16px}
     .grow .qmedia.gfx{background:var(--bg)}
+    .tscroll{overflow-x:auto;margin:6px 0 16px}
     .ask{font-size:15px;margin:0 0 10px}
     .inwrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .inlabel{font-size:16px}
@@ -117,10 +118,10 @@
       for (var i=-5;i<=5;i++){ g+='<line x1="'+sx(i)+'" y1="'+sy(-5)+'" x2="'+sx(i)+'" y2="'+sy(5)+'" style="stroke:var(--grid);stroke-width:.5"/>'; g+='<line x1="'+sx(-5)+'" y1="'+sy(i)+'" x2="'+sx(5)+'" y2="'+sy(i)+'" style="stroke:var(--grid);stroke-width:.5"/>'; }
       g+='<line x1="'+sx(-5)+'" y1="'+sy(0)+'" x2="'+sx(5)+'" y2="'+sy(0)+'" style="stroke:var(--axis);stroke-width:1"/>';
       g+='<line x1="'+sx(0)+'" y1="'+sy(-5)+'" x2="'+sx(0)+'" y2="'+sy(5)+'" style="stroke:var(--axis);stroke-width:1"/>';
-      [-4,-2,2,4].forEach(function(n){
-        g+='<text x="'+sx(n)+'" y="'+(parseFloat(sy(0))+9).toFixed(1)+'" text-anchor="middle" style="fill:var(--muted);font:7px system-ui">'+n+'</text>';
-        g+='<text x="'+(parseFloat(sx(0))-5).toFixed(1)+'" y="'+(parseFloat(sy(n))+2.6).toFixed(1)+'" text-anchor="end" style="fill:var(--muted);font:7px system-ui">'+n+'</text>';
-      });
+      for (var nn=-5;nn<=5;nn++){ if(nn===0) continue;
+        g+='<text x="'+sx(nn)+'" y="'+(parseFloat(sy(0))+8).toFixed(1)+'" text-anchor="middle" style="fill:var(--muted);font:6.5px system-ui">'+nn+'</text>';
+        g+='<text x="'+(parseFloat(sx(0))-4).toFixed(1)+'" y="'+(parseFloat(sy(nn))+2.3).toFixed(1)+'" text-anchor="end" style="fill:var(--muted);font:6.5px system-ui">'+nn+'</text>';
+      }
       function plot(f,a,b){ a=(a==null?-5:a); b=(b==null?5:b); var d="",pen=true; for(var x=a;x<=b+1e-9;x+=0.1){ var y=f(x); if(!isFinite(y)||y<-5.2||y>5.2){pen=true;continue;} d+=(pen?"M":"L")+sx(x)+" "+sy(y)+" "; pen=false; } return '<path d="'+d.trim()+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>'; }
       function plotX(f,a,b){ a=(a==null?-5:a); b=(b==null?5:b); var d="",pen=true; for(var y=a;y<=b+1e-9;y+=0.1){ var x=f(y); if(!isFinite(x)||x<-5.2||x>5.2){pen=true;continue;} d+=(pen?"M":"L")+sx(x)+" "+sy(y)+" "; pen=false; } return '<path d="'+d.trim()+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>'; }
       if(kind==="sine")g+=plot(function(x){return 2*Math.sin(Math.PI*x/2);});
@@ -149,10 +150,11 @@
     }
 
     function tableHTML(item){
-      if (item.x && item.y) {
-        var hx='<tr><th>x</th>', hy='<tr><th>y</th>';
+      if (item.x && (item.y || item.f)) {
+        var second = item.f || item.y, lab = item.f ? "f(x)" : "y";
+        var hx='<tr><th>x</th>', hy='<tr><th>'+lab+'</th>';
         item.x.forEach(function(v){ hx+='<td>'+v+'</td>'; });
-        item.y.forEach(function(v){ hy+='<td>'+v+'</td>'; });
+        second.forEach(function(v){ hy+='<td>'+v+'</td>'; });
         return '<table class="dt">'+hx+'</tr>'+hy+'</tr></table>';
       }
       var h='<table class="dt"><tr><th>x</th><th>y</th></tr>';
@@ -207,6 +209,16 @@
         ask: "Evaluate <em>f</em>(−1):",
         label: "<em>f</em>(−1) =",
         answer: -3, answerText: "-3", points: 10
+      },
+      {
+        type: "tableinput",
+        prompt: "Based on the table below,",
+        table: { x: [0,1,2,3,4,5,6,7,8,9], f: [81,82,11,66,6,16,42,50,2,17] },
+        blanks: [
+          { ask: "Evaluate <em>f</em>(2):", label: "<em>f</em>(2) =", answer: 11 },
+          { ask: "Solve <em>f</em>(<em>x</em>) = 6:", label: "<em>x</em> =", answer: 4 }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -281,6 +293,13 @@
           '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>'
           + '<div class="ask">'+q.ask+'</div>'
           + '<div class="inwrap"><span class="inlabel">'+q.label+'</span><input type="text" class="ansin" inputmode="text" autocomplete="off" aria-label="Your answer"><span class="mark"></span></div>';
+      } else if (q.type==="tableinput") {
+        promptEl.innerHTML = q.prompt;
+        var html = '<div class="tscroll">'+tableHTML(q.table)+'</div>';
+        q.blanks.forEach(function(b,bi){
+          html += '<div class="ask">'+b.ask+'</div><div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+        });
+        optsEl.innerHTML = html;
       }
       if (!ph && graded[idx]!=null) { scoreEl.textContent = graded[idx]+" / "+q.points; scoreEl.style.color=(graded[idx]===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
@@ -303,6 +322,18 @@
         var correct=(parsed!==null && Math.abs(parsed-q.answer)<1e-9);
         inp.classList.add(correct?"ok":"bad"); if(mk) mk.textContent=correct?"✓":"✗";
         finishGrade(correct?q.points:0, q.points);
+        return;
+      }
+      if (q.type==="tableinput") {
+        var inps=optsEl.querySelectorAll(".ansin"), ok2=0;
+        [].forEach.call(inps,function(inp,bi){
+          inp.classList.remove("ok","bad");
+          var p=evalAnswer(inp.value), right=(p!==null && Math.abs(p-q.blanks[bi].answer)<1e-9);
+          inp.classList.add(right?"ok":"bad");
+          var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent=right?"✓":"✗";
+          if(right)ok2++;
+        });
+        finishGrade(Math.round(ok2/q.blanks.length*q.points), q.points);
         return;
       }
       var rows=optsEl.querySelectorAll("[data-i]"); clearMarks();
@@ -334,6 +365,14 @@
         if(mk) mk.textContent="✓";
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)";
         return;
+      }
+      if (q.type==="tableinput") {
+        [].forEach.call(optsEl.querySelectorAll(".ansin"),function(inp,bi){
+          inp.classList.remove("bad"); inp.classList.add("ok");
+          inp.value = (q.blanks[bi].answerText!=null?q.blanks[bi].answerText:q.blanks[bi].answer);
+          var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent="✓";
+        });
+        scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
       }
       clearMarks();
       [].forEach.call(optsEl.querySelectorAll("[data-i]"),function(row,i){
