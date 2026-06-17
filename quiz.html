@@ -75,6 +75,11 @@
     .mlbl{font-size:15px;min-width:16px;color:var(--text)}
     .mright .qmedia.gfx{width:120px;background:var(--bg);border:.5px solid var(--line);border-radius:8px}
     .mrow.ok .meq{color:var(--ok)} .mrow.bad .meq{color:var(--bad)}
+    .lmrow{flex-direction:column;align-items:flex-start;gap:7px;margin-bottom:18px}
+    .lmtop{display:flex;align-items:center;gap:8px}
+    .lmrow .msel{min-width:140px;font-weight:500}
+    .lmrow.ok .msel{box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
+    .lmrow.bad .msel{box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
     .ask{font-size:15px;margin:0 0 10px}
     .inwrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .inlabel{font-size:16px}
@@ -325,6 +330,20 @@
           { eq: "<em>y</em> = <em>x</em>³", answer: 1 }
         ],
         points: 10
+      },
+      {
+        type: "labelmatch", media: "table",
+        prompt: "Match each table with its equation.",
+        choices: ["Linear", "Reciprocal", "Square Root", "Quadratic", "Absolute Value", "Cubic"],
+        items: [
+          { data: { head:["Input","Output"], rows:[["-2","2"],["-1","1"],["0","0"],["1","1"],["2","2"],["3","3"]] }, answer: 4 },
+          { data: { head:["Input","Output"], rows:[["-2","4"],["-1","1"],["0","0"],["1","1"],["2","4"],["3","9"]] }, answer: 3 },
+          { data: { head:["Input","Output"], rows:[["-2","-8"],["-1","-1"],["0","0"],["1","1"],["2","8"],["3","27"]] }, answer: 5 },
+          { data: { head:["Input","Output"], rows:[["-2","_"],["-1","_"],["0","0"],["1","1"],["4","2"],["9","3"]] }, answer: 2 },
+          { data: { head:["Input","Output"], rows:[["-2","-0.5"],["-1","-1"],["0","_"],["1","1"],["2","0.5"],["3","0.33"]] }, answer: 1 },
+          { data: { head:["Input","Output"], rows:[["-2","-2"],["-1","-1"],["0","0"],["1","1"],["2","2"],["3","3"]] }, answer: 0 }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -433,6 +452,16 @@
           else rightH += '<div class="mopt">'+L[k]+'. '+op+'</div>';
         });
         optsEl.innerHTML = '<div class="matchwrap"><div class="mleft">'+leftH+'</div><div class="mright">'+rightH+'</div></div>';
+      } else if (q.type==="labelmatch") {
+        promptEl.innerHTML = q.prompt;
+        var lh="";
+        q.items.forEach(function(it,i){
+          var o='<option value=""></option>';
+          q.choices.forEach(function(c,k){ o+='<option value="'+k+'">'+c+'</option>'; });
+          var media = (q.media==="graph") ? '<div class="qmedia gfx">'+graphSVG(it.data)+'</div>' : tableHTML(it.data);
+          lh += '<div class="mrow lmrow"><div class="lmtop"><select class="msel" aria-label="Item '+(i+1)+'">'+o+'</select><span class="mark"></span></div><div class="lmmedia">'+media+'</div></div>';
+        });
+        optsEl.innerHTML = lh;
       }
       if (!ph && graded[idx]!=null) { scoreEl.textContent = graded[idx]+" / "+q.points; scoreEl.style.color=(graded[idx]===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
@@ -469,7 +498,7 @@
         finishGrade(Math.round(ok2/q.blanks.length*q.points), q.points);
         return;
       }
-      if (q.type==="match") {
+      if (q.type==="match" || q.type==="labelmatch") {
         var mrows=optsEl.querySelectorAll(".mrow"), ok3=0;
         [].forEach.call(mrows,function(row,i){
           var sel=row.querySelector(".msel"); var v=(sel.value===""?-1:parseInt(sel.value,10));
@@ -518,7 +547,7 @@
         });
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
       }
-      if (q.type==="match") {
+      if (q.type==="match" || q.type==="labelmatch") {
         [].forEach.call(optsEl.querySelectorAll(".mrow"),function(row,i){
           row.querySelector(".msel").value=String(q.items[i].answer);
           row.classList.remove("bad"); row.classList.add("ok"); row.querySelector(".mark").textContent="✓";
