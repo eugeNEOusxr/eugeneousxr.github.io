@@ -230,6 +230,18 @@
           { ask: "Solve <em>f</em>(<em>x</em>) = 4:", label: "<em>x</em> =", answer: -1, answerText: "-1" }
         ],
         points: 10
+      },
+      {
+        type: "multiinput",
+        prompt: "Given the function <em>f</em>(<em>x</em>) = 3<em>x</em>² − 7<em>x</em> + 3. Calculate the following values:",
+        blanks: [
+          { label: "<em>f</em>(−2) =", answer: 29 },
+          { label: "<em>f</em>(−1) =", answer: 13 },
+          { label: "<em>f</em>(0) =", answer: 3 },
+          { label: "<em>f</em>(1) =", answer: -1, answerText: "-1" },
+          { label: "<em>f</em>(2) =", answer: 1 }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -318,6 +330,11 @@
           gh += '<div class="ask">'+b.ask+'</div><div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
         });
         optsEl.innerHTML = gh;
+      } else if (q.type==="multiinput") {
+        promptEl.innerHTML = q.prompt;
+        var mh = "";
+        q.blanks.forEach(function(b,bi){ mh += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>'; });
+        optsEl.innerHTML = mh;
       }
       if (!ph && graded[idx]!=null) { scoreEl.textContent = graded[idx]+" / "+q.points; scoreEl.style.color=(graded[idx]===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
@@ -342,7 +359,7 @@
         finishGrade(correct?q.points:0, q.points);
         return;
       }
-      if (q.type==="tableinput" || q.type==="graphinput") {
+      if (q.type==="tableinput" || q.type==="graphinput" || q.type==="multiinput") {
         var inps=optsEl.querySelectorAll(".ansin"), ok2=0;
         [].forEach.call(inps,function(inp,bi){
           inp.classList.remove("ok","bad");
@@ -384,7 +401,7 @@
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)";
         return;
       }
-      if (q.type==="tableinput" || q.type==="graphinput") {
+      if (q.type==="tableinput" || q.type==="graphinput" || q.type==="multiinput") {
         [].forEach.call(optsEl.querySelectorAll(".ansin"),function(inp,bi){
           inp.classList.remove("bad"); inp.classList.add("ok");
           inp.value = (q.blanks[bi].answerText!=null?q.blanks[bi].answerText:q.blanks[bi].answer);
