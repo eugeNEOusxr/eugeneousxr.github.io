@@ -344,6 +344,20 @@
           { data: { head:["Input","Output"], rows:[["-2","-2"],["-1","-1"],["0","0"],["1","1"],["2","2"],["3","3"]] }, answer: 0 }
         ],
         points: 10
+      },
+      {
+        type: "match", media: "graph", itemMedia: "table",
+        prompt: "Match each graph with its table.",
+        options: ["identity", "cube", "sqrt0", "sq", "absv", "recip"],
+        items: [
+          { data: { head:["Input","Output"], rows:[["-2","-2"],["-1","-1"],["0","0"],["1","1"],["2","2"],["3","3"]] }, answer: 0 },
+          { data: { head:["Input","Output"], rows:[["-2","_"],["-1","_"],["0","0"],["1","1"],["4","2"],["9","3"]] }, answer: 2 },
+          { data: { head:["Input","Output"], rows:[["-2","4"],["-1","1"],["0","0"],["1","1"],["2","4"],["3","9"]] }, answer: 3 },
+          { data: { head:["Input","Output"], rows:[["-2","-8"],["-1","-1"],["0","0"],["1","1"],["2","8"],["3","27"]] }, answer: 1 },
+          { data: { head:["Input","Output"], rows:[["-2","2"],["-1","1"],["0","0"],["1","1"],["2","2"],["3","3"]] }, answer: 4 },
+          { data: { head:["Input","Output"], rows:[["-2","-0.5"],["-1","-1"],["0","_"],["1","1"],["2","0.5"],["3","0.33"]] }, answer: 5 }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -444,7 +458,12 @@
         q.items.forEach(function(it,i){
           var o='<option value=""></option>';
           for(var k=0;k<q.options.length;k++){ o+='<option value="'+k+'">'+L[k]+'</option>'; }
-          leftH += '<div class="mrow"><select class="msel" aria-label="Match '+(i+1)+'">'+o+'</select><span class="meq">'+it.eq+'</span><span class="mark"></span></div>';
+          if (it.eq) {
+            leftH += '<div class="mrow"><select class="msel" aria-label="Match '+(i+1)+'">'+o+'</select><span class="meq">'+it.eq+'</span><span class="mark"></span></div>';
+          } else {
+            var im = (q.itemMedia==="graph") ? '<div class="qmedia gfx">'+graphSVG(it.data)+'</div>' : '<div class="qmedia">'+tableHTML(it.data)+'</div>';
+            leftH += '<div class="mrow lmrow"><div class="lmtop"><select class="msel" aria-label="Match '+(i+1)+'">'+o+'</select><span class="mark"></span></div>'+im+'</div>';
+          }
         });
         q.options.forEach(function(op,k){
           if (q.media==="graph") rightH += '<div class="mopt mgfx"><span class="mlbl">'+L[k]+'.</span><div class="qmedia gfx">'+graphSVG(op)+'</div><button class="zoom" aria-label="Zoom '+L[k]+'">🔍</button></div>';
