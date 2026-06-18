@@ -106,7 +106,16 @@
     .zoomov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:22px}
     .zoombox{width:min(92vw,520px);background:var(--surface);border:.5px solid var(--line);border-radius:14px;padding:12px}
     em{font-style:italic}
+    .genbtn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,#a855f7,#7c3aed);border:0;border-radius:9px;padding:8px 13px;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+    .genbtn:active{transform:scale(.96)}
+    .genbar{margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .geninput{flex:1 1 220px;min-width:160px;height:38px;padding:0 12px;border-radius:10px;border:.5px solid var(--line);background:var(--surface);color:var(--text);font:500 14px system-ui;outline:none}
+    .gengo{flex:0 0 auto;height:38px;padding:0 16px;border-radius:10px;border:0;background:linear-gradient(180deg,#a855f7,#7c3aed);color:#fff;font:800 13px system-ui;cursor:pointer}
+    .gengo[disabled]{opacity:.5;cursor:default}
+    .gennote{flex:1 1 100%;font-size:12px;color:var(--muted)}
+    .gennote.err{color:#fca5a5}.gennote.ok{color:#86efac}
   </style>
+  <script src="/inkling-config.js"></script>
 </head>
 <body data-theme="dark">
   <header>
@@ -126,8 +135,14 @@
         <div class="menu" id="menu" role="menu"></div>
       </div>
       <button class="arrow" id="nextq" aria-label="Next question">›</button>
+      <button class="genbtn" id="genBtn" type="button" title="Generate a new set with Inkling AI">✨ Generate</button>
     </div>
     <div class="setrow" id="setRow" style="display:none"><span class="slbl">Sets</span></div>
+    <div class="genbar" id="genBar" style="display:none">
+      <input class="geninput" id="genTopic" type="text" placeholder="Topic for a new AI set… e.g. Quadratic formula" maxlength="120" />
+      <button class="gengo" id="genGo" type="button">Generate</button>
+      <span class="gennote" id="genNote"></span>
+    </div>
   </header>
   <main>
     <p class="prompt" id="prompt"></p>
@@ -1146,6 +1161,52 @@
     } catch(_){}
     // Tell the host we're ready to receive a deck.
     try { if (window.parent && window.parent !== window) window.parent.postMessage({ type:"inkling-quiz-ready" }, "*"); } catch(_){}
+
+    // ── ✨ Generate a new set via Inkling AI (Haiku backend) ──────────────────
+    var genBtn=document.getElementById("genBtn"), genBar=document.getElementById("genBar"),
+        genTopic=document.getElementById("genTopic"), genGo=document.getElementById("genGo"), genNote=document.getElementById("genNote");
+    function apiBase(){
+      try { if (window.__EUGENEOUS_API__) return String(window.__EUGENEOUS_API__).replace(/\/$/,""); } catch(_){}
+      return "https://inkling-15yf.onrender.com";
+    }
+    function authToken(){
+      try { var s=JSON.parse(localStorage.getItem("eugeneousxr:session")||"null"); return (s && s.token) || null; } catch(_){ return null; }
+    }
+    function setNote(msg, kind){ genNote.textContent=msg||""; genNote.className="gennote"+(kind?" "+kind:""); }
+    genBtn.addEventListener("click", function(){
+      var open = genBar.style.display==="none";
+      genBar.style.display = open ? "flex" : "none";
+      if (open){ setNote(""); genTopic.focus(); }
+    });
+    genTopic.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); doGenerate(); } });
+    genGo.addEventListener("click", doGenerate);
+    function doGenerate(){
+      var topic=(genTopic.value||"").trim();
+      if (topic.length<2){ setNote("Type a topic first.", "err"); genTopic.focus(); return; }
+      if (!authToken()){ setNote("Sign in to Inkling first, then reopen this to generate.", "err"); return; }
+      genGo.disabled=true; var orig=genGo.textContent; genGo.textContent="Generating…";
+      setNote("Asking Inkling… the AI can take a few seconds (longer if the server was asleep).");
+      fetch(apiBase()+"/api/inkling/quiz-set", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+authToken(), "X-Inkling-Client":"Inkling" },
+        body: JSON.stringify({ topic: topic })
+      }).then(function(res){ return res.json().catch(function(){ return null; }).then(function(d){ return { ok:res.ok, status:res.status, data:d }; }); })
+        .then(function(r){
+          genGo.disabled=false; genGo.textContent=orig;
+          var data=r.data;
+          if (!r.ok){ setNote("Couldn't generate — "+((data&&data.error)||("server "+r.status)), "err"); return; }
+          var src = data && data.source;
+          if (src==="guest"){ setNote("Sign in to Inkling to use the AI generator.", "err"); return; }
+          if (src==="capped"){ setNote("You've hit today's AI limit — it resets tomorrow.", "err"); return; }
+          if (!data || !Array.isArray(data.questions) || !data.questions.length){ setNote("Couldn't make a set — try a clearer topic.", "err"); return; }
+          var deck = { id:"✨ "+topic, title:topic, topic:topic, questions:data.questions };
+          if (addGeneratedDeck(deck)){
+            setNote((src==="mock"?"(Demo set — live AI fills in once the server is deployed.) ":"")+"Done — showing your new set ↑", "ok");
+            genBar.style.display="none"; genTopic.value="";
+          } else { setNote("Got a response but couldn't build a set from it.", "err"); }
+        })
+        .catch(function(){ genGo.disabled=false; genGo.textContent=orig; setNote("Couldn't reach Inkling — check your connection and try again.", "err"); });
+    }
   })();
   </script>
 </body>
