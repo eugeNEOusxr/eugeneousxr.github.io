@@ -176,10 +176,16 @@
     }
 
     function normExpr(s){
-      s = String(s).toLowerCase().replace(/\s+/g,"").replace(/\*/g,"").replace(/−/g,"-");
+      s = String(s).toLowerCase().replace(/\s+/g,"").replace(/\*/g,"").replace(/−/g,"-").replace(/²/g,"^2").replace(/³/g,"^3");
       if (s==="") return "";
       if (!/^[+-]/.test(s)) s = "+"+s;
       var t = s.match(/[+-][^+-]+/g) || [];
+      t = t.map(function(term){
+        var m = term.match(/^([+-])(\d*\.?\d*)(.*)$/);
+        if (!m) return term;
+        var f = (m[3].match(/[a-z](\^\d+)?/g) || []); f.sort();
+        return m[1] + m[2] + f.join("");
+      });
       t.sort();
       return t.join("");
     }
@@ -389,6 +395,15 @@
         prompt: "For the function <em>f</em>(<em>x</em>) = 3<em>x</em>² + 2<em>x</em>, evaluate and simplify.",
         blanks: [
           { label: "[<em>f</em>(<em>x</em>+<em>h</em>) − <em>f</em>(<em>x</em>)] / <em>h</em> =", answer: "6x + 3h + 2" }
+        ],
+        points: 10
+      },
+      {
+        type: "multiinput",
+        prompt: "For the function <em>f</em>(<em>x</em>) = −5<em>x</em>² + <em>x</em> + 5, evaluate and fully simplify each of the following.",
+        blanks: [
+          { label: "<em>f</em>(<em>x</em> + <em>h</em>) =", answer: "-5x² - 10xh - 5h² + x + h + 5" },
+          { label: "[<em>f</em>(<em>x</em>+<em>h</em>) − <em>f</em>(<em>x</em>)] / <em>h</em> =", answer: "-10x - 5h + 1" }
         ],
         points: 10
       }
