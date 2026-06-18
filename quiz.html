@@ -175,6 +175,21 @@
       return null;
     }
 
+    function normExpr(s){
+      s = String(s).toLowerCase().replace(/\s+/g,"").replace(/\*/g,"").replace(/−/g,"-");
+      if (s==="") return "";
+      if (!/^[+-]/.test(s)) s = "+"+s;
+      var t = s.match(/[+-][^+-]+/g) || [];
+      t.sort();
+      return t.join("");
+    }
+    function exprMatch(input, blank){
+      var n = normExpr(input); if (n==="") return false;
+      if (n === normExpr(blank.answer)) return true;
+      if (blank.accept) for (var i=0;i<blank.accept.length;i++){ if (n===normExpr(blank.accept[i])) return true; }
+      return false;
+    }
+
     function tableHTML(item){
       if (item.x && (item.y || item.f)) {
         var second = item.f || item.y, lab = item.f ? "f(x)" : "y";
@@ -358,6 +373,16 @@
           { data: { head:["Input","Output"], rows:[["-2","-0.5"],["-1","-1"],["0","_"],["1","1"],["2","0.5"],["3","0.33"]] }, answer: 5 }
         ],
         points: 10
+      },
+      {
+        type: "multiinput",
+        prompt: "Given the function <em>f</em>(<em>x</em>) = 7<em>x</em> + 6, evaluate and simplify the expressions below.<br><span style=\"font-size:13px;color:var(--muted)\">Simplify fully — expand and collect like terms (e.g. 3x + x → 4x).</span>",
+        blanks: [
+          { label: "<em>f</em>(<em>a</em>) =", answer: "7a + 6", accept: ["6 + 7a"] },
+          { label: "<em>f</em>(<em>a</em> + <em>h</em>) =", answer: "7a + 7h + 6" },
+          { label: "[<em>f</em>(<em>a</em>+<em>h</em>) − <em>f</em>(<em>a</em>)] / <em>h</em> =", answer: 7 }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -509,7 +534,9 @@
         var inps=optsEl.querySelectorAll(".ansin"), ok2=0;
         [].forEach.call(inps,function(inp,bi){
           inp.classList.remove("ok","bad");
-          var p=evalAnswer(inp.value), right=(p!==null && Math.abs(p-q.blanks[bi].answer)<1e-9);
+          var ans=q.blanks[bi].answer, right;
+          if (typeof ans === "number") { var p=evalAnswer(inp.value); right=(p!==null && Math.abs(p-ans)<1e-9); }
+          else { right = exprMatch(inp.value, q.blanks[bi]); }
           inp.classList.add(right?"ok":"bad");
           var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent=right?"✓":"✗";
           if(right)ok2++;
