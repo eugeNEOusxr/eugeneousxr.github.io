@@ -1023,10 +1023,77 @@
 
     // Group decks into sections; multiple decks sharing an id become Set 1, Set 2, ...
     var SECTIONS = [], secIndex = {};
-    DECKS.forEach(function(d,i){
-      if (secIndex[d.id]==null){ secIndex[d.id]=SECTIONS.length; SECTIONS.push({sec:d.id, decks:[]}); }
-      var s=SECTIONS[secIndex[d.id]]; s.decks.push(i); d.set = s.decks.length;
-    });
+    var deckPick = document.getElementById("deckPick");
+    function rebuildSections(){
+      SECTIONS = []; secIndex = {};
+      DECKS.forEach(function(d,i){
+        if (secIndex[d.id]==null){ secIndex[d.id]=SECTIONS.length; SECTIONS.push({sec:d.id, decks:[]}); }
+        var s=SECTIONS[secIndex[d.id]]; s.decks.push(i); d.set = s.decks.length;
+      });
+      deckPick.innerHTML = "";
+      SECTIONS.forEach(function(s,i){ var o=document.createElement("option"); o.value=i; o.textContent=s.sec; deckPick.appendChild(o); });
+      deckPick.value = secIndex[DECKS[curDeck].id];
+    }
+
+    // ── Generated-deck ingestion (Inkling / Haiku → quiz format) ───────────────
+    // A generated set is plain JSON. Supported question "types" (the internal
+    // sorting structure for math questions):
+    //   { "type":"mc", "prompt":"…", "options":["…","…",…], "correct":<index> }
+    //   { "type":"multiinput", "prompt":"…",
+    //     "blanks":[{ "label":"…", "answer":<number | "expr" | "interval">, "answerText":"…"? }] }
+    // Answer routing at grade time: number→exact numeric; string with a letter→
+    // algebraic equivalence (exprEquiv); else interval/text match. So the AI just
+    // emits numbers for computed answers, expressions like "6x+12" for algebra, or
+    // interval strings like "(-∞, 3]"/"[0, ∞)" for domains/ranges.
+    function normalizeQuestion(q){
+      if (!q || typeof q !== "object" || !q.prompt) return null;
+      var points = (typeof q.points === "number" && q.points > 0) ? q.points : 10;
+      var prompt = String(q.prompt);
+      if (q.type === "mc") {
+        var options = Array.isArray(q.options) ? q.options.map(String) : [];
+        if (options.length < 2) return null;
+        var correct = (typeof q.correct === "number" && q.correct >= 0 && q.correct < options.length) ? q.correct : 0;
+        return { type:"mc", prompt:prompt, options:options, correct:correct, points:points };
+      }
+      if (q.type === "multiinput" || q.type === "input" || q.type === "numeric" || q.type === "fill") {
+        var src = Array.isArray(q.blanks) ? q.blanks
+          : (q.answer != null ? [{ label:q.label, answer:q.answer, answerText:q.answerText }] : []);
+        var blanks = [];
+        src.forEach(function(b){
+          if (b == null || b.answer == null) return;
+          var ans = b.answer;
+          if (typeof ans === "string" && /^-?\d+(\.\d+)?$/.test(ans.trim())) ans = parseFloat(ans);
+          var nb = { label: String(b.label || "Answer ="), answer: ans };
+          if (b.answerText != null) nb.answerText = String(b.answerText);
+          blanks.push(nb);
+        });
+        if (!blanks.length) return null;
+        return { type:"multiinput", prompt:prompt, blanks:blanks, points:points };
+      }
+      return null; // unsupported / unsafe type → skip
+    }
+    function normalizeDeck(raw){
+      if (!raw || typeof raw !== "object") return null;
+      var qsrc = Array.isArray(raw.questions) ? raw.questions : (Array.isArray(raw) ? raw : []);
+      var questions = [];
+      qsrc.forEach(function(q){ var nq = normalizeQuestion(q); if (nq) questions.push(nq); });
+      if (!questions.length) return null;
+      return {
+        id: String(raw.id || raw.section || raw.title || raw.topic || "AI").slice(0, 40),
+        title: String(raw.title || raw.topic || "Generated set").slice(0, 120),
+        graded: {}, qcount: questions.length, generated: true, questions: questions
+      };
+    }
+    function addGeneratedDeck(raw){
+      var d = normalizeDeck(raw);
+      if (!d) return false;
+      var existing = -1;
+      DECKS.forEach(function(x,i){ if (x.generated && x.id === d.id) existing = i; });
+      if (existing >= 0) DECKS[existing] = d; else DECKS.push(d);
+      rebuildSections();
+      switchDeck(existing >= 0 ? existing : DECKS.length - 1);
+      return true;
+    }
     var setRow = document.getElementById("setRow");
     function buildSetRow(){
       var s=SECTIONS[secIndex[DECKS[curDeck].id]];
@@ -1055,12 +1122,30 @@
       deckPick.value = secIndex[DECKS[curDeck].id];
       buildSetRow(); closeMenu(); setEarned(); render();
     }
-    var deckPick = document.getElementById("deckPick");
-    SECTIONS.forEach(function(s,i){ var o=document.createElement("option"); o.value=i; o.textContent=s.sec; deckPick.appendChild(o); });
-    deckPick.value = secIndex[DECKS[curDeck].id];
     deckPick.addEventListener("change", function(){ switchDeck(SECTIONS[parseInt(this.value,10)].decks[0]); });
 
+    rebuildSections();
     buildSetRow(); setEarned(); render();
+
+    // Receive generated decks from a host page (Inkling embeds this in an iframe).
+    window.addEventListener("message", function(e){
+      var msg = e && e.data;
+      if (!msg || msg.type !== "inkling-quiz-deck" || !msg.deck) return;
+      var ok = addGeneratedDeck(msg.deck);
+      try { (e.source || window.parent)?.postMessage({ type:"inkling-quiz-deck-ack", ok: ok }, "*"); } catch(_){}
+    });
+    // localStorage handoff: host stashes a deck just before opening the page.
+    try {
+      var stashed = localStorage.getItem("inkling-quiz-incoming-deck");
+      if (stashed) { localStorage.removeItem("inkling-quiz-incoming-deck"); addGeneratedDeck(JSON.parse(stashed)); }
+    } catch(_){}
+    // Direct link: ?deck=<base64-encoded JSON>.
+    try {
+      var dparam = new URLSearchParams(location.search).get("deck");
+      if (dparam) addGeneratedDeck(JSON.parse(decodeURIComponent(escape(atob(dparam)))));
+    } catch(_){}
+    // Tell the host we're ready to receive a deck.
+    try { if (window.parent && window.parent !== window) window.parent.postMessage({ type:"inkling-quiz-ready" }, "*"); } catch(_){}
   })();
   </script>
 </body>
