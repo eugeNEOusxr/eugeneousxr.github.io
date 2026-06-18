@@ -91,6 +91,9 @@
     .ansin{font:500 16px system-ui;padding:9px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);width:150px;outline:none}
     .ansin.ok{box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
     .ansin.bad{box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
+    .fsel{font:500 15px system-ui;padding:8px 10px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer}
+    .fsel.ok{box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
+    .fsel.bad{box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
     .mathkb{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;padding-top:13px;border-top:.5px solid var(--line)}
     .mathkb button{min-width:48px;height:42px;border:.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:16px;cursor:pointer}
     .mathkb button:active{background:var(--accent);color:#fff}
@@ -199,6 +202,8 @@
       else if(kind==="identity")g+=plot(function(x){return x;});
       else if(kind==="cubicTurns")g+=plot(function(x){return 0.25*x*x*x-3*x;});
       else if(kind==="parabMin")g+=plot(function(x){return x*x-4;});
+      else if(kind==="decrCurve")g+=plot(function(x){return 0.12*x*x-1.0*x-1;},-4,4);
+      else if(kind==="parabMax3")g+=plot(function(x){return 2-0.9*(x-3)*(x-3);});
       return '<svg viewBox="0 0 '+W+' '+W+'" width="100%" style="display:block">'+g+'</svg>';
     }
 
@@ -587,7 +592,27 @@
       { type:"multiinput", prompt:"Find the average rate of change of <em>g</em>(<em>x</em>) = 4<em>x</em>³ + 4 from <em>x</em> = −2 to <em>x</em> = 3.", blanks:[{label:"ARC =", answer:28}], points:10 },
       { type:"multiinput", prompt:"Find the average rate of change of <em>g</em>(<em>x</em>) = 4<em>x</em>² + 5/<em>x</em>⁴ on the interval [−4, 1].", blanks:[{label:"ARC =", answer:-11.00390625, answerText:"−2817/256 ≈ −11.0039"}], points:10 },
       { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = 6<em>x</em>² − 3 on the interval [2, <em>b</em>]. Your answer will be an expression involving <em>b</em>.", blanks:[{label:"ARC =", answer:"6b+12", answerText:"6b + 12"}], points:10 },
-      { type:"multiinput", prompt:"Given <em>f</em>(<em>x</em>) = 1/(<em>x</em> + 4), find the average rate of change of <em>f</em>(<em>x</em>) on the interval [7, 7 + <em>h</em>]. Your answer will be an expression involving <em>h</em>.", blanks:[{label:"ARC =", answer:"-1/(11(11+h))", answerText:"−1/(11(11 + h))"}], points:10 }
+      { type:"multiinput", prompt:"Given <em>f</em>(<em>x</em>) = 1/(<em>x</em> + 4), find the average rate of change of <em>f</em>(<em>x</em>) on the interval [7, 7 + <em>h</em>]. Your answer will be an expression involving <em>h</em>.", blanks:[{label:"ARC =", answer:"-1/(11(11+h))", answerText:"−1/(11(11 + h))"}], points:10 },
+      { type:"graphform", prompt:"For the graph below, determine if it represents a function that is increasing or decreasing.", graph:"decrCurve", fields:[
+        {kind:"select", label:"This function is", choices:["Increasing","Decreasing"], answer:1}
+      ], points:10 },
+      { type:"graphinput", prompt:"The function graphed above is increasing on some interval(s) and decreasing on others. Use the graph to state each in interval notation.", graph:"cubicTurns", blanks:[
+        {label:"Increasing on the interval(s):", answer:"(-∞,-2)∪(2,∞)"},
+        {label:"Decreasing on the interval(s):", answer:"(-2,2)"}
+      ], points:10 },
+      { type:"multiinput", prompt:"The function <em>f</em>(<em>x</em>) = 2<em>x</em>³ − 33<em>x</em>² + 168<em>x</em> + 10 has one local minimum and one local maximum. Use a graph of the function to estimate these local extrema.", blanks:[
+        {label:"Local minimum at <em>x</em> =", answer:7},
+        {label:"with output value:", answer:255},
+        {label:"Local maximum at <em>x</em> =", answer:4},
+        {label:"with output value:", answer:282}
+      ], points:10 },
+      { type:"graphform", prompt:"Consider the function graphed at right.", graph:"parabMax3", fields:[
+        {kind:"select", label:"The function has a", choices:["minimum","maximum"], answer:1},
+        {kind:"input", label:"of", answer:2},
+        {kind:"input", label:"at <em>x</em> =", answer:3},
+        {kind:"input", label:"Increasing on the interval(s):", answer:"(-∞,3)"},
+        {kind:"input", label:"Decreasing on the interval(s):", answer:"(3,∞)"}
+      ], points:10 }
     ] }
     ];
     var DEFAULT_QCOUNT = 20;
@@ -684,6 +709,19 @@
         var mh = "";
         q.blanks.forEach(function(b,bi){ mh += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>'; });
         optsEl.innerHTML = mh;
+      } else if (q.type==="graphform") {
+        promptEl.innerHTML = q.prompt;
+        var ff = q.graph ? '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>' : '';
+        q.fields.forEach(function(f,fi){
+          if (f.kind==="select"){
+            var o='<option value=""></option>';
+            f.choices.forEach(function(c,k){ o+='<option value="'+k+'">'+c+'</option>'; });
+            ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span><select class="ffield fsel" data-f="'+fi+'" aria-label="Field '+(fi+1)+'">'+o+'</select><span class="mark"></span></div>';
+          } else {
+            ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span><input type="text" class="ffield ansin" data-f="'+fi+'" inputmode="text" autocomplete="off" aria-label="Field '+(fi+1)+'"><span class="mark"></span></div>';
+          }
+        });
+        optsEl.innerHTML = ff;
       } else if (q.type==="match") {
         promptEl.innerHTML = q.prompt;
         var L="abcdefghijkl".split("");
@@ -716,6 +754,7 @@
         optsEl.innerHTML = lh;
       }
       if (!ph && q.blanks && q.blanks.some(function(b){ return typeof b.answer==="string" && /[∞∪\[\]()]/.test(b.answer) && !/[a-z]/i.test(b.answer); })) optsEl.insertAdjacentHTML("beforeend", MATHKB);
+      if (!ph && q.fields && q.fields.some(function(f){ return f.kind!=="select" && typeof f.answer==="string" && /[∞∪\[\]()]/.test(f.answer) && !/[a-z]/i.test(f.answer); })) optsEl.insertAdjacentHTML("beforeend", MATHKB);
       if (!ph && DECKS[curDeck].graded[idx]!=null) { var gv=DECKS[curDeck].graded[idx]; scoreEl.textContent = gv+" / "+q.points; scoreEl.style.color=(gv===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
     }
@@ -751,6 +790,25 @@
           if(right)ok2++;
         });
         finishGrade(Math.round(ok2/q.blanks.length*q.points), q.points);
+        return;
+      }
+      if (q.type==="graphform") {
+        var ffs=optsEl.querySelectorAll(".ffield"), okf=0;
+        [].forEach.call(ffs,function(el){
+          var f=q.fields[parseInt(el.getAttribute("data-f"),10)], right;
+          el.classList.remove("ok","bad");
+          if (f.kind==="select"){ var v=(el.value===""?-1:parseInt(el.value,10)); right=(v===f.answer); }
+          else {
+            var ans=f.answer;
+            if (typeof ans==="number"){ var p=evalAnswer(el.value); right=(p!==null && Math.abs(p-ans)<1e-9); }
+            else if (/[a-z]/i.test(ans)){ right=exprEquiv(el.value,ans)||exprMatch(el.value,{answer:ans}); }
+            else { right=textMatch(el.value,{answer:ans}); }
+          }
+          el.classList.add(right?"ok":"bad");
+          var mk=el.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent=right?"✓":"✗";
+          if(right)okf++;
+        });
+        finishGrade(Math.round(okf/q.fields.length*q.points), q.points);
         return;
       }
       if (q.type==="match" || q.type==="labelmatch") {
@@ -799,6 +857,16 @@
           inp.classList.remove("bad"); inp.classList.add("ok");
           inp.value = (q.blanks[bi].answerText!=null?q.blanks[bi].answerText:q.blanks[bi].answer);
           var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent="✓";
+        });
+        scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
+      }
+      if (q.type==="graphform") {
+        [].forEach.call(optsEl.querySelectorAll(".ffield"),function(el){
+          var f=q.fields[parseInt(el.getAttribute("data-f"),10)];
+          el.classList.remove("bad"); el.classList.add("ok");
+          if (f.kind==="select"){ el.value=String(f.answer); }
+          else { el.value=(f.answerText!=null?f.answerText:f.answer); }
+          var mk=el.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent="✓";
         });
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
       }
