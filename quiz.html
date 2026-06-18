@@ -164,8 +164,27 @@
       g+='<path d="'+d+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>';
       return '<svg viewBox="0 0 120 120" width="100%" style="display:block">'+g+'</svg>';
     }
+    // Dedicated cubic with local max (-3,6) and local min (3,0); grid x -6..6, y -2..10.
+    function cubicMaxMin(){
+      var SX=9, SY=8.5, OX=64, OY0=97; // y=0 at 97 (y=10 -> 12, y=-2 -> 114)
+      function sx(x){ return (OX + x*SX).toFixed(1); } function sy(y){ return (OY0 - y*SY).toFixed(1); }
+      var g="";
+      for (var x=-6;x<=6;x++){ g+='<line x1="'+sx(x)+'" y1="'+sy(-2)+'" x2="'+sx(x)+'" y2="'+sy(10)+'" style="stroke:var(--grid);stroke-width:.5"/>'; }
+      for (var y=-2;y<=10;y++){ g+='<line x1="'+sx(-6)+'" y1="'+sy(y)+'" x2="'+sx(6)+'" y2="'+sy(y)+'" style="stroke:var(--grid);stroke-width:.5"/>'; }
+      g+='<line x1="'+sx(-6)+'" y1="'+sy(0)+'" x2="'+sx(6)+'" y2="'+sy(0)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      g+='<line x1="'+sx(0)+'" y1="'+sy(-2)+'" x2="'+sx(0)+'" y2="'+sy(10)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      for (var xn=-6;xn<=6;xn++){ if(xn===0)continue; g+='<text x="'+sx(xn)+'" y="'+(parseFloat(sy(0))+8).toFixed(1)+'" text-anchor="middle" style="fill:var(--muted);font:6px system-ui">'+xn+'</text>'; }
+      for (var yn=-2;yn<=10;yn++){ if(yn===0)continue; g+='<text x="'+(parseFloat(sx(0))-3).toFixed(1)+'" y="'+(parseFloat(sy(yn))+2.2).toFixed(1)+'" text-anchor="end" style="fill:var(--muted);font:6px system-ui">'+yn+'</text>'; }
+      var f=function(x){ return x*x*x/18 - 1.5*x + 3; }, d="", pen=true;
+      for (var t=-6;t<=6+1e-9;t+=0.1){ var v=f(t); if(v<-2.2||v>10.2){pen=true;continue;} d+=(pen?"M":"L")+sx(t)+" "+sy(v)+" "; pen=false; }
+      g+='<path d="'+d.trim()+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>';
+      g+='<circle cx="'+sx(-3)+'" cy="'+sy(6)+'" r="2.6" style="fill:var(--curve)"/>';
+      g+='<circle cx="'+sx(3)+'" cy="'+sy(0)+'" r="2.6" style="fill:var(--curve)"/>';
+      return '<svg viewBox="0 0 130 122" width="100%" style="display:block">'+g+'</svg>';
+    }
     function graphSVG(kind) {
       if (kind==="salesWave") return waveGraph();
+      if (kind==="cubicMaxMin") return cubicMaxMin();
       var S = 9, O = 60, W = 120;
       function sx(x){ return (O + x*S).toFixed(1); } function sy(y){ return (O - y*S).toFixed(1); }
       var g = "";
@@ -204,6 +223,7 @@
       else if(kind==="parabMin")g+=plot(function(x){return x*x-4;});
       else if(kind==="decrCurve")g+=plot(function(x){return 0.12*x*x-1.0*x-1;},-4,4);
       else if(kind==="parabMax3")g+=plot(function(x){return 2-0.9*(x-3)*(x-3);});
+      else if(kind==="parabArc"){ g+=plot(function(x){return -0.9*x*x-0.3*x+4;},-2,3); g+='<circle cx="'+sx(-2)+'" cy="'+sy(1)+'" r="2.6" style="fill:var(--curve)"/>'; g+='<circle cx="'+sx(3)+'" cy="'+sy(-5)+'" r="2.6" style="fill:var(--curve)"/>'; }
       return '<svg viewBox="0 0 '+W+' '+W+'" width="100%" style="display:block">'+g+'</svg>';
     }
 
@@ -612,6 +632,20 @@
         {kind:"input", label:"at <em>x</em> =", answer:3},
         {kind:"input", label:"Increasing on the interval(s):", answer:"(-∞,3)"},
         {kind:"input", label:"Decreasing on the interval(s):", answer:"(3,∞)"}
+      ], points:10 },
+      { type:"graphinput", prompt:"Find the absolute maximum and minimum for the given graph. Give your answer as an ordered pair.", graph:"parabArc", blanks:[
+        {label:"Absolute maximum:", answer:"(0,4)"},
+        {label:"Absolute minimum:", answer:"(3,-5)"}
+      ], points:10 },
+      { type:"graphinput", prompt:"Consider the function in the graph below.", graph:"cubicMaxMin", blanks:[
+        {label:"The function has a maximum of:", answer:6},
+        {label:"&nbsp;&nbsp;&nbsp;at <em>x</em> =", answer:-3},
+        {label:"The function has a minimum of:", answer:0},
+        {label:"&nbsp;&nbsp;&nbsp;at <em>x</em> =", answer:3},
+        {label:"Increasing on the interval(s):", answer:"(-∞,-3)∪(3,∞)"},
+        {label:"Decreasing on the interval(s):", answer:"(-3,3)"},
+        {label:"The domain of the function is:", answer:"(-∞,∞)"},
+        {label:"The range of the function is:", answer:"(-∞,∞)"}
       ], points:10 }
     ] }
     ];
