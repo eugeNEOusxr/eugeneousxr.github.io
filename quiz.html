@@ -168,6 +168,8 @@
       else if(kind==="absv")g+=plot(function(x){return Math.abs(x);});
       else if(kind==="cbrt")g+=plot(function(x){return Math.cbrt(x);});
       else if(kind==="identity")g+=plot(function(x){return x;});
+      else if(kind==="cubicTurns")g+=plot(function(x){return 0.25*x*x*x-3*x;});
+      else if(kind==="parabMin")g+=plot(function(x){return x*x-4;});
       return '<svg viewBox="0 0 '+W+' '+W+'" width="100%" style="display:block">'+g+'</svg>';
     }
 
@@ -477,6 +479,28 @@
       { type:"multiinput", prompt:"Find the domain of <em>f</em>(<em>x</em>) = √(<em>x</em> − 6)/(<em>x</em> − 4). Interval notation.", blanks:[{label:"Domain =", answer:"[6, ∞)"}], points:10 },
       { type:"mc", prompt:"What is the domain of <em>f</em>(<em>x</em>) = ∛<em>x</em>  (cube root)?", options:["(-∞, ∞)","[0, ∞)","(0, ∞)","(-∞, 0]"], correct:0, points:10 },
       { type:"multiinput", prompt:"A company's cost to produce <em>x</em> items is <em>C</em>(<em>x</em>) = 10<em>x</em> + 500 dollars.", blanks:[{label:"Fixed cost <em>C</em>(0) = $",answer:500},{label:"Cost of 25 items <em>C</em>(25) = $",answer:750}], points:10 }
+    ] },
+    { id:"1.3", title:"1.3 · Rates of Change & Behavior of Graphs", graded:{}, questions: [
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = <em>x</em>² − 1 on the interval [2, 4].", blanks:[{label:"ARC =", answer:6}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = 3<em>x</em> + 2 on the interval [1, 5].", blanks:[{label:"ARC =", answer:3}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = <em>x</em>² on the interval [1, 3].", blanks:[{label:"ARC =", answer:4}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = 1/<em>x</em> on the interval [1, 4]. A fraction is fine.", blanks:[{label:"ARC =", answer:-0.25, answerText:"-1/4"}], points:10 },
+      { type:"tableinput", prompt:"Use the table to find the average rate of change of <em>f</em> on the interval [1, 3].", table:{ x:[0,1,2,3,4], f:[5,8,9,14,21] }, blanks:[{label:"ARC =", answer:3}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = <em>x</em>² + 3<em>x</em> + 1 on [0, <em>a</em>]. Simplify in terms of <em>a</em>.", blanks:[{label:"ARC =", answer:"a + 3"}], points:10 },
+      { type:"graphinput", prompt:"Use the graph of <em>f</em> below. On what interval(s) is <em>f</em> increasing?", graph:"cubicTurns", blanks:[{label:"Increasing on", answer:"(-∞, -2) ∪ (2, ∞)"}], points:10 },
+      { type:"graphinput", prompt:"Use the same graph. On what interval is <em>f</em> decreasing?", graph:"cubicTurns", blanks:[{label:"Decreasing on", answer:"(-2, 2)"}], points:10 },
+      { type:"graphinput", prompt:"From the graph, identify the local maximum.", graph:"cubicTurns", blanks:[{label:"Maximum value =", answer:4},{label:"occurs at <em>x</em> =", answer:-2}], points:10 },
+      { type:"graphinput", prompt:"From the graph, identify the local minimum.", graph:"cubicTurns", blanks:[{label:"Minimum value =", answer:-4},{label:"occurs at <em>x</em> =", answer:2}], points:10 },
+      { type:"graphinput", prompt:"From the graph of <em>f</em>(<em>x</em>) = <em>x</em>² − 4, identify the absolute minimum.", graph:"parabMin", blanks:[{label:"Minimum value =", answer:-4},{label:"occurs at <em>x</em> =", answer:0}], points:10 },
+      { type:"graphinput", prompt:"Using the graph, find the average rate of change of <em>f</em> on the interval [−2, 2].", graph:"cubicTurns", blanks:[{label:"ARC =", answer:-2}], points:10 },
+      { type:"graphinput", prompt:"How many local extrema (turning points) does the graph have?", graph:"cubicTurns", blanks:[{label:"Number of extrema =", answer:2}], points:10 },
+      { type:"mc", prompt:"The average rate of change of a function over [<em>a</em>, <em>b</em>] equals:", options:["the slope of the secant line through (<em>a</em>, <em>f</em>(<em>a</em>)) and (<em>b</em>, <em>f</em>(<em>b</em>))","the value of <em>f</em> at the midpoint","the steepest slope on the interval","the <em>y</em>-intercept of <em>f</em>"], correct:0, points:10 },
+      { type:"mc", prompt:"A local maximum occurs at a point where the function changes from:", options:["increasing to decreasing","decreasing to increasing","positive to negative","concave up to concave down"], correct:0, points:10 },
+      { type:"mc", prompt:"A function is increasing on an interval when, as <em>x</em> increases, the output <em>f</em>(<em>x</em>):", options:["increases","decreases","stays constant","alternates sign"], correct:0, points:10 },
+      { type:"multiinput", prompt:"Over 6 hours, a car's distance from home goes from 10 miles to 292 miles. Find the average speed.", blanks:[{label:"Average speed (mph) =", answer:47}], points:10 },
+      { type:"multiinput", prompt:"A plant grows from 4 cm to 22 cm over 6 days. Find the average rate of change.", blanks:[{label:"ARC (cm/day) =", answer:3}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = <em>x</em>³ on the interval [0, 2].", blanks:[{label:"ARC =", answer:4}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = 4<em>x</em>² − 7 on the interval [1, 3].", blanks:[{label:"ARC =", answer:16}], points:10 }
     ] }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
@@ -558,14 +582,14 @@
         promptEl.innerHTML = q.prompt;
         var html = '<div class="tscroll">'+tableHTML(q.table)+'</div>';
         q.blanks.forEach(function(b,bi){
-          html += '<div class="ask">'+b.ask+'</div><div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+          html += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
         });
         optsEl.innerHTML = html;
       } else if (q.type==="graphinput") {
         promptEl.innerHTML = q.prompt;
         var gh = '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>';
         q.blanks.forEach(function(b,bi){
-          gh += '<div class="ask">'+b.ask+'</div><div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+          gh += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
         });
         optsEl.innerHTML = gh;
       } else if (q.type==="multiinput") {
