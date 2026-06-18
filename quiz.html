@@ -86,6 +86,10 @@
     .ansin{font:500 16px system-ui;padding:9px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);width:150px;outline:none}
     .ansin.ok{box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
     .ansin.bad{box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
+    .mathkb{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;padding-top:13px;border-top:.5px solid var(--line)}
+    .mathkb button{min-width:48px;height:42px;border:.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:16px;cursor:pointer}
+    .mathkb button:active{background:var(--accent);color:#fff}
+    .mathkb .kbtag{flex-basis:100%;font-size:12px;color:var(--muted);margin:-4px 0 2px}
     footer{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-top:.5px solid var(--line)}
     .btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--text);border:.5px solid var(--line);border-radius:10px;padding:10px 17px;font-size:14px;font-weight:500;cursor:pointer}
     .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
@@ -205,6 +209,20 @@
       if (n === normText(blank.answer)) return true;
       if (blank.accept) for (var i=0;i<blank.accept.length;i++){ if (n===normText(blank.accept[i])) return true; }
       return false;
+    }
+    var MATHKB = '<div class="mathkb" aria-label="Interval keyboard"><span class="kbtag">Interval keyboard — tap to insert</span>'
+      + '<button type="button" data-b="(" data-a=")">( )</button>'
+      + '<button type="button" data-b="[" data-a="]">[ ]</button>'
+      + '<button type="button" data-b="(" data-a="]">( ]</button>'
+      + '<button type="button" data-b="[" data-a=")">[ )</button>'
+      + '<button type="button" data-b="∞">∞</button>'
+      + '<button type="button" data-b="-∞">−∞</button>'
+      + '<button type="button" data-b="∪">∪</button>'
+      + '<button type="button" data-b=",">,</button></div>';
+    function insertAtCursor(input, before, after){
+      after = after || ""; var s=input.selectionStart, e=input.selectionEnd, v=input.value;
+      input.value = v.slice(0,s) + before + after + v.slice(e);
+      var pos = s + before.length; input.setSelectionRange(pos,pos); input.focus();
     }
 
     function tableHTML(item){
@@ -467,7 +485,7 @@
     var DECK = DECKS[curDeck].questions;
     function qnum(i){ return DECKS[curDeck].id + "." + (i + 1); }
 
-    var idx = 0;
+    var idx = 0, lastFocusedAnsin = null;
     var promptEl = document.getElementById("prompt"), optsEl = document.getElementById("opts");
     var scoreEl = document.getElementById("score"), selEl = document.getElementById("sel");
     var earnedEl = document.getElementById("earned"), menuEl = document.getElementById("menu");
@@ -586,6 +604,7 @@
         });
         optsEl.innerHTML = lh;
       }
+      if (!ph && q.blanks && q.blanks.some(function(b){ return typeof b.answer==="string" && /[∞∪\[\]()]/.test(b.answer); })) optsEl.insertAdjacentHTML("beforeend", MATHKB);
       if (!ph && DECKS[curDeck].graded[idx]!=null) { var gv=DECKS[curDeck].graded[idx]; scoreEl.textContent = gv+" / "+q.points; scoreEl.style.color=(gv===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
     }
@@ -689,7 +708,10 @@
     }
 
     optsEl.addEventListener("keydown",function(e){ if(e.key==="Enter" && e.target.classList && e.target.classList.contains("ansin")){ e.preventDefault(); grade(); } });
+    optsEl.addEventListener("focusin",function(e){ if(e.target.classList && e.target.classList.contains("ansin")) lastFocusedAnsin = e.target; });
     optsEl.addEventListener("click",function(e){
+      var kb=e.target.closest(".mathkb button[data-b]");
+      if(kb){ e.preventDefault(); var inp=lastFocusedAnsin||optsEl.querySelector(".ansin"); if(inp) insertAtCursor(inp, kb.getAttribute("data-b"), kb.getAttribute("data-a")||""); return; }
       var z=e.target.closest(".zoom");
       if(z){ openZoom(z.parentElement.querySelector(".qmedia").innerHTML); return; }
       var m=e.target.closest(".qmedia");
