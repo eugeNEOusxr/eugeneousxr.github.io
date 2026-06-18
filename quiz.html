@@ -231,6 +231,29 @@
       if (blank.accept) for (var i=0;i<blank.accept.length;i++){ if (n===normExpr(blank.accept[i])) return true; }
       return false;
     }
+    // Convert a math-y answer/input string into evaluable JS (implicit mult, ^, −).
+    function toJsExpr(s){
+      s = String(s).toLowerCase().replace(/\s+/g,"").replace(/−/g,"-").replace(/²/g,"^2").replace(/³/g,"^3").replace(/\^/g,"**");
+      s = s.replace(/(\d)([a-z(])/g,"$1*$2");   // 6b -> 6*b , 11( -> 11*(
+      s = s.replace(/([a-z)])(\()/g,"$1*$2");   // b( -> b*( , )( -> )*(
+      s = s.replace(/(\))([a-z0-9])/g,"$1*$2"); // )b -> )*b , )2 -> )*2
+      s = s.replace(/([a-z])([a-z])/g,"$1*$2"); // xh -> x*h
+      return s;
+    }
+    // Numeric equivalence: do input & answer agree as functions of their variable?
+    function exprEquiv(input, ans){
+      var v=(String(ans).toLowerCase().match(/[a-z]/)||["x"])[0];
+      var fi, fa;
+      try { fi=new Function(v,"return ("+toJsExpr(input)+");"); fa=new Function(v,"return ("+toJsExpr(ans)+");"); } catch(e){ return false; }
+      var samples=[0.37,1.13,2.71,3.59,-1.27,4.42,5.83], tot=0, ok=0;
+      for (var i=0;i<samples.length;i++){
+        var x=samples[i], yi, ya;
+        try { yi=fi(x); ya=fa(x); } catch(e){ continue; }
+        if (typeof yi!=="number"||typeof ya!=="number"||!isFinite(yi)||!isFinite(ya)) continue;
+        tot++; if (Math.abs(yi-ya) < 1e-6*(1+Math.abs(ya))) ok++;
+      }
+      return tot>=3 && ok===tot;
+    }
     function normText(s){
       return String(s).toLowerCase().replace(/\s+/g,"").replace(/−/g,"-")
         .replace(/infinity|infty|\binf\b/g,"∞").replace(/union/g,"∪").replace(/\bu\b/g,"∪");
@@ -561,7 +584,10 @@
         {label:"b) between 2022 and 2025? (millions $/yr) =", answer:-9}
       ], points:10 },
       { type:"graphinput", prompt:"Based on the graph above, estimate (to one decimal place) the average rate of change from <em>x</em> = 1 to <em>x</em> = 5.", graph:"salesWave", blanks:[{label:"Average rate of change ≈", answer:1.5}], points:10 },
-      { type:"multiinput", prompt:"Find the average rate of change of <em>g</em>(<em>x</em>) = 4<em>x</em>³ + 4 from <em>x</em> = −2 to <em>x</em> = 3.", blanks:[{label:"ARC =", answer:28}], points:10 }
+      { type:"multiinput", prompt:"Find the average rate of change of <em>g</em>(<em>x</em>) = 4<em>x</em>³ + 4 from <em>x</em> = −2 to <em>x</em> = 3.", blanks:[{label:"ARC =", answer:28}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>g</em>(<em>x</em>) = 4<em>x</em>² + 5/<em>x</em>⁴ on the interval [−4, 1].", blanks:[{label:"ARC =", answer:-11.00390625, answerText:"−2817/256 ≈ −11.0039"}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>f</em>(<em>x</em>) = 6<em>x</em>² − 3 on the interval [2, <em>b</em>]. Your answer will be an expression involving <em>b</em>.", blanks:[{label:"ARC =", answer:"6b+12", answerText:"6b + 12"}], points:10 },
+      { type:"multiinput", prompt:"Given <em>f</em>(<em>x</em>) = 1/(<em>x</em> + 4), find the average rate of change of <em>f</em>(<em>x</em>) on the interval [7, 7 + <em>h</em>]. Your answer will be an expression involving <em>h</em>.", blanks:[{label:"ARC =", answer:"-1/(11(11+h))", answerText:"−1/(11(11 + h))"}], points:10 }
     ] }
     ];
     var DEFAULT_QCOUNT = 20;
@@ -689,7 +715,7 @@
         });
         optsEl.innerHTML = lh;
       }
-      if (!ph && q.blanks && q.blanks.some(function(b){ return typeof b.answer==="string" && /[∞∪\[\]()]/.test(b.answer); })) optsEl.insertAdjacentHTML("beforeend", MATHKB);
+      if (!ph && q.blanks && q.blanks.some(function(b){ return typeof b.answer==="string" && /[∞∪\[\]()]/.test(b.answer) && !/[a-z]/i.test(b.answer); })) optsEl.insertAdjacentHTML("beforeend", MATHKB);
       if (!ph && DECKS[curDeck].graded[idx]!=null) { var gv=DECKS[curDeck].graded[idx]; scoreEl.textContent = gv+" / "+q.points; scoreEl.style.color=(gv===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
     }
@@ -718,8 +744,8 @@
           inp.classList.remove("ok","bad");
           var ans=q.blanks[bi].answer, right;
           if (typeof ans === "number") { var p=evalAnswer(inp.value); right=(p!==null && Math.abs(p-ans)<1e-9); }
-          else if (/[∞∪\[\]()]/.test(ans)) { right = textMatch(inp.value, q.blanks[bi]); }
-          else { right = exprMatch(inp.value, q.blanks[bi]); }
+          else if (/[a-z]/i.test(ans)) { right = exprEquiv(inp.value, ans) || exprMatch(inp.value, q.blanks[bi]); }
+          else { right = textMatch(inp.value, q.blanks[bi]); }
           inp.classList.add(right?"ok":"bad");
           var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent=right?"✓":"✗";
           if(right)ok2++;
