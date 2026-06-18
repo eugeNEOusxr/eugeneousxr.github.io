@@ -1371,9 +1371,11 @@ export function createDayView(scene, dayIso, opts = {}) {
     updateUI();
   }
 
-  if (typeof document !== "undefined" && cards.length) {
+  if (typeof document !== "undefined") {
     // Day-view controls: a small bar pinned TOP-RIGHT that retracts to a handle.
     // Click the handle → options slide out to the left; click » → retract right.
+    // Built on EVERY day (even empty ones) so the day/night/B&W theme + Full/Scroll
+    // controls are always reachable — they used to vanish when a day had no notes.
     modeBar = document.createElement("div");
     modeBar.id = "ww-day-modebar";
     modeBar.style.cssText =
