@@ -31,6 +31,7 @@
     .setrow .slbl{font-size:12px;opacity:.6;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
     .setbtn{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:6px 13px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
     .setbtn.active{background:var(--accent,#6ea8fe);border-color:var(--accent,#6ea8fe);color:#0b1220}
+    .setbtn.newq{margin-left:auto;opacity:.85}
     .arrow{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);font:500 20px system-ui;cursor:pointer;flex:0 0 auto}
     .arrow[disabled]{opacity:.38;cursor:default}
     .seldrop{position:relative;display:inline-block}
@@ -138,7 +139,30 @@
 
   <script>
   (function () {
+    // Dedicated graph for the WebWork "estimate the ARC" wave (x from -1..5, y from 0..10).
+    function waveGraph(){
+      var SX=15, SY=9, OX=22, OYzero=105; // y=0 line at 105, y=10 at 15
+      function sx(x){ return (OX + x*SX).toFixed(1); } function sy(y){ return (OYzero - y*SY).toFixed(1); }
+      var g="";
+      for (var x=-1;x<=5;x++){ g+='<line x1="'+sx(x)+'" y1="'+sy(0)+'" x2="'+sx(x)+'" y2="'+sy(10)+'" style="stroke:var(--grid);stroke-width:.5"/>'; }
+      for (var y=0;y<=10;y++){ g+='<line x1="'+sx(-1)+'" y1="'+sy(y)+'" x2="'+sx(5)+'" y2="'+sy(y)+'" style="stroke:var(--grid);stroke-width:.5"/>'; }
+      g+='<line x1="'+sx(-1)+'" y1="'+sy(0)+'" x2="'+sx(5)+'" y2="'+sy(0)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      g+='<line x1="'+sx(0)+'" y1="'+sy(0)+'" x2="'+sx(0)+'" y2="'+sy(10)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      for (var xn=-1;xn<=5;xn++){ if(xn===0) continue; g+='<text x="'+sx(xn)+'" y="'+(parseFloat(sy(0))+8).toFixed(1)+'" text-anchor="middle" style="fill:var(--muted);font:6.5px system-ui">'+xn+'</text>'; }
+      for (var yn=1;yn<=10;yn++){ g+='<text x="'+(parseFloat(sx(0))-3).toFixed(1)+'" y="'+(parseFloat(sy(yn))+2.3).toFixed(1)+'" text-anchor="end" style="fill:var(--muted);font:6.5px system-ui">'+yn+'</text>'; }
+      // Smooth curve through readable points (peak, valley, bump, valley, peak, descent). f(1)=1, f(5)=7.
+      var pts=[[-1,9],[0,8],[1,1],[2,4],[3,1.5],[4,9],[5,7]], d="M "+sx(pts[0][0])+" "+sy(pts[0][1]);
+      for (var i=0;i<pts.length-1;i++){
+        var p0=pts[Math.max(0,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(pts.length-1,i+2)];
+        var c1x=p1[0]+(p2[0]-p0[0])/6, c1y=p1[1]+(p2[1]-p0[1])/6;
+        var c2x=p2[0]-(p3[0]-p1[0])/6, c2y=p2[1]-(p3[1]-p1[1])/6;
+        d+=" C "+sx(c1x)+" "+sy(c1y)+", "+sx(c2x)+" "+sy(c2y)+", "+sx(p2[0])+" "+sy(p2[1]);
+      }
+      g+='<path d="'+d+'" style="fill:none;stroke:var(--curve);stroke-width:2"/>';
+      return '<svg viewBox="0 0 120 120" width="100%" style="display:block">'+g+'</svg>';
+    }
     function graphSVG(kind) {
+      if (kind==="salesWave") return waveGraph();
       var S = 9, O = 60, W = 120;
       function sx(x){ return (O + x*S).toFixed(1); } function sy(y){ return (O - y*S).toFixed(1); }
       var g = "";
@@ -247,6 +271,7 @@
     }
 
     var T14 = '<div class="tscroll"><table class="dt plain"><tr><th><em>x</em></th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr><tr><th><em>f</em>(<em>x</em>)</th><td>3</td><td>1</td><td>2</td><td>5</td><td>4</td></tr><tr><th><em>g</em>(<em>x</em>)</th><td>2</td><td>4</td><td>5</td><td>1</td><td>3</td></tr></table></div>';
+    var T13B = '<div class="tscroll"><table class="dt plain"><tr><th>year</th><td>2017</td><td>2018</td><td>2019</td><td>2020</td><td>2021</td><td>2022</td><td>2023</td><td>2024</td><td>2025</td></tr><tr><th>sales</th><td>254</td><td>281</td><td>302</td><td>317</td><td>326</td><td>329</td><td>326</td><td>317</td><td>302</td></tr></table></div>';
     var DECKS = [
     { id:"1.1", title:"1.1 · Functions and Function Notation", graded:{}, questions: [
       {
@@ -529,11 +554,19 @@
       { type:"mc", prompt:"Which decomposition expresses <em>h</em>(<em>x</em>) = √(3<em>x</em> − 2) as <em>f</em>(<em>g</em>(<em>x</em>))?", options:["<em>f</em>(<em>x</em>) = √<em>x</em>, <em>g</em>(<em>x</em>) = 3<em>x</em> − 2","<em>f</em>(<em>x</em>) = 3<em>x</em> − 2, <em>g</em>(<em>x</em>) = √<em>x</em>","<em>f</em>(<em>x</em>) = 3√<em>x</em>, <em>g</em>(<em>x</em>) = <em>x</em> − 2","<em>f</em>(<em>x</em>) = √(3<em>x</em>), <em>g</em>(<em>x</em>) = −2"], correct:0, points:10 },
       { type:"mc", prompt:"Which decomposition expresses <em>h</em>(<em>x</em>) = 5 / (<em>x</em>² + 4) as <em>f</em>(<em>g</em>(<em>x</em>))?", options:["<em>f</em>(<em>x</em>) = 5/<em>x</em>, <em>g</em>(<em>x</em>) = <em>x</em>² + 4","<em>f</em>(<em>x</em>) = <em>x</em>² + 4, <em>g</em>(<em>x</em>) = 5/<em>x</em>","<em>f</em>(<em>x</em>) = 5, <em>g</em>(<em>x</em>) = <em>x</em>² + 4","<em>f</em>(<em>x</em>) = 5<em>x</em>, <em>g</em>(<em>x</em>) = <em>x</em>² + 4"], correct:0, points:10 },
       { type:"mc", prompt:"The composition (<em>f</em> ∘ <em>g</em>)(<em>x</em>) means:", options:["<em>f</em>(<em>g</em>(<em>x</em>)) — apply <em>g</em> first, then <em>f</em>","<em>g</em>(<em>f</em>(<em>x</em>)) — apply <em>f</em> first, then <em>g</em>","<em>f</em>(<em>x</em>) · <em>g</em>(<em>x</em>) — multiply the outputs","<em>f</em>(<em>x</em>) + <em>g</em>(<em>x</em>) — add the outputs"], correct:0, points:10 }
+    ] },
+    { id:"1.3", title:"1.3 · Rates of Change & Behavior of Graphs", graded:{}, qcount:12, questions: [
+      { type:"multiinput", prompt:"The table below gives the annual sales (in millions) of a product.<br>"+T13B+"What was the average rate of change of annual sales:", blanks:[
+        {label:"a) between 2022 and 2023? (millions $/yr) =", answer:-3},
+        {label:"b) between 2022 and 2025? (millions $/yr) =", answer:-9}
+      ], points:10 },
+      { type:"graphinput", prompt:"Based on the graph above, estimate (to one decimal place) the average rate of change from <em>x</em> = 1 to <em>x</em> = 5.", graph:"salesWave", blanks:[{label:"Average rate of change ≈", answer:1.5}], points:10 },
+      { type:"multiinput", prompt:"Find the average rate of change of <em>g</em>(<em>x</em>) = 4<em>x</em>³ + 4 from <em>x</em> = −2 to <em>x</em> = 3.", blanks:[{label:"ARC =", answer:28}], points:10 }
     ] }
     ];
-    var QCOUNT = 20, DECK_TOTAL = 200;
+    var DEFAULT_QCOUNT = 20;
     var curDeck = 0;
-    DECKS.forEach(function(d){ while (d.questions.length < QCOUNT) d.questions.push({ type: "placeholder", points: 10 }); });
+    DECKS.forEach(function(d){ d.qcount = d.qcount || DEFAULT_QCOUNT; while (d.questions.length < d.qcount) d.questions.push({ type: "placeholder", points: 10 }); d.total = d.qcount * 10; });
     var DECK = DECKS[curDeck].questions;
     function qnum(i){ return DECKS[curDeck].id + "." + (i + 1); }
 
@@ -544,7 +577,7 @@
     var prevBtn = document.getElementById("prev"), nextqBtn = document.getElementById("nextq");
     var nextBtn = document.getElementById("next"), submitBtn = document.getElementById("submit"), answerBtn = document.getElementById("answer");
 
-    function setEarned(){ var e=0, g=DECKS[curDeck].graded; for (var k in g) e+=g[k]; earnedEl.textContent = "🏆 Earned " + e + " / " + DECK_TOTAL; }
+    function setEarned(){ var e=0, g=DECKS[curDeck].graded; for (var k in g) e+=g[k]; earnedEl.textContent = "🏆 Earned " + e + " / " + DECKS[curDeck].total; var pb=document.querySelector(".pts"); if(pb) pb.textContent = DECKS[curDeck].total + " pts"; }
     function openZoom(svg){ var ov=document.createElement("div"); ov.className="zoomov"; ov.innerHTML='<div class="zoombox">'+svg+'</div>'; ov.addEventListener("click",function(){ov.remove();}); document.body.appendChild(ov); }
 
     function buildMenu(){
@@ -809,6 +842,14 @@
         b.addEventListener("click",function(){ switchDeck(di); });
         setRow.appendChild(b);
       });
+      var nb=document.createElement("button");
+      nb.className="setbtn newq"; nb.textContent="🎲 Try new question";
+      nb.addEventListener("click",function(){
+        var keep=idx, k=s.decks.indexOf(curDeck), nd=s.decks[(k+1)%s.decks.length];
+        switchDeck(nd);
+        if (keep < DECK.length){ idx=keep; render(); }
+      });
+      setRow.appendChild(nb);
     }
     function switchDeck(n){
       curDeck = n; DECK = DECKS[curDeck].questions; idx = 0;
