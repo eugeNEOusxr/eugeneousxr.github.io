@@ -63,6 +63,14 @@ function injectStyles() {
       backdrop-filter: blur(10px);
     }
     .nab-bar.hidden { display: none !important; }
+    .nab-handle { display: flex; justify-content: center; margin: -2px 0 0; }
+    .nab-toggle {
+      width: 76px; height: 22px; border-radius: 8px;
+      border: 1px solid rgba(125,211,252,0.35); background: rgba(14,116,144,0.30);
+      color: #e0fbff; font: 700 14px system-ui; cursor: pointer; line-height: 1;
+    }
+    .nab-bar--min { width: auto; padding: 6px 10px; }
+    .nab-bar--min .nab-date, .nab-bar--min .nab-row { display: none !important; }
     .nab-row { display: flex; align-items: center; gap: 8px; }
     .nab-date {
       display: flex; align-items: center; justify-content: center; gap: 6px;
@@ -146,7 +154,25 @@ export class NoteAddBar {
     this._bottomPx = opts.bottomPx ?? 158;
     this._dayIso = null;
     this._time = null; // chosen "HH:MM" or null → "now"
+    this._minimized = this._loadMinimized(); // collapsed-to-a-pill state, persisted
     this._build();
+  }
+
+  _loadMinimized() {
+    try { return localStorage.getItem("inkling:nab-min") === "1"; } catch { return false; }
+  }
+
+  /** Collapse the bar to a small ⏫ pill (or expand it back). Default = open. */
+  _setMinimized(min, persist = true) {
+    this._minimized = !!min;
+    this.bar?.classList.toggle("nab-bar--min", this._minimized);
+    if (this.toggleBtn) {
+      this.toggleBtn.textContent = this._minimized ? "⏫" : "⏬";
+      this.toggleBtn.setAttribute("aria-label", this._minimized ? "Expand note bar" : "Minimize note bar");
+      this.toggleBtn.title = this._minimized ? "Expand" : "Minimize";
+    }
+    if (this._minimized) this._closeWheel();
+    if (persist) { try { localStorage.setItem("inkling:nab-min", this._minimized ? "1" : "0"); } catch { /* ignore */ } }
   }
 
   _build() {
@@ -156,6 +182,9 @@ export class NoteAddBar {
     bar.className = "nab-bar hidden";
     bar.style.setProperty("--nab-bottom", `${this._bottomPx}px`);
     bar.innerHTML = `
+      <div class="nab-handle">
+        <button class="nab-toggle" type="button" aria-label="Minimize note bar" title="Minimize">⏬</button>
+      </div>
       <div class="nab-date">
         <button class="nab-date-arrow nab-date-prev" type="button" aria-label="Previous day">‹</button>
         <button class="nab-date-label" type="button" title="Tap to reset to today">Today</button>
@@ -168,6 +197,9 @@ export class NoteAddBar {
       </div>`;
     document.body.appendChild(bar);
     this.bar = bar;
+    this.toggleBtn = bar.querySelector(".nab-toggle");
+    this.toggleBtn.addEventListener("click", () => this._setMinimized(!this._minimized));
+    this._setMinimized(this._minimized, false);
     this.timeBtn = bar.querySelector(".nab-time");
     this.textInput = bar.querySelector(".nab-text");
     this.addBtn = bar.querySelector(".nab-add");
@@ -242,7 +274,7 @@ export class NoteAddBar {
     if (active) active.scrollIntoView({ block: "center" });
   }
 
-  _closeWheel() { this.wheel.classList.add("hidden"); }
+  _closeWheel() { this.wheel?.classList.add("hidden"); }
 
   _nowHHMM() {
     const d = new Date();

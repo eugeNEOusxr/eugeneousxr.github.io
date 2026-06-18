@@ -53,6 +53,9 @@ export class WordWeaver3DEditor {
     // Shared add-note bar (text + time wheel). On add, rebuild the day so the
     // new note appears.
     this._addBar = new NoteAddBar({
+      // Sit a touch higher than the default so the bar clears the 3D movement
+      // joystick (anchored bottom-left/right of the scene).
+      bottomPx: 196,
       onAdded: (date) => { this._clearSelection(); this.host?.enterDayViewIso?.(date); }
     });
 

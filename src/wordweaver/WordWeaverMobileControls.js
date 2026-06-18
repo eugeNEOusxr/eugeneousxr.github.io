@@ -48,9 +48,6 @@ export class WordWeaverMobileControls {
     this.root.hidden = true;
     this.root.setAttribute("aria-label", "3D movement");
     this.root.innerHTML = `
-      <div id="moveForwardPad" class="ww-mobile-nav__forward-pad" aria-label="Slide to move forward">
-        <span class="ww-mobile-nav__forward-label">Slide forward</span>
-      </div>
       <div class="ww-mobile-nav__joystick" data-joystick>
         <div class="ww-mobile-nav__joystick-base" data-joystick-base>
           <span class="ww-mobile-nav__dir ww-mobile-nav__dir--n" aria-hidden="true"></span>
@@ -84,7 +81,6 @@ export class WordWeaverMobileControls {
     this._onMediaChange = this._onMediaChange.bind(this);
 
     this.baseEl.addEventListener("pointerdown", this._onJoystickDown);
-    this.moveForwardPad.addEventListener("pointerdown", this._onPadStart);
     for (const btn of [this.flyButton, this.descendButton]) {
       btn.addEventListener("pointerdown", this._onLiftDown);
       btn.addEventListener("pointerup", this._onLiftEnd);
@@ -118,6 +114,7 @@ export class WordWeaverMobileControls {
         z-index: 25;
         display: flex;
         align-items: flex-end;
+        justify-content: space-between;
         gap: 10px;
         pointer-events: none;
       }

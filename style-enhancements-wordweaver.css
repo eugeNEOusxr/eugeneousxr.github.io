@@ -16,6 +16,22 @@ body.inkling-tab-wordweaver #calendar-sidebar {
   pointer-events: none;
 }
 
+/* In the immersive 3D view, fully hide the top-chrome bar (month + login/alerts/
+   settings). Dimming it left a row of unpressable buttons in the top-right ("the
+   three-dot icon I can't press"); the only control needed there is the embed's
+   minimize (▾). Also drop the layout dropdown + the "Linked from your calendar &
+   notes" subtitle from the embed bar — clutter the user doesn't want. */
+body.wordweaver-immersive #top-chrome .top-chrome__bar,
+body.inkling-tab-wordweaver #top-chrome .top-chrome__bar {
+  display: none !important;
+}
+body.wordweaver-immersive .wordweaver-embed__layout-label,
+body.wordweaver-immersive #wordweaver-embed-date,
+body.inkling-tab-wordweaver .wordweaver-embed__layout-label,
+body.inkling-tab-wordweaver #wordweaver-embed-date {
+  display: none !important;
+}
+
 /* Default: sit in top chrome below Inkling when not in stage mode */
 #wordweaver-embed.wordweaver-embed {
   position: relative;
