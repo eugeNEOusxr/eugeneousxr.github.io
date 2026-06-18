@@ -414,6 +414,16 @@
           { label: "", answer: -2, answerText: "-2" }
         ],
         points: 10
+      },
+      {
+        type: "multiinput",
+        prompt: "Given the function <em>f</em>(<em>x</em>) = 7 + 7<em>x</em>², calculate the following values:",
+        blanks: [
+          { label: "<em>f</em>(<em>a</em>) =", answer: "7 + 7a²" },
+          { label: "<em>f</em>(<em>a</em> + <em>h</em>) =", answer: "7a² + 14ah + 7h² + 7" },
+          { label: "[<em>f</em>(<em>a</em>+<em>h</em>) − <em>f</em>(<em>a</em>)] / <em>h</em> =", answer: "14a + 7h" }
+        ],
+        points: 10
       }
     ];
     var QCOUNT = 20, DECK_TOTAL = 200;
