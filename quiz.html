@@ -114,6 +114,28 @@
     .gengo[disabled]{opacity:.5;cursor:default}
     .gennote{flex:1 1 100%;font-size:12px;color:var(--muted)}
     .gennote.err{color:#fca5a5}.gennote.ok{color:#86efac}
+    /* Study-set home (boxes) — the landing view: one dismissible box per set. */
+    #home{display:none;flex:1 1 auto;overflow-y:auto;padding:16px 16px 28px}
+    body.quiz-home #home{display:block}
+    body.quiz-home main,body.quiz-home footer,body.quiz-home .sub,body.quiz-home .setrow{display:none !important}
+    .home-head{margin:2px 2px 14px}
+    .home-title{font:800 22px system-ui;margin:0 0 4px}
+    .home-sub{font-size:13px;color:var(--muted);margin:0;line-height:1.5}
+    .home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+    .homebox{position:relative;text-align:left;border:.5px solid var(--line);border-radius:14px;padding:14px 13px 13px;
+      background:linear-gradient(160deg,rgba(124,58,237,.16),var(--surface));color:var(--text);cursor:pointer;
+      display:flex;flex-direction:column;gap:5px;min-height:104px;transition:transform .1s ease,border-color .2s ease}
+    .homebox:hover{border-color:var(--accent,#6ea8fe);transform:translateY(-2px)}
+    .homebox--gen{background:linear-gradient(160deg,rgba(168,85,247,.22),var(--surface))}
+    .homebox--add{align-items:center;justify-content:center;text-align:center;border-style:dashed;background:transparent;color:var(--muted);font-weight:700}
+    .homebox .hsec{font:800 17px system-ui}
+    .homebox .htitle{font-size:12.5px;line-height:1.35;opacity:.92;flex:1 1 auto}
+    .homebox .hmeta{font-size:11px;color:var(--muted);margin-top:2px}
+    .homebox .hbar{height:5px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:3px}
+    .homebox .hbar>i{display:block;height:100%;background:var(--accent,#6ea8fe)}
+    .homebox .hx{position:absolute;top:6px;right:7px;width:22px;height:22px;border-radius:50%;border:0;
+      background:rgba(0,0,0,.35);color:#e6edf3;font:700 12px system-ui;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+    .homebox .hx:hover{background:#dc2626}
   </style>
   <script src="/inkling-config.js"></script>
 </head>
@@ -121,6 +143,7 @@
   <header>
     <div class="row">
       <button class="ic" id="theme" aria-label="Toggle light or dark theme">☀️</button>
+      <button class="ic" id="homeBtn" aria-label="All study sets" title="All study sets">📚</button>
       <span class="title" id="deckTitle">1.1 · Functions and Function Notation</span>
       <span class="badges">
         <span class="pts">200 pts</span>
@@ -144,6 +167,13 @@
       <span class="gennote" id="genNote"></span>
     </div>
   </header>
+  <section id="home">
+    <div class="home-head">
+      <h2 class="home-title">📚 Study sets</h2>
+      <p class="home-sub">Pick a set to practice. Tap ✕ to hide one you don't need — ✨ Generate adds your own.</p>
+    </div>
+    <div id="homeGrid" class="home-grid"></div>
+  </section>
   <main>
     <p class="prompt" id="prompt"></p>
     <div id="opts"></div>
@@ -1119,6 +1149,7 @@
       DECKS.forEach(function(x,i){ if (x.generated && x.id === d.id) existing = i; });
       if (existing >= 0) DECKS[existing] = d; else DECKS.push(d);
       rebuildSections();
+      if (typeof hideHome === "function") hideHome();
       switchDeck(existing >= 0 ? existing : DECKS.length - 1);
       return true;
     }
@@ -1154,6 +1185,55 @@
 
     rebuildSections();
     buildSetRow(); setEarned(); render();
+
+    // ── Study-set home (dismissible boxes) — the landing view ────────────────
+    var DISMISS_KEY = "inkling-quiz-dismissed";
+    function getDismissed(){ try { return JSON.parse(localStorage.getItem(DISMISS_KEY) || "{}") || {}; } catch(_){ return {}; } }
+    function setDismissed(o){ try { localStorage.setItem(DISMISS_KEY, JSON.stringify(o)); } catch(_){ } }
+    function dismissSection(sec){ var d = getDismissed(); d[sec] = 1; setDismissed(d); buildHome(); }
+    var homeGrid = document.getElementById("homeGrid");
+    function buildHome(){
+      if (!homeGrid) return;
+      homeGrid.innerHTML = "";
+      var dismissed = getDismissed();
+      SECTIONS.forEach(function(s){
+        if (dismissed[s.sec]) return;
+        var d0 = DECKS[s.decks[0]];
+        var g = d0.graded || {}, earned = 0; for (var k in g) earned += g[k];
+        var pct = d0.total ? Math.round(earned / d0.total * 100) : 0;
+        var titleText = String(d0.title || s.sec).replace(/^\s*[^·]*·\s*/, "");
+        var box = document.createElement("button");
+        box.type = "button";
+        box.className = "homebox" + (d0.generated ? " homebox--gen" : "");
+        box.innerHTML =
+          '<span class="hx" aria-label="Hide this set">✕</span>' +
+          '<div class="hsec">' + (d0.generated ? "✨ " : "") + s.sec + '</div>' +
+          '<div class="htitle">' + titleText + '</div>' +
+          '<div class="hmeta">' + s.decks.length + (s.decks.length > 1 ? " sets" : " set") + ' · ' + d0.qcount + ' Q' + (earned ? ' · ' + pct + '%' : '') + '</div>' +
+          '<div class="hbar"><i style="width:' + pct + '%"></i></div>';
+        box.addEventListener("click", function(e){
+          if (e.target.classList.contains("hx")) { e.stopPropagation(); dismissSection(s.sec); return; }
+          hideHome(); switchDeck(s.decks[0]);
+        });
+        homeGrid.appendChild(box);
+      });
+      var add = document.createElement("button");
+      add.type = "button"; add.className = "homebox homebox--add";
+      add.innerHTML = '<div style="font-size:26px">✨</div><div>Generate a new set</div>';
+      add.addEventListener("click", function(){ hideHome(); if (genBar.style.display === "none") genBtn.click(); });
+      homeGrid.appendChild(add);
+      if (Object.keys(dismissed).length){
+        var r = document.createElement("button");
+        r.type = "button"; r.className = "homebox homebox--add";
+        r.innerHTML = '<div style="font-size:22px">↩︎</div><div>Restore hidden sets</div>';
+        r.addEventListener("click", function(){ setDismissed({}); buildHome(); });
+        homeGrid.appendChild(r);
+      }
+    }
+    function showHome(){ buildHome(); document.body.classList.add("quiz-home"); closeMenu(); }
+    function hideHome(){ document.body.classList.remove("quiz-home"); }
+    document.getElementById("homeBtn").addEventListener("click", showHome);
+    showHome();
 
     // Receive generated decks from a host page (Inkling embeds this in an iframe).
     window.addEventListener("message", function(e){
