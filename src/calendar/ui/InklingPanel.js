@@ -364,6 +364,7 @@ export class InklingPanel {
     // Schedule day panel; Connections opens when you ask Inkling to make them.
     this._orbItems = [
       mk("💬", "Chat with Inkling", () => this.openWithContext()),
+      mk("🔔", "Alerts", () => this.alerts?.toggle()),
       mk("🎤", "Voice message", () => this.openWithVoice()),
       mk("🧠", "Mind", () => { this.minimize(); this.showMind(); }),
       mk("📚", "Study", () => { this.minimize(); this.showStudy(); }),
