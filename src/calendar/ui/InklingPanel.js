@@ -233,19 +233,24 @@ export class InklingPanel {
     else this.minimize();
   }
 
-  /** Bump the orb's unread-message badge (Inkling spoke while minimized). */
+  /** Bump the unread Inkling-message count (Inkling spoke while minimized). */
   _bumpUnread() {
     this._unread = (this._unread || 0) + 1;
-    if (this._msgBadge) {
-      this._msgBadge.textContent = this._unread > 9 ? "9+" : String(this._unread);
-      this._msgBadge.style.display = "flex";
-    }
+    this._renderChatBadge();
   }
 
-  /** Clear the orb's unread-message badge (the user opened the chat). */
+  /** Clear the unread-message count (the user opened the chat). */
   _clearUnread() {
     this._unread = 0;
-    if (this._msgBadge) this._msgBadge.style.display = "none";
+    this._renderChatBadge();
+  }
+
+  /** Paint the unread count onto the 💬 Chat icon in the orb fan. */
+  _renderChatBadge() {
+    if (!this._chatBadge) return;
+    const n = this._unread || 0;
+    this._chatBadge.textContent = n > 9 ? "9+" : String(n);
+    this._chatBadge.style.display = n > 0 ? "flex" : "none";
   }
 
   expand() {
@@ -284,20 +289,9 @@ export class InklingPanel {
     const orb = document.getElementById("inkling-fab");
     if (!orb) return;
     this._orb = orb;
-    // Unread-message badge on the chat orb (indigo, top-LEFT) — shows a count when
-    // Inkling speaks while the chat is minimized. Distinct from the red Alerts
-    // badge (top-right), so the orb feels like a chat with unread messages.
-    if (!this._msgBadge) {
-      const mb = document.createElement("span");
-      mb.id = "inkling-msg-badge";
-      mb.style.cssText =
-        "position:absolute;top:-8px;left:-12px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;" +
-        "background:linear-gradient(180deg,#818cf8,#6366f1);color:#fff;font:800 11px system-ui;" +
-        "display:none;align-items:center;justify-content:center;box-shadow:0 3px 9px rgba(0,0,0,.5);" +
-        "border:1.5px solid rgba(255,255,255,.9);z-index:4;pointer-events:none;white-space:nowrap";
-      orb.appendChild(mb);
-      this._msgBadge = mb;
-    }
+    // Unread Inkling-message count lives on the 💬 Chat icon in the orb fan (see
+    // _buildOrbMenu), NOT on the main orb — the main orb keeps only the red Alerts
+    // badge (note/calendar alerts) in its top-right quadrant.
     this._unread = 0;
     try {
       const pos = JSON.parse(localStorage.getItem("inkling-orb-pos") || "null");
@@ -383,6 +377,21 @@ export class InklingPanel {
       this._orbItems = this._orbItems.filter((b) => b.dataset.label !== "Voice message");
     }
     for (const b of this._orbItems) menu.appendChild(b);
+    // Red unread-message count on the 💬 Chat icon (the small chat orb in the fan).
+    const chatBtn = this._orbItems.find((b) => b.dataset.label === "Chat with Inkling");
+    if (chatBtn) {
+      chatBtn.style.position = "relative";
+      const cb = document.createElement("span");
+      cb.className = "inkling-chat-badge";
+      cb.style.cssText =
+        "position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;" +
+        "background:linear-gradient(180deg,#f87171,#dc2626);color:#fff;font:800 10px system-ui;" +
+        "display:none;align-items:center;justify-content:center;box-shadow:0 2px 7px rgba(0,0,0,.55);" +
+        "border:1.5px solid rgba(255,255,255,.9);z-index:5;pointer-events:none";
+      chatBtn.appendChild(cb);
+      this._chatBadge = cb;
+      this._renderChatBadge();
+    }
     document.body.appendChild(menu);
     this._orbMenu = menu;
     document.addEventListener("pointerdown", (e) => {
