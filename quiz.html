@@ -1060,12 +1060,24 @@
     // algebraic equivalence (exprEquiv); else interval/text match. So the AI just
     // emits numbers for computed answers, expressions like "6x+12" for algebra, or
     // interval strings like "(-∞, 3]"/"[0, ∞)" for domains/ranges.
+    // Pretty-print plain-text math for DISPLAY only (never the graded answer):
+    // sqrt(…)→√(…), x^2→x², b^2→b², +/-→±, <=/>=→≤/≥, infinity→∞, pi→π.
+    function prettyMath(s){
+      if (s == null) return s;
+      s = String(s);
+      s = s.replace(/\bsqrt\s*\(/gi, "√(");
+      s = s.replace(/\^(\d+)/g, function(_, d){ return d.replace(/\d/g, function(c){ return "⁰¹²³⁴⁵⁶⁷⁸⁹"[+c]; }); });
+      s = s.replace(/\+\/-/g, "±");
+      s = s.replace(/<=/g, "≤").replace(/>=/g, "≥").replace(/!=/g, "≠");
+      s = s.replace(/\binfinity\b/gi, "∞").replace(/\bpi\b/gi, "π");
+      return s;
+    }
     function normalizeQuestion(q){
       if (!q || typeof q !== "object" || !q.prompt) return null;
       var points = (typeof q.points === "number" && q.points > 0) ? q.points : 10;
-      var prompt = String(q.prompt);
+      var prompt = prettyMath(String(q.prompt));
       if (q.type === "mc") {
-        var options = Array.isArray(q.options) ? q.options.map(String) : [];
+        var options = Array.isArray(q.options) ? q.options.map(function(o){ return prettyMath(String(o)); }) : [];
         if (options.length < 2) return null;
         var correct = (typeof q.correct === "number" && q.correct >= 0 && q.correct < options.length) ? q.correct : 0;
         return { type:"mc", prompt:prompt, options:options, correct:correct, points:points };
@@ -1078,8 +1090,9 @@
           if (b == null || b.answer == null) return;
           var ans = b.answer;
           if (typeof ans === "string" && /^-?\d+(\.\d+)?$/.test(ans.trim())) ans = parseFloat(ans);
-          var nb = { label: String(b.label || "Answer ="), answer: ans };
-          if (b.answerText != null) nb.answerText = String(b.answerText);
+          // answer stays RAW (graded); label + answerText are prettified (display).
+          var nb = { label: prettyMath(String(b.label || "Answer =")), answer: ans };
+          if (b.answerText != null) nb.answerText = prettyMath(String(b.answerText));
           blanks.push(nb);
         });
         if (!blanks.length) return null;
@@ -1096,7 +1109,7 @@
       return {
         id: String(raw.id || raw.section || raw.title || raw.topic || "AI").slice(0, 40),
         title: String(raw.title || raw.topic || "Generated set").slice(0, 120),
-        graded: {}, qcount: questions.length, generated: true, questions: questions
+        graded: {}, qcount: questions.length, total: questions.length * 10, generated: true, questions: questions
       };
     }
     function addGeneratedDeck(raw){
