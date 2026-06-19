@@ -128,6 +128,8 @@
     .homebox:hover{border-color:var(--accent,#6ea8fe);transform:translateY(-2px)}
     .homebox--gen{background:linear-gradient(160deg,rgba(168,85,247,.22),var(--surface))}
     .homebox--add{align-items:center;justify-content:center;text-align:center;border-style:dashed;background:transparent;color:var(--muted);font-weight:700}
+    .homebox--soon{opacity:.45;cursor:default;background:var(--surface)}
+    .homebox--soon:hover{transform:none;border-color:var(--line)}
     .homebox .hsec{font:800 17px system-ui}
     .homebox .htitle{font-size:12.5px;line-height:1.35;opacity:.92;flex:1 1 auto}
     .homebox .hmeta{font-size:11px;color:var(--muted);margin-top:2px}
@@ -1219,34 +1221,72 @@
       b.addEventListener("click", fn);
       return b;
     }
-    function isPrecalc(sec){ return /^\d+\.\d+$/.test(sec); }     // 1.1, 1.2, … = precalc chapters
-    var homeView = null;  // null = subjects level; "precalc" = its chapter list
+    function isPrecalc(sec){ return /^\d+\.\d+$/.test(sec); }     // 1.1, 1.2, … = section of chapter 1
+    function chapterOf(sec){ return parseInt(String(sec).split(".")[0], 10); }
+    function chapterSections(n){ return SECTIONS.filter(function(s){ return isPrecalc(s.sec) && chapterOf(s.sec) === n; }); }
+    // OpenStax Precalculus — the 12 chapters. 1.1–1.7 are the SECTIONS of Ch. 1.
+    var PRECALC_CHAPTERS = [
+      "Functions", "Linear Functions", "Polynomial & Rational Functions",
+      "Exponential & Logarithmic Functions", "Trigonometric Functions", "Periodic Functions",
+      "Trigonometric Identities & Equations", "Further Applications of Trigonometry",
+      "Systems of Equations & Inequalities", "Analytic Geometry",
+      "Sequences, Probability & Counting", "Introduction to Calculus"
+    ];
+    var homeView = null;  // null = subjects | "precalc-chapters" | "precalc-ch-<N>"
     function buildHome(){
       if (!homeGrid) return;
       homeGrid.innerHTML = "";
-      var dismissed = getDismissed();
+      var dismissed = getDismissed(), titleEl = document.querySelector(".home-title");
       var precalc = SECTIONS.filter(function(s){ return isPrecalc(s.sec); });
       var others  = SECTIONS.filter(function(s){ return !isPrecalc(s.sec); });
-      // Drilled into Precalculus → show only its numbered chapters + a back box.
-      if (homeView === "precalc"){
-        document.querySelector(".home-title").textContent = "📐 Precalculus";
-        homeGrid.appendChild(makeMiscBox("Back to subjects", "←", function(){ homeView = null; buildHome(); }));
-        precalc.forEach(function(s){ if (!dismissed[s.sec]) homeGrid.appendChild(makeSectionBox(s)); });
+
+      // Level 3 — the sections inside a chosen chapter.
+      var m = /^precalc-ch-(\d+)$/.exec(homeView || "");
+      if (m){
+        var cn = parseInt(m[1], 10);
+        titleEl.textContent = "📐 Chapter " + cn + " · " + (PRECALC_CHAPTERS[cn - 1] || "");
+        homeGrid.appendChild(makeMiscBox("Back to chapters", "←", function(){ homeView = "precalc-chapters"; buildHome(); }));
+        chapterSections(cn).forEach(function(s){ if (!dismissed[s.sec]) homeGrid.appendChild(makeSectionBox(s)); });
         return;
       }
-      // Subjects level — Precalculus is one box; clicking it lists the chapters.
-      document.querySelector(".home-title").textContent = "📚 Study sets";
+
+      // Level 2 — the 12 chapters of Precalculus (only built ones are clickable).
+      if (homeView === "precalc-chapters"){
+        titleEl.textContent = "📐 Precalculus · 12 chapters";
+        homeGrid.appendChild(makeMiscBox("Back to subjects", "←", function(){ homeView = null; buildHome(); }));
+        var built = {};
+        precalc.forEach(function(s){ built[chapterOf(s.sec)] = (built[chapterOf(s.sec)] || 0) + 1; });
+        PRECALC_CHAPTERS.forEach(function(name, i){
+          var n = i + 1, count = built[n] || 0;
+          var box = document.createElement("button");
+          box.type = "button";
+          box.className = "homebox" + (count ? "" : " homebox--soon");
+          box.innerHTML =
+            '<div class="hsec">Chapter ' + n + '</div>' +
+            '<div class="htitle">' + name + '</div>' +
+            '<div class="hmeta">' + (count ? count + " section" + (count > 1 ? "s" : "") + " →" : "Coming soon") + '</div>';
+          if (count) box.addEventListener("click", function(){ homeView = "precalc-ch-" + n; buildHome(); });
+          else box.disabled = true;
+          homeGrid.appendChild(box);
+        });
+        return;
+      }
+
+      // Level 1 — subjects.
+      titleEl.textContent = "📚 Study sets";
       if (precalc.length && !dismissed["__precalc"]){
+        var chs = {}; precalc.forEach(function(s){ chs[chapterOf(s.sec)] = 1; });
+        var readyList = Object.keys(chs).sort(function(a,b){ return a - b; }).join(", ");
         var pc = document.createElement("button");
         pc.type = "button"; pc.className = "homebox";
         pc.innerHTML =
           '<span class="hx" aria-label="Hide Precalculus">✕</span>' +
           '<div class="hsec">📐 Precalculus</div>' +
-          '<div class="htitle">Functions, graphs, inverses &amp; more</div>' +
-          '<div class="hmeta">' + precalc.length + ' chapters →</div>';
+          '<div class="htitle">OpenStax · ' + PRECALC_CHAPTERS.length + ' chapters</div>' +
+          '<div class="hmeta">Chapter ' + readyList + ' ready →</div>';
         pc.addEventListener("click", function(e){
           if (e.target.classList.contains("hx")) { e.stopPropagation(); dismissSection("__precalc"); return; }
-          homeView = "precalc"; buildHome();
+          homeView = "precalc-chapters"; buildHome();
         });
         homeGrid.appendChild(pc);
       }
