@@ -1192,45 +1192,71 @@
     function setDismissed(o){ try { localStorage.setItem(DISMISS_KEY, JSON.stringify(o)); } catch(_){ } }
     function dismissSection(sec){ var d = getDismissed(); d[sec] = 1; setDismissed(d); buildHome(); }
     var homeGrid = document.getElementById("homeGrid");
+    function makeSectionBox(s){
+      var d0 = DECKS[s.decks[0]];
+      var g = d0.graded || {}, earned = 0; for (var k in g) earned += g[k];
+      var pct = d0.total ? Math.round(earned / d0.total * 100) : 0;
+      var titleText = String(d0.title || s.sec).replace(/^\s*[^·]*·\s*/, "");
+      var box = document.createElement("button");
+      box.type = "button";
+      box.className = "homebox" + (d0.generated ? " homebox--gen" : "");
+      box.innerHTML =
+        '<span class="hx" aria-label="Hide this set">✕</span>' +
+        '<div class="hsec">' + (d0.generated ? "✨ " : "") + s.sec + '</div>' +
+        '<div class="htitle">' + titleText + '</div>' +
+        '<div class="hmeta">' + s.decks.length + (s.decks.length > 1 ? " sets" : " set") + ' · ' + d0.qcount + ' Q' + (earned ? ' · ' + pct + '%' : '') + '</div>' +
+        '<div class="hbar"><i style="width:' + pct + '%"></i></div>';
+      box.addEventListener("click", function(e){
+        if (e.target.classList.contains("hx")) { e.stopPropagation(); dismissSection(s.sec); return; }
+        hideHome(); switchDeck(s.decks[0]);
+      });
+      return box;
+    }
+    function makeMiscBox(label, icon, fn){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "homebox homebox--add";
+      b.innerHTML = '<div style="font-size:24px">' + icon + '</div><div>' + label + '</div>';
+      b.addEventListener("click", fn);
+      return b;
+    }
+    function isPrecalc(sec){ return /^\d+\.\d+$/.test(sec); }     // 1.1, 1.2, … = precalc chapters
+    var homeView = null;  // null = subjects level; "precalc" = its chapter list
     function buildHome(){
       if (!homeGrid) return;
       homeGrid.innerHTML = "";
       var dismissed = getDismissed();
-      SECTIONS.forEach(function(s){
-        if (dismissed[s.sec]) return;
-        var d0 = DECKS[s.decks[0]];
-        var g = d0.graded || {}, earned = 0; for (var k in g) earned += g[k];
-        var pct = d0.total ? Math.round(earned / d0.total * 100) : 0;
-        var titleText = String(d0.title || s.sec).replace(/^\s*[^·]*·\s*/, "");
-        var box = document.createElement("button");
-        box.type = "button";
-        box.className = "homebox" + (d0.generated ? " homebox--gen" : "");
-        box.innerHTML =
-          '<span class="hx" aria-label="Hide this set">✕</span>' +
-          '<div class="hsec">' + (d0.generated ? "✨ " : "") + s.sec + '</div>' +
-          '<div class="htitle">' + titleText + '</div>' +
-          '<div class="hmeta">' + s.decks.length + (s.decks.length > 1 ? " sets" : " set") + ' · ' + d0.qcount + ' Q' + (earned ? ' · ' + pct + '%' : '') + '</div>' +
-          '<div class="hbar"><i style="width:' + pct + '%"></i></div>';
-        box.addEventListener("click", function(e){
-          if (e.target.classList.contains("hx")) { e.stopPropagation(); dismissSection(s.sec); return; }
-          hideHome(); switchDeck(s.decks[0]);
+      var precalc = SECTIONS.filter(function(s){ return isPrecalc(s.sec); });
+      var others  = SECTIONS.filter(function(s){ return !isPrecalc(s.sec); });
+      // Drilled into Precalculus → show only its numbered chapters + a back box.
+      if (homeView === "precalc"){
+        document.querySelector(".home-title").textContent = "📐 Precalculus";
+        homeGrid.appendChild(makeMiscBox("Back to subjects", "←", function(){ homeView = null; buildHome(); }));
+        precalc.forEach(function(s){ if (!dismissed[s.sec]) homeGrid.appendChild(makeSectionBox(s)); });
+        return;
+      }
+      // Subjects level — Precalculus is one box; clicking it lists the chapters.
+      document.querySelector(".home-title").textContent = "📚 Study sets";
+      if (precalc.length && !dismissed["__precalc"]){
+        var pc = document.createElement("button");
+        pc.type = "button"; pc.className = "homebox";
+        pc.innerHTML =
+          '<span class="hx" aria-label="Hide Precalculus">✕</span>' +
+          '<div class="hsec">📐 Precalculus</div>' +
+          '<div class="htitle">Functions, graphs, inverses &amp; more</div>' +
+          '<div class="hmeta">' + precalc.length + ' chapters →</div>';
+        pc.addEventListener("click", function(e){
+          if (e.target.classList.contains("hx")) { e.stopPropagation(); dismissSection("__precalc"); return; }
+          homeView = "precalc"; buildHome();
         });
-        homeGrid.appendChild(box);
-      });
-      var add = document.createElement("button");
-      add.type = "button"; add.className = "homebox homebox--add";
-      add.innerHTML = '<div style="font-size:26px">✨</div><div>Generate a new set</div>';
-      add.addEventListener("click", function(){ hideHome(); if (genBar.style.display === "none") genBtn.click(); });
-      homeGrid.appendChild(add);
+        homeGrid.appendChild(pc);
+      }
+      others.forEach(function(s){ if (!dismissed[s.sec]) homeGrid.appendChild(makeSectionBox(s)); });
+      homeGrid.appendChild(makeMiscBox("Generate a new set", "✨", function(){ hideHome(); if (genBar.style.display === "none") genBtn.click(); }));
       if (Object.keys(dismissed).length){
-        var r = document.createElement("button");
-        r.type = "button"; r.className = "homebox homebox--add";
-        r.innerHTML = '<div style="font-size:22px">↩︎</div><div>Restore hidden sets</div>';
-        r.addEventListener("click", function(){ setDismissed({}); buildHome(); });
-        homeGrid.appendChild(r);
+        homeGrid.appendChild(makeMiscBox("Restore hidden sets", "↩︎", function(){ setDismissed({}); buildHome(); }));
       }
     }
-    function showHome(){ buildHome(); document.body.classList.add("quiz-home"); closeMenu(); }
+    function showHome(){ homeView = null; buildHome(); document.body.classList.add("quiz-home"); closeMenu(); }
     function hideHome(){ document.body.classList.remove("quiz-home"); }
     document.getElementById("homeBtn").addEventListener("click", showHome);
     showHome();
