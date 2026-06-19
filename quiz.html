@@ -1181,32 +1181,50 @@
       DECKS.forEach(function(x,i){ if (x.generated && x.id === d.id) existing = i; });
       if (existing >= 0) DECKS[existing] = d; else DECKS.push(d);
       rebuildSections();
-      // Land on the home (first sight) where the new set shows as its OWN subject
-      // box — don't drop into it mixed with the precalc sections.
-      if (typeof showHome === "function") showHome(); else switchDeck(DECKS.length - 1);
+      var di = existing >= 0 ? existing : DECKS.length - 1;
+      // An AI set made FOR a precalc section (id like "1.1") joins that section as
+      // its ✨ AI Set — switch right into it. A brand-new subject (biology…) lands
+      // on the home as its own box.
+      if (isPrecalc(d.id)) switchDeck(di);
+      else if (typeof showHome === "function") showHome();
+      else switchDeck(di);
       return true;
     }
     var setRow = document.getElementById("setRow");
     function buildSetRow(){
-      var s=SECTIONS[secIndex[DECKS[curDeck].id]];
-      while(setRow.children.length>1) setRow.removeChild(setRow.lastChild);
-      if (s.decks.length<2){ setRow.style.display="none"; return; }
-      setRow.style.display="flex";
-      s.decks.forEach(function(di,k){
-        var b=document.createElement("button");
-        b.className="setbtn"+(di===curDeck?" active":"");
-        b.textContent="Set "+(k+1);
-        b.addEventListener("click",function(){ switchDeck(di); });
-        setRow.appendChild(b);
-      });
-      var nb=document.createElement("button");
-      nb.className="setbtn newq"; nb.textContent="🎲 Try new question";
-      nb.addEventListener("click",function(){
-        var keep=idx, k=s.decks.indexOf(curDeck), nd=s.decks[(k+1)%s.decks.length];
-        switchDeck(nd);
-        if (keep < DECK.length){ idx=keep; render(); }
-      });
-      setRow.appendChild(nb);
+      var s = SECTIONS[secIndex[DECKS[curDeck].id]];
+      while (setRow.children.length > 1) setRow.removeChild(setRow.lastChild);
+      var hasAi = s.decks.some(function(di){ return DECKS[di].generated; });
+      var mineCount = s.decks.filter(function(di){ return !DECKS[di].generated; }).length;
+      var show = false;
+      if (s.decks.length >= 2){
+        show = true;
+        var myN = 0;
+        s.decks.forEach(function(di){
+          var b = document.createElement("button");
+          b.className = "setbtn" + (di===curDeck ? " active" : "");
+          if (DECKS[di].generated) b.textContent = "✨ AI set";
+          else { myN++; b.textContent = "📷 " + (mineCount > 1 ? "Set " + myN : "My set"); }
+          b.addEventListener("click", function(){ switchDeck(di); });
+          setRow.appendChild(b);
+        });
+        var nb = document.createElement("button");
+        nb.className = "setbtn newq"; nb.textContent = "🎲 Try new question";
+        nb.addEventListener("click", function(){
+          var keep=idx, k=s.decks.indexOf(curDeck), nd=s.decks[(k+1)%s.decks.length];
+          switchDeck(nd); if (keep < DECK.length){ idx=keep; render(); }
+        });
+        setRow.appendChild(nb);
+      }
+      // Offer an AI set for this precalc section if it doesn't have one yet.
+      if (!hasAi && isPrecalc(DECKS[curDeck].id)){
+        show = true;
+        var mk = document.createElement("button");
+        mk.className = "setbtn newq"; mk.textContent = "✨ Make an AI set";
+        mk.addEventListener("click", function(){ makeSectionAiSet(mk); });
+        setRow.appendChild(mk);
+      }
+      setRow.style.display = show ? "flex" : "none";
     }
     function switchDeck(n){
       curDeck = n; DECK = DECKS[curDeck].questions; idx = 0;
@@ -1409,6 +1427,30 @@
           } else { setNote("Got a response but couldn't build a set from it.", "err"); }
         })
         .catch(function(){ genGo.disabled=false; genGo.textContent=orig; setNote("Couldn't reach Inkling — check your connection and try again.", "err"); });
+    }
+
+    // Make an AI set FOR the current precalc section (joins it as the ✨ AI Set,
+    // alongside your 📷 screenshot set). Generated on the section's own topic.
+    function makeSectionAiSet(btn){
+      var sec = DECKS[curDeck].id, title = DECKS[curDeck].title;
+      var topic = String(title || sec).replace(/^\s*[^·]*·\s*/, "") || sec;
+      if (!authToken()){ btn.textContent = "Sign in to Inkling first"; return; }
+      btn.disabled = true; var orig = btn.textContent; btn.textContent = "✨ Generating…";
+      fetch(apiBase()+"/api/inkling/quiz-set", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+authToken(), "X-Inkling-Client":"Inkling" },
+        body: JSON.stringify({ topic: topic, section: sec })
+      }).then(function(res){ return res.json().catch(function(){ return null; }).then(function(d){ return { ok:res.ok, data:d }; }); })
+        .then(function(r){
+          btn.disabled = false; btn.textContent = orig;
+          var d = r.data;
+          if (!r.ok || !d){ btn.textContent = "Couldn't generate — retry"; return; }
+          if (d.source === "guest"){ btn.textContent = "Sign in first"; return; }
+          if (d.source === "capped"){ btn.textContent = "Daily limit reached"; return; }
+          if (!Array.isArray(d.questions) || !d.questions.length){ btn.textContent = "Try again"; return; }
+          addGeneratedDeck({ id: sec, title: title, topic: topic, questions: d.questions });
+        })
+        .catch(function(){ btn.disabled = false; btn.textContent = orig; });
     }
 
     // ── 🤖 Explain — AI worked solution + follow-up chat (pops up like an AI window) ──
