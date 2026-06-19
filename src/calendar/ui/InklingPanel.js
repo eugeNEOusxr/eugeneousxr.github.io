@@ -233,8 +233,25 @@ export class InklingPanel {
     else this.minimize();
   }
 
+  /** Bump the orb's unread-message badge (Inkling spoke while minimized). */
+  _bumpUnread() {
+    this._unread = (this._unread || 0) + 1;
+    if (this._msgBadge) {
+      this._msgBadge.textContent = this._unread > 9 ? "9+" : String(this._unread);
+      this._msgBadge.style.display = "flex";
+    }
+  }
+
+  /** Clear the orb's unread-message badge (the user opened the chat). */
+  _clearUnread() {
+    this._unread = 0;
+    if (this._msgBadge) this._msgBadge.style.display = "none";
+  }
+
   expand() {
     this._minimized = false;
+    this._clearUnread();
+    document.getElementById("inkling-checkin-nudge")?.remove();
     this.el?.classList.remove("hidden", "inkling-panel--minimized");
     // Sit above the Schedule day overlay (z 11000) AND the Mind panel (z 11086)
     // so the chat floats over the mind map when you open it to ask about it.
@@ -267,6 +284,21 @@ export class InklingPanel {
     const orb = document.getElementById("inkling-fab");
     if (!orb) return;
     this._orb = orb;
+    // Unread-message badge on the chat orb (indigo, top-LEFT) — shows a count when
+    // Inkling speaks while the chat is minimized. Distinct from the red Alerts
+    // badge (top-right), so the orb feels like a chat with unread messages.
+    if (!this._msgBadge) {
+      const mb = document.createElement("span");
+      mb.id = "inkling-msg-badge";
+      mb.style.cssText =
+        "position:absolute;top:-8px;left:-12px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;" +
+        "background:linear-gradient(180deg,#818cf8,#6366f1);color:#fff;font:800 11px system-ui;" +
+        "display:none;align-items:center;justify-content:center;box-shadow:0 3px 9px rgba(0,0,0,.5);" +
+        "border:1.5px solid rgba(255,255,255,.9);z-index:4;pointer-events:none;white-space:nowrap";
+      orb.appendChild(mb);
+      this._msgBadge = mb;
+    }
+    this._unread = 0;
     try {
       const pos = JSON.parse(localStorage.getItem("inkling-orb-pos") || "null");
       if (pos && Number.isFinite(pos.left) && Number.isFinite(pos.top)) this._placeOrb(pos.left, pos.top);
@@ -761,6 +793,10 @@ export class InklingPanel {
     this.messagesEl.appendChild(div);
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight;
 
+    // Inkling spoke while the chat is minimized → show an unread count on the orb
+    // so the hover button feels like a chat with a waiting message.
+    if (role === "inkling" && this._minimized) this._bumpUnread();
+
     // Layer 0 capture + graph ingest: persist real dialogue turns (user + Inkling
     // replies, not system chrome or proactive nudges) to the local-first Mind
     // store, then grow the on-device knowledge graph from the turn.
@@ -939,16 +975,31 @@ export class InklingPanel {
   _showCheckInNudge() {
     if (typeof document === "undefined") return;
     document.getElementById("inkling-checkin-nudge")?.remove();
+    const orb = this._orb || document.getElementById("inkling-fab");
     const n = document.createElement("button");
     n.id = "inkling-checkin-nudge";
     n.type = "button";
     n.textContent = "✦ What are you up to?";
+    // A chat bubble that sits right beside the orb (tail toward it) so it reads as
+    // Inkling speaking from the hover button, not a stray corner popup.
     n.style.cssText =
-      "position:fixed;right:16px;bottom:84px;z-index:11090;background:rgba(15,23,42,.95);color:#e2e8f0;" +
-      "border:1px solid rgba(129,140,248,.55);border-radius:999px;padding:9px 14px;font:700 12px system-ui;" +
-      "cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5)";
+      "position:fixed;z-index:11090;background:rgba(15,23,42,.96);color:#e2e8f0;" +
+      "border:1px solid rgba(129,140,248,.6);border-radius:14px 14px 4px 14px;padding:9px 13px;" +
+      "font:700 12px system-ui;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:210px;text-align:left";
     n.addEventListener("click", () => { n.remove(); try { this.expand(); } catch { /* ignore */ } });
     document.body.appendChild(n);
+    // Anchor beside the orb (prefer its left; flip right if there's no room).
+    const r = orb && orb.getBoundingClientRect();
+    if (r && r.width) {
+      const w = n.offsetWidth || 190, h = n.offsetHeight || 38;
+      let left = r.left - w - 10;
+      if (left < 8) left = r.right + 10;
+      n.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, left)) + "px";
+      n.style.top = Math.max(8, Math.min(window.innerHeight - h - 8, r.top + r.height / 2 - h / 2)) + "px";
+      n.style.right = "auto"; n.style.bottom = "auto";
+    } else {
+      n.style.right = "16px"; n.style.bottom = "84px";
+    }
     setTimeout(() => n.remove(), 14000);
   }
 

@@ -73,6 +73,12 @@
   <link rel="stylesheet" href="style-enhancements-layers.css" />
   <link rel="stylesheet" href="style-enhancements-shell.css" />
   <link rel="stylesheet" href="style-appearance-palettes.css" />
+  <style>
+    /* Alerts live on the Inkling orb (its red count badge) + the Alerts nav tab.
+       Hide the redundant standalone alerts bells: the top-chrome 🔔 and the
+       floating notification bell beside the orb. (2026-06-18) */
+    #btn-top-alerts, #notification-bell-anchor { display: none !important; }
+  </style>
 </head>
 <body>
   <div id="app">
