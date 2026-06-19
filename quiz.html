@@ -326,6 +326,11 @@
       }
       return tot>=3 && ok===tot;
     }
+    // Plain word/term answers (e.g. "mitochondria", "natural selection") — used for
+    // non-math generated sets. Letters/spaces/'/- only (no digits or math operators).
+    function isWordAnswer(s){ return typeof s === "string" && /^[a-zA-Z][a-zA-Z\s'\-]*$/.test(s); }
+    function wordNorm(s){ return String(s).toLowerCase().replace(/[’]/g, "'").replace(/\s+/g, " ").replace(/[.\s]+$/, "").trim(); }
+    function wordMatch(input, ans){ var n = wordNorm(input); return n !== "" && n === wordNorm(ans); }
     function normText(s){
       return String(s).toLowerCase().replace(/\s+/g,"").replace(/−/g,"-")
         .replace(/infinity|infty|\binf\b/g,"∞").replace(/union/g,"∪").replace(/\bu\b/g,"∪");
@@ -934,7 +939,7 @@
           inp.classList.remove("ok","bad");
           var ans=q.blanks[bi].answer, right;
           if (typeof ans === "number") { var p=evalAnswer(inp.value); right=(p!==null && Math.abs(p-ans)<1e-9); }
-          else if (/[a-z]/i.test(ans)) { right = exprEquiv(inp.value, ans) || exprMatch(inp.value, q.blanks[bi]); }
+          else if (/[a-z]/i.test(ans)) { right = isWordAnswer(ans) ? wordMatch(inp.value, ans) : (exprEquiv(inp.value, ans) || exprMatch(inp.value, q.blanks[bi])); }
           else { right = textMatch(inp.value, q.blanks[bi]); }
           inp.classList.add(right?"ok":"bad");
           var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent=right?"✓":"✗";
@@ -952,7 +957,7 @@
           else {
             var ans=f.answer;
             if (typeof ans==="number"){ var p=evalAnswer(el.value); right=(p!==null && Math.abs(p-ans)<1e-9); }
-            else if (/[a-z]/i.test(ans)){ right=exprEquiv(el.value,ans)||exprMatch(el.value,{answer:ans}); }
+            else if (/[a-z]/i.test(ans)){ right = isWordAnswer(ans) ? wordMatch(el.value, ans) : (exprEquiv(el.value,ans)||exprMatch(el.value,{answer:ans})); }
             else { right=textMatch(el.value,{answer:ans}); }
           }
           el.classList.add(right?"ok":"bad");
