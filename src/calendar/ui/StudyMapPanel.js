@@ -176,7 +176,7 @@ export class StudyMapPanel {
     h.querySelector("div:last-child").textContent = `${p.pct}% mastered · tap a term to update`;
   }
 
-  show() { this._build(); this._panel.style.display = "flex"; if (this._openId) this._renderMap(this._openId); else this._renderList(); }
-  hide() { if (this._panel) this._panel.style.display = "none"; }
+  show(opts = {}) { this._onClose = opts.onClose || null; this._build(); this._panel.style.display = "flex"; if (this._openId) this._renderMap(this._openId); else this._renderList(); }
+  hide(opts = {}) { if (this._panel) this._panel.style.display = "none"; const cb = this._onClose; this._onClose = null; if (!opts.silent) cb?.(); }
   toggle() { this._build(); (this._panel.style.display === "none" || !this._panel.style.display) ? this.show() : this.hide(); }
 }

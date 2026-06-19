@@ -1197,6 +1197,12 @@ export class CalendarApp {
         this._showStageBackdrop(true);
         this.inklingPanel?.showGoals({ onClose: () => this._closeBottomStage() });
         break;
+      case "study":
+        document.body.classList.add("inkling-stage-open");
+        this._showStageBackdrop(true);
+        // Study Maps + flashcards/quiz; ✕ tears the nav stage back down.
+        this.inklingPanel?.showStudy({ onClose: () => this._closeBottomStage() });
+        break;
       default:
         break;
     }

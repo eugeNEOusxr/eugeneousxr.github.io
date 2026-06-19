@@ -18,6 +18,14 @@ const SAMPLE = "Today";
 const SIZES = [["S", 0.8], ["M", 1.0], ["L", 1.3], ["XL", 1.7]];
 /** 3D typeface options → Real3DText font key (label, key). */
 const FONTS = [["Sans", "helvetiker"], ["Bold", "helvetiker-bold"], ["Serif", "optimer"], ["Elegant", "gentilis"], ["Droid", "droid-serif"]];
+/** Web-font approximation of each 3D typeface, for the live preview only. */
+const FONT_CSS = {
+  "helvetiker": "system-ui,sans-serif",
+  "helvetiker-bold": "system-ui,sans-serif",
+  "optimer": "'Trebuchet MS','Segoe UI',sans-serif",
+  "gentilis": "Georgia,'Times New Roman',serif",
+  "droid-serif": "'Droid Serif',Georgia,serif"
+};
 
 /** Preset text colours offered in the picker (plus a custom swatch + Auto). */
 const COLORS = ["#ffffff", "#ef4444", "#f59e0b", "#fde047", "#22c55e", "#22d3ee", "#3b82f6", "#a855f7", "#ec4899"];
@@ -53,7 +61,9 @@ const GROUPS = [
       { id: "emboss", name: "Deep Emboss", css: "color:#cbd5e1;text-shadow:0 1px 0 #64748b,0 2px 0 #5b6677,0 3px 0 #515c6e,0 4px 0 #475160,0 6px 9px rgba(0,0,0,.6)" },
       { id: "neon", name: "Neon Tube", css: "color:#fff;text-shadow:0 0 4px #22d3ee,0 0 11px #22d3ee,0 0 22px #0891b2,0 0 34px #0891b2" },
       { id: "gold", name: "Gold Relief", css: "background:linear-gradient(180deg,#fde68a,#f59e0b 55%,#b45309);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 2px rgba(0,0,0,.55))" },
-      { id: "glass", name: "Glass Prism", css: "color:rgba(255,255,255,.82);-webkit-text-stroke:0.5px rgba(255,255,255,.45);text-shadow:0 1px 1px rgba(255,255,255,.6),0 2px 8px rgba(56,189,248,.55)" }
+      { id: "glass", name: "Glass Prism", css: "color:rgba(255,255,255,.82);-webkit-text-stroke:0.5px rgba(255,255,255,.45);text-shadow:0 1px 1px rgba(255,255,255,.6),0 2px 8px rgba(56,189,248,.55)" },
+      { id: "bubble", name: "Bubble Candy", css: "color:#a7f3d0;-webkit-text-stroke:1.5px #047857;text-shadow:0 2px 0 #047857,0 4px 9px rgba(0,0,0,.45)" },
+      { id: "block", name: "Stone Block", css: "color:#fbbf24;text-shadow:1px 1px 0 #b45309,2px 2px 0 #92400e,3px 3px 0 #78350f,4px 4px 0 #78350f,5px 6px 9px rgba(0,0,0,.5)" }
     ]
   },
   {
@@ -64,7 +74,9 @@ const GROUPS = [
       { id: "letterpress", name: "Letterpress", css: "color:#1e293b;text-shadow:0 1px 0 rgba(255,255,255,.6)", bg: "linear-gradient(135deg,#cbd5e1,#94a3b8)" },
       { id: "retro", name: "Retro Stack", css: "color:#fff;text-shadow:2px 2px 0 #f59e0b,4px 4px 0 #ef4444" },
       { id: "softlift", name: "Soft Lift", css: "color:#f1f5f9;text-shadow:0 1px 0 #cbd5e1,0 8px 14px rgba(0,0,0,.5)" },
-      { id: "outline", name: "Outline Pop", css: "color:#fff;text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000,4px 4px 0 rgba(0,0,0,.35)" }
+      { id: "outline", name: "Outline Pop", css: "color:#fff;text-shadow:-1.5px -1.5px 0 #000,1.5px -1.5px 0 #000,-1.5px 1.5px 0 #000,1.5px 1.5px 0 #000,4px 4px 0 rgba(0,0,0,.35)" },
+      { id: "bubbly", name: "Bubbly Sticker", css: "color:#fff;font-family:'Trebuchet MS','Segoe UI',sans-serif;font-weight:900;-webkit-text-stroke:3px #6366f1;text-shadow:0 4px 7px rgba(0,0,0,.45)" },
+      { id: "comic", name: "Comic Pop", css: "color:#fde047;font-family:'Comic Sans MS','Trebuchet MS',sans-serif;font-weight:900;-webkit-text-stroke:2px #1e293b;text-shadow:3px 3px 0 #1e293b" }
     ]
   },
   {
@@ -82,6 +94,28 @@ const GROUPS = [
 
 let _panel = null;
 let _onPick = null;
+let _previewSample = null;
+
+/** Live "Today" preview — reflects the chosen style + colour + size + font + anim. */
+function _updatePreview() {
+  if (!_previewSample) return;
+  const css = textStyleCss(getTextStyle());
+  const color = getTextColorCss();
+  const size = getTextScale();
+  const fam = FONT_CSS[getTextFont()] || "";
+  let s = "font-weight:800;line-height:1.05;font-size:" + Math.round(46 * size) + "px;" + css + ";";
+  if (fam) s += "font-family:" + fam + ";";
+  if (getTextFont() === "helvetiker-bold") s += "font-weight:900;";
+  if (color) {
+    // Tint to the chosen colour, defeating any gradient/clip so the colour shows.
+    s += "color:" + color + " !important;-webkit-text-fill-color:" + color +
+      " !important;background:none !important;-webkit-background-clip:initial !important;";
+  }
+  const animCss = textAnimCss();
+  if (animCss) s += animCss + ";";
+  _previewSample.style.cssText = s;
+  _previewSample.textContent = SAMPLE;
+}
 
 /** value (`dim:id`) → style object, for applying the look elsewhere. */
 const STYLE_INDEX = {};
@@ -155,6 +189,12 @@ export function text3dParams(value, baseColor) {
       return { color: 0xf5c542, glowColor: 0xfde68a, metalness: 0.92, roughness: 0.12, emissiveIntensity: 0.2, depth: 0.34 };
     case "3D:glass":
       return { color: 0xbfe3ff, glowColor: 0xffffff, metalness: 0.1, roughness: 0.08, emissiveIntensity: 0.25, depth: 0.3 };
+    case "3D:bubble":
+      // Glossy candy/plastic — bright, low metal, high gloss, a little glow.
+      return { color: baseColor, glowColor: baseColor, metalness: 0.0, roughness: 0.12, emissiveIntensity: 0.5, depth: 0.42 };
+    case "3D:block":
+      // Chunky matte stone block — deep extrusion, rough, no shine.
+      return { color: baseColor, glowColor: baseColor, metalness: 0.05, roughness: 0.92, emissiveIntensity: 0.08, depth: 0.62 };
     default:
       return { color: baseColor, glowColor: baseColor, metalness: 0.25, roughness: 0.4, emissiveIntensity: 0.32, depth: 0.34 };
   }
@@ -168,6 +208,7 @@ export function openTextStylePicker(onPick) {
   _build();
   _panel.style.display = "flex";
   _markSelected(getTextStyle());
+  _updatePreview();
 }
 
 export function closeTextStylePicker() {
@@ -184,6 +225,7 @@ function _markSelected(value) {
 function _select(value) {
   try { localStorage.setItem(PREF_KEY, value); } catch { /* ignore */ }
   _markSelected(value);
+  _updatePreview();
   try { window.dispatchEvent(new CustomEvent("inkling:text-style", { detail: { value } })); } catch { /* ignore */ }
   _onPick?.(value);
 }
@@ -195,6 +237,7 @@ function _selectAnim(id) {
     b.style.background = on ? "#6366f1" : "#1e293b";
     b.style.color = on ? "#fff" : "#cbd5e1";
   });
+  _updatePreview();
   try { window.dispatchEvent(new CustomEvent("inkling:text-anim", { detail: { value: id } })); } catch { /* ignore */ }
 }
 
@@ -215,6 +258,7 @@ function _markColor(hex) {
 function _selectColor(hex) {
   try { if (hex) localStorage.setItem(COLOR_KEY, hex); else localStorage.removeItem(COLOR_KEY); } catch { /* ignore */ }
   _markColor(hex);
+  _updatePreview();
   try { window.dispatchEvent(new CustomEvent("inkling:text-color", { detail: { value: hex || null } })); } catch { /* ignore */ }
 }
 
@@ -230,6 +274,7 @@ function _markSize(mult) {
 function _selectSize(mult) {
   try { localStorage.setItem(SIZE_KEY, String(mult)); } catch { /* ignore */ }
   _markSize(mult);
+  _updatePreview();
   try { window.dispatchEvent(new CustomEvent("inkling:text-size", { detail: { value: mult } })); } catch { /* ignore */ }
 }
 
@@ -245,6 +290,7 @@ function _markFont(key) {
 function _selectFont(key) {
   try { localStorage.setItem(FONT_KEY, key); } catch { /* ignore */ }
   _markFont(key);
+  _updatePreview();
   try { window.dispatchEvent(new CustomEvent("inkling:text-font", { detail: { value: key } })); } catch { /* ignore */ }
 }
 
@@ -268,6 +314,16 @@ function _build() {
   done.addEventListener("click", () => closeTextStylePicker());
   head.append(title, done);
   overlay.appendChild(head);
+
+  // Live preview — shows "Today" in the current style + colour + size + font so
+  // the user can see exactly what their text will look like as they tweak.
+  const preview = document.createElement("div");
+  preview.style.cssText =
+    "display:flex;align-items:center;justify-content:center;min-height:96px;margin-bottom:16px;" +
+    "border-radius:14px;background:linear-gradient(135deg,#111827,#0b1220);border:1px solid #243049;overflow:hidden;padding:10px";
+  _previewSample = document.createElement("span");
+  preview.appendChild(_previewSample);
+  overlay.appendChild(preview);
 
   // Animation selector (applies on top of any style).
   injectAnimKeyframes();

@@ -460,9 +460,9 @@ export class InklingPanel {
   }
 
   /** Open the Study Maps surface — Haiku-built study paths with mastery tracking. */
-  showStudy() {
+  showStudy(opts = {}) {
     if (!this._studyPanel) this._studyPanel = new StudyMapPanel();
-    this._studyPanel.show();
+    this._studyPanel.show(opts);
   }
 
   /** Open the new quiz deck (full-screen overlay; replaces the old flip-card flashcards). */
