@@ -1082,9 +1082,7 @@
         if (secIndex[d.id]==null){ secIndex[d.id]=SECTIONS.length; SECTIONS.push({sec:d.id, decks:[]}); }
         var s=SECTIONS[secIndex[d.id]]; s.decks.push(i); d.set = s.decks.length;
       });
-      deckPick.innerHTML = "";
-      SECTIONS.forEach(function(s,i){ var o=document.createElement("option"); o.value=i; o.textContent=s.sec; deckPick.appendChild(o); });
-      deckPick.value = secIndex[DECKS[curDeck].id];
+      scopeDeckPick();
     }
 
     // ── Generated-deck ingestion (Inkling / Haiku → quiz format) ───────────────
@@ -1156,8 +1154,9 @@
       DECKS.forEach(function(x,i){ if (x.generated && x.id === d.id) existing = i; });
       if (existing >= 0) DECKS[existing] = d; else DECKS.push(d);
       rebuildSections();
-      if (typeof hideHome === "function") hideHome();
-      switchDeck(existing >= 0 ? existing : DECKS.length - 1);
+      // Land on the home (first sight) where the new set shows as its OWN subject
+      // box — don't drop into it mixed with the precalc sections.
+      if (typeof showHome === "function") showHome(); else switchDeck(DECKS.length - 1);
       return true;
     }
     var setRow = document.getElementById("setRow");
@@ -1185,7 +1184,7 @@
     function switchDeck(n){
       curDeck = n; DECK = DECKS[curDeck].questions; idx = 0;
       document.getElementById("deckTitle").textContent = DECKS[curDeck].title;
-      deckPick.value = secIndex[DECKS[curDeck].id];
+      scopeDeckPick();
       buildSetRow(); closeMenu(); setEarned(); render();
     }
     deckPick.addEventListener("change", function(){ switchDeck(SECTIONS[parseInt(this.value,10)].decks[0]); });
@@ -1229,6 +1228,19 @@
     function isPrecalc(sec){ return /^\d+\.\d+$/.test(sec); }     // 1.1, 1.2, … = section of chapter 1
     function chapterOf(sec){ return parseInt(String(sec).split(".")[0], 10); }
     function chapterSections(n){ return SECTIONS.filter(function(s){ return isPrecalc(s.sec) && chapterOf(s.sec) === n; }); }
+    // A subject groups its sections. Precalc chapters share "precalc"; each
+    // generated set (biology, etc.) is its OWN subject — so the section dropdown
+    // never mixes biology in with the precalc sections.
+    function subjectKey(sec){ return isPrecalc(sec) ? "precalc" : sec; }
+    function scopeDeckPick(){
+      var curKey = subjectKey(DECKS[curDeck].id);
+      deckPick.innerHTML = "";
+      SECTIONS.forEach(function(s, i){
+        if (subjectKey(s.sec) !== curKey) return;
+        var o = document.createElement("option"); o.value = i; o.textContent = s.sec; deckPick.appendChild(o);
+      });
+      deckPick.value = secIndex[DECKS[curDeck].id];
+    }
     // OpenStax Precalculus — the 12 chapters. 1.1–1.7 are the SECTIONS of Ch. 1.
     var PRECALC_CHAPTERS = [
       "Functions", "Linear Functions", "Polynomial & Rational Functions",
