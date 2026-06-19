@@ -334,14 +334,14 @@ export class InklingPanel {
     // Orb = Inkling's own quick actions. Connections-map, Goals, Alerts and
     // Alarm now live in the bottom nav, so they're dropped here to keep the
     // orb cluster legible (was 9 cramped icons).
+    // Alarm (🔔) and Connections (🔗) removed 2026-06-18: alarms live in the
+    // Schedule day panel; Connections opens when you ask Inkling to make them.
     this._orbItems = [
       mk("💬", "Chat with Inkling", () => this.openWithContext()),
       mk("🎤", "Voice message", () => this.openWithVoice()),
       mk("🧠", "Mind", () => { this.minimize(); this.showMind(); }),
       mk("📚", "Study", () => { this.minimize(); this.showStudy(); }),
       mk("📇", "Flashcards", () => { this.minimize(); this.showFlashcards(); }),
-      mk("🔔", "Alarm", () => this.app?.openAlarmClock?.()),
-      mk("🔗", "Connections", () => this.showConnections()),
       mk("＋", "New event", () => this._orbNewEvent()),
       mk("🎨", "Text style", () => openTextStylePicker()),
       mk("📅", "Go to today", () => this._orbToday())

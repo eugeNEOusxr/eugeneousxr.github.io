@@ -20,6 +20,7 @@ import {
 } from "./weaveTextStyleSettings.js";
 import { hexToCssColor } from "./letterTypography.js";
 import { getCalendarMode, toggleCalendarMode, onCalendarModeChange } from "./calendarMode.js";
+import { openTextStylePicker } from "../calendar/ui/TextStylePicker.js";
 
 const STYLE_TAG_ID = "wordweaver-ui-styles";
 
@@ -254,7 +255,10 @@ export class WordWeaverUI {
 
     toggleBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      this._setMenuOpen(!this._menuOpen);
+      // Open the unified Text-style picker (colour · 3D style · size · font) — the
+      // same one the Inkling orb uses, which the 3D day view actually honors. The
+      // old in-house MENU_SECTIONS panel wrote to a different store and never showed.
+      openTextStylePicker();
     });
 
     document.addEventListener("click", (e) => {
