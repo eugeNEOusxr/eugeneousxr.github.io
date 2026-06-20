@@ -812,6 +812,16 @@
     var DEFAULT_QCOUNT = 20;
     var curDeck = 0;
     DECKS.forEach(function(d){ d.qcount = d.qcount || DEFAULT_QCOUNT; while (d.questions.length < d.qcount) d.questions.push({ type: "placeholder", points: 10 }); d.total = d.qcount * 10; });
+
+    // Persist quiz progress across sessions (localStorage, keyed by section id).
+    // Only hand-built "My set" decks are saved — AI sets are regenerated fresh.
+    var PROGRESS_KEY = "inkling-quiz-progress";
+    function loadProgress(){ try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || "{}") || {}; } catch(_){ return {}; } }
+    function persistProgress(){ try { var m=loadProgress(); if(!DECKS[curDeck].generated){ m[DECKS[curDeck].id]=DECKS[curDeck].graded; localStorage.setItem(PROGRESS_KEY, JSON.stringify(m)); } } catch(_){} }
+    (function restoreProgress(){
+      var prog = loadProgress();
+      DECKS.forEach(function(d){ if (!d.generated && prog[d.id] && typeof prog[d.id]==="object") d.graded = prog[d.id]; });
+    })();
     var DECK = DECKS[curDeck].questions;
     function qnum(i){ return DECKS[curDeck].id + "." + (i + 1); }
 
@@ -955,7 +965,7 @@
 
     function clearMarks(){ [].forEach.call(optsEl.querySelectorAll("[data-i]"),function(r){ r.classList.remove("ok","bad"); r.querySelector(".mark").textContent=""; }); }
     function finishGrade(pts,max){
-      DECKS[curDeck].graded[idx]=pts; setEarned();
+      DECKS[curDeck].graded[idx]=pts; setEarned(); persistProgress();
       scoreEl.textContent = pts+" / "+max+" ("+Math.round((pts/max)*100)+"%)";
       scoreEl.style.color = (pts===max)?"var(--ok)":"var(--text)";
     }
