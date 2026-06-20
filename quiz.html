@@ -99,8 +99,11 @@
     .mathkb button:active{background:var(--accent);color:#fff}
     .mathkb .kbtag{flex-basis:100%;font-size:12px;color:var(--muted);margin:-4px 0 2px}
     /* Standardized math keyboard (tabbed grid, mirrors the school MathQuill pad) */
-    .mathpad{margin-top:16px;padding-top:10px;border-top:.5px solid var(--line);max-width:420px}
-    .mp-tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:9px;border-bottom:.5px solid var(--line)}
+    .mathpad{margin:10px 0 4px;padding-top:10px;border-top:.5px solid var(--line);max-width:420px}
+    .mathpad.mp-closed{display:none}
+    .mp-tabs{display:flex;align-items:center;gap:2px;flex-wrap:wrap;margin-bottom:9px;border-bottom:.5px solid var(--line)}
+    .mp-x{margin-left:auto;border:none;background:none;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:4px 6px}
+    .mp-x:active{color:var(--text)}
     .mp-tab{padding:6px 10px;border:none;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
     .mp-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
     .mp-grid{display:none;gap:5px;grid-template-columns:repeat(var(--cols,6),1fr)}
@@ -439,7 +442,7 @@
         if (t==="ABC") return '<div class="mp-grid mp-grid-abc'+(t===defaultTab?' on':'')+'" data-grid="ABC">'+abcKeysHTML()+'</div>';
         return '<div class="mp-grid'+(t===defaultTab?' on':'')+'" data-grid="'+t+'" style="--cols:'+(MP_COLS[t]||6)+'">'+MP_KEYS[t].map(mpKeyHTML).join("")+'</div>';
       }).join("");
-      return '<div class="mathpad" aria-label="Math keyboard"><div class="mp-tabs">'+tabs+'</div>'+grids+'</div>';
+      return '<div class="mathpad mp-closed" aria-label="Math keyboard"><div class="mp-tabs">'+tabs+'<button type="button" class="mp-x" data-mpx="1" aria-label="Close keyboard">✕</button></div>'+grids+'</div>';
     }
     // Answer-shape detector: interval-style (no letters) → open the Interval tab by default.
     function isIntervalStr(a){ return typeof a==="string" && /[∞∪\[\]()]/.test(a) && !/[a-z]/i.test(a); }
@@ -976,25 +979,25 @@
         optsEl.innerHTML =
           '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>'
           + '<div class="ask">'+q.ask+'</div>'
-          + '<div class="inwrap"><span class="inlabel">'+q.label+'</span><input type="text" class="ansin" inputmode="text" autocomplete="off" aria-label="Your answer"><span class="mark"></span></div>';
+          + '<div class="inwrap"><span class="inlabel">'+q.label+'</span><input type="text" class="ansin" inputmode="none" autocomplete="off" aria-label="Your answer"><span class="mark"></span></div>';
       } else if (q.type==="tableinput") {
         promptEl.innerHTML = q.prompt;
         var html = '<div class="tscroll">'+tableHTML(q.table)+'</div>';
         q.blanks.forEach(function(b,bi){
-          html += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+          html += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="none" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
         });
         optsEl.innerHTML = html;
       } else if (q.type==="graphinput") {
         promptEl.innerHTML = q.prompt;
         var gh = '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>';
         q.blanks.forEach(function(b,bi){
-          gh += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+          gh += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="none" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
         });
         optsEl.innerHTML = gh;
       } else if (q.type==="multiinput") {
         promptEl.innerHTML = q.prompt;
         var mh = "";
-        q.blanks.forEach(function(b,bi){ mh += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="text" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>'; });
+        q.blanks.forEach(function(b,bi){ mh += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="none" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>'; });
         optsEl.innerHTML = mh;
       } else if (q.type==="graphform") {
         promptEl.innerHTML = q.prompt;
@@ -1005,7 +1008,7 @@
             f.choices.forEach(function(c,k){ o+='<option value="'+k+'">'+c+'</option>'; });
             ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span><select class="ffield fsel" data-f="'+fi+'" aria-label="Field '+(fi+1)+'">'+o+'</select><span class="mark"></span></div>';
           } else {
-            ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span><input type="text" class="ffield ansin" data-f="'+fi+'" inputmode="text" autocomplete="off" aria-label="Field '+(fi+1)+'"><span class="mark"></span></div>';
+            ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span><input type="text" class="ffield ansin" data-f="'+fi+'" inputmode="none" autocomplete="off" aria-label="Field '+(fi+1)+'"><span class="mark"></span></div>';
           }
         });
         optsEl.innerHTML = ff;
@@ -1183,10 +1186,18 @@
     }
 
     optsEl.addEventListener("keydown",function(e){ if(e.key==="Enter" && e.target.classList && e.target.classList.contains("ansin")){ e.preventDefault(); grade(); } });
-    optsEl.addEventListener("focusin",function(e){ if(e.target.classList && e.target.classList.contains("ansin")) lastFocusedAnsin = e.target; });
+    // Pop the keyboard up right below the input the user tapped (school-style).
+    optsEl.addEventListener("focusin",function(e){
+      if(e.target.classList && e.target.classList.contains("ansin")){
+        lastFocusedAnsin = e.target;
+        var pad=optsEl.querySelector(".mathpad");
+        if(pad){ (e.target.closest(".inwrap")||e.target).insertAdjacentElement("afterend", pad); pad.classList.remove("mp-closed"); }
+      }
+    });
     optsEl.addEventListener("click",function(e){
       var pad=e.target.closest(".mathpad");
       if(pad){
+        if(e.target.closest(".mp-x")){ e.preventDefault(); pad.classList.add("mp-closed"); return; }
         var tab=e.target.closest(".mp-tab");
         if(tab){ e.preventDefault(); var t=tab.getAttribute("data-tab");
           [].forEach.call(pad.querySelectorAll(".mp-tab"),function(x){ x.classList.toggle("on", x===tab); });
