@@ -199,6 +199,7 @@
   <footer>
     <button class="btn primary" id="submit">Submit</button>
     <button class="btn" id="answer" title="Show the answer">🔑 Show answer</button>
+    <button class="btn" id="hintBtn" title="Get a hint (without the answer)">💡 Hint</button>
     <button class="btn" id="explainBtn" title="AI worked solution">🤖 Explain</button>
     <span class="score" id="score"></span>
     <button class="btn" id="next" style="margin-left:auto">Next question →</button>
@@ -866,6 +867,7 @@
 
     function render(){
       var q = DECK[idx];
+      if (typeof resetTutorUI==="function") resetTutorUI();
       scoreEl.textContent=""; scoreEl.style.color="var(--text)";
       selEl.textContent = qnum(idx) + " ▾";
       optsEl.innerHTML="";
@@ -1505,11 +1507,19 @@
         .catch(function(){ btn.disabled = false; btn.textContent = orig; });
     }
 
-    // ── 🤖 Explain — AI worked solution + follow-up chat (pops up like an AI window) ──
+    // ── 🤖 Explain / 💡 Hint — AI tutor: progressive hints (nudge → step → full worked solution) ──
     var explainPanel=document.getElementById("explainPanel"), explainBody=document.getElementById("explainBody"),
         explainInput=document.getElementById("explainInput"), explainSend=document.getElementById("explainSend"),
-        explainBtn=document.getElementById("explainBtn"), explainClose=document.getElementById("explainClose");
-    var explainHistory=[], explainQIdx=null, explainBusy=false;
+        explainBtn=document.getElementById("explainBtn"), explainClose=document.getElementById("explainClose"),
+        hintBtn=document.getElementById("hintBtn");
+    var explainHistory=[], explainQIdx=null, explainBusy=false, hintLevel=0, fullShown=false, sessionQA=null;
+
+    // Cache full worked solutions so reopening Explain on a question is instant + costs no API call.
+    var EXPLAIN_CACHE_KEY="inkling-quiz-explain-cache";
+    function explainKey(qa){ return (qa.prompt+"||"+qa.answer).toLowerCase().replace(/\s+/g," ").trim().slice(0,300); }
+    function getExplainCache(qa){ try{ var m=JSON.parse(localStorage.getItem(EXPLAIN_CACHE_KEY)||"{}"); return m[explainKey(qa)]||null; }catch(e){ return null; } }
+    function setExplainCache(qa, reply){ try{ var m=JSON.parse(localStorage.getItem(EXPLAIN_CACHE_KEY)||"{}"); var k=explainKey(qa); if(!(k in m)){ var ks=Object.keys(m); while(ks.length>=80){ delete m[ks.shift()]; } } m[k]=reply; localStorage.setItem(EXPLAIN_CACHE_KEY, JSON.stringify(m)); }catch(e){} }
+
     function exAdd(kind, text){
       var d=document.createElement("div"); d.className="ex-msg ex-msg--"+kind; d.textContent=text;
       explainBody.appendChild(d); explainBody.scrollTop=explainBody.scrollHeight; return d;
@@ -1523,42 +1533,87 @@
       else if (Array.isArray(q.fields)) ans=q.fields.map(function(f){ return f.kind==="select"?(f.choices&&f.choices[f.answer]):(f.answerText!=null?f.answerText:f.answer); }).join("; ");
       return { prompt:prompt, answer:ans };
     }
-    function callExplain(){
+    function updateHintBtn(){
+      if (!hintBtn) return;
+      if (fullShown){ hintBtn.textContent="💡 Hint"; hintBtn.disabled=true; return; }
+      hintBtn.disabled=false;
+      hintBtn.textContent = hintLevel===0 ? "💡 Hint" : hintLevel===1 ? "💡 Another hint" : "💡 Show solution";
+    }
+    function resetTutorUI(){
+      explainQIdx=null; hintLevel=0; fullShown=false;
+      if (explainPanel) explainPanel.classList.add("hidden");
+      updateHintBtn();
+    }
+    function ensureSession(){
+      if (explainQIdx===idx) return;
+      explainQIdx=idx; explainBody.innerHTML=""; explainHistory=[]; hintLevel=0; fullShown=false; sessionQA=currentQA();
+    }
+    function callExplain(mode, cacheQA){
       if (explainBusy) return;
-      if (!authToken()){ exAdd("note","Sign in to Inkling to get AI explanations."); return; }
-      explainBusy=true; explainSend.disabled=true;
+      if (!authToken()){ exAdd("note","Sign in to Inkling to get AI help."); return; }
+      explainBusy=true; explainSend.disabled=true; if(hintBtn) hintBtn.disabled=true;
       var thinking=exAdd("ai","…");
       fetch(apiBase()+"/api/inkling/explain",{ method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+authToken() },
-        body: JSON.stringify({ history: explainHistory }) })
+        body: JSON.stringify({ history: explainHistory, mode: mode||"" }) })
         .then(function(r){ return r.json().catch(function(){return null;}).then(function(d){ return {ok:r.ok,data:d}; }); })
         .then(function(r){
           thinking.remove();
           var d=r.data;
           if (!r.ok || !d){ exAdd("note","Couldn't reach Inkling — try again."); return; }
-          if (d.source==="guest"){ exAdd("note","Sign in to Inkling for AI explanations."); return; }
+          if (d.source==="guest"){ exAdd("note","Sign in to Inkling for AI help."); return; }
           if (d.source==="capped"){ exAdd("note","You've hit today's AI limit — resets tomorrow."); return; }
-          var reply=String(d.reply||"").trim() || "Hmm — I couldn't explain that one.";
+          var reply=String(d.reply||"").trim() || "Hmm — I couldn't work that one out.";
           exAdd("ai", reply); explainHistory.push({ role:"assistant", content:reply });
+          if (cacheQA) setExplainCache(cacheQA, reply);
         })
         .catch(function(){ thinking.remove(); exAdd("note","Couldn't reach Inkling — check your connection."); })
-        .then(function(){ explainBusy=false; explainSend.disabled=false; });
+        .then(function(){ explainBusy=false; explainSend.disabled=false; updateHintBtn(); });
+    }
+    function showFull(){
+      if (fullShown || explainBusy) return;
+      fullShown=true;
+      var qa=sessionQA, firstTurn=explainHistory.length===0;
+      if (firstTurn){
+        explainHistory.push({ role:"user", content:"Question: "+qa.prompt+(qa.answer?"\nThe correct answer is: "+qa.answer:"")+"\n\nWalk me through how to solve it." });
+        var cached=getExplainCache(qa);
+        if (cached){ exAdd("ai", cached); explainHistory.push({ role:"assistant", content:cached }); updateHintBtn(); return; }
+        callExplain("", qa);   // clean full solution → cache it
+      } else {
+        explainHistory.push({ role:"user", content:"Now give me the full worked solution, step by step." });
+        callExplain("");       // came after hints → don't cache (it may reference them)
+      }
     }
     function openExplain(){
+      ensureSession();
       explainPanel.classList.remove("hidden");
-      if (explainQIdx!==idx){
-        explainQIdx=idx; explainBody.innerHTML=""; explainHistory=[];
-        var qa=currentQA();
-        explainHistory.push({ role:"user", content:"Question: "+qa.prompt+(qa.answer?"\nThe correct answer is: "+qa.answer:"")+"\n\nWalk me through how to solve it." });
-        callExplain();
-      }
+      showFull();
       explainInput.focus();
+    }
+    function requestHint(){
+      ensureSession();
+      explainPanel.classList.remove("hidden");
+      if (fullShown || explainBusy){ explainInput.focus(); return; }
+      var qa=sessionQA;
+      if (hintLevel===0){
+        hintLevel=1;
+        explainHistory.push({ role:"user", content:"Question: "+qa.prompt+(qa.answer?"\n(The answer is "+qa.answer+" — do NOT reveal it.)":"")+"\n\nGive me a small hint to get started." });
+        callExplain("nudge");
+      } else if (hintLevel===1){
+        hintLevel=2;
+        explainHistory.push({ role:"user", content:"Give me the first concrete step, then stop." });
+        callExplain("step");
+      } else {
+        showFull();
+      }
     }
     function sendFollowup(){
       var t=(explainInput.value||"").trim(); if(!t || explainBusy) return;
-      exAdd("me", t); explainHistory.push({ role:"user", content:t }); explainInput.value=""; callExplain();
+      ensureSession();
+      exAdd("me", t); explainHistory.push({ role:"user", content:t }); explainInput.value=""; callExplain("");
     }
     explainBtn.addEventListener("click", openExplain);
+    if (hintBtn) hintBtn.addEventListener("click", requestHint);
     explainClose.addEventListener("click", function(){ explainPanel.classList.add("hidden"); });
     explainSend.addEventListener("click", sendFollowup);
     explainInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); sendFollowup(); } });
