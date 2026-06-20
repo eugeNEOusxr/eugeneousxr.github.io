@@ -331,10 +331,13 @@
     // Convert a math-y answer/input string into evaluable JS (implicit mult, ^, −).
     function toJsExpr(s){
       s = String(s).toLowerCase().replace(/\s+/g,"").replace(/−/g,"-").replace(/²/g,"^2").replace(/³/g,"^3").replace(/\^/g,"**");
+      s = s.replace(/([0-9a-z)\]])√/g,"$1*√");  // 2√ -> 2*√ , x√ -> x*√
+      s = s.replace(/√\s*\(/g,"§(");       // protect sqrt( from implicit-mult / letter rules
       s = s.replace(/(\d)([a-z(])/g,"$1*$2");   // 6b -> 6*b , 11( -> 11*(
       s = s.replace(/([a-z)])(\()/g,"$1*$2");   // b( -> b*( , )( -> )*(
       s = s.replace(/(\))([a-z0-9])/g,"$1*$2"); // )b -> )*b , )2 -> )*2
       s = s.replace(/([a-z])([a-z])/g,"$1*$2"); // xh -> x*h
+      s = s.replace(/§/g,"Math.sqrt");      // restore protected sqrt
       return s;
     }
     // Numeric equivalence: do input & answer agree as functions of their variable?
@@ -375,6 +378,18 @@
       + '<button type="button" data-b="-∞">−∞</button>'
       + '<button type="button" data-b="∪">∪</button>'
       + '<button type="button" data-b=",">,</button></div>';
+    // Math keyboard — insert symbols for expression answers (exponents, roots, reciprocal).
+    var MATHKB2 = '<div class="mathkb" aria-label="Math keyboard"><span class="kbtag">Math keyboard — tap to insert</span>'
+      + '<button type="button" data-b="²" title="squared / quadratic">x²</button>'
+      + '<button type="button" data-b="³" title="cubed / cubic">x³</button>'
+      + '<button type="button" data-b="^" title="exponent">x^</button>'
+      + '<button type="button" data-b="√(" data-a=")" title="square root">√(&nbsp;)</button>'
+      + '<button type="button" data-b="1/(" data-a=")" title="reciprocal">1/(&nbsp;)</button>'
+      + '<button type="button" data-b="(" data-a=")">(&nbsp;)</button>'
+      + '<button type="button" data-b="/">a/b</button></div>';
+    // Answer-shape detectors: interval (no letters) vs. algebraic expression (lettered, not a plain word).
+    function isIntervalStr(a){ return typeof a==="string" && /[∞∪\[\]()]/.test(a) && !/[a-z]/i.test(a); }
+    function isExprStr(a){ return typeof a==="string" && /[a-z]/i.test(a) && !isWordAnswer(a); }
     function insertAtCursor(input, before, after){
       after = after || ""; var s=input.selectionStart, e=input.selectionEnd, v=input.value;
       input.value = v.slice(0,s) + before + after + v.slice(e);
@@ -957,8 +972,13 @@
         });
         optsEl.innerHTML = lh;
       }
-      if (!ph && q.blanks && q.blanks.some(function(b){ return typeof b.answer==="string" && /[∞∪\[\]()]/.test(b.answer) && !/[a-z]/i.test(b.answer); })) optsEl.insertAdjacentHTML("beforeend", MATHKB);
-      if (!ph && q.fields && q.fields.some(function(f){ return f.kind!=="select" && typeof f.answer==="string" && /[∞∪\[\]()]/.test(f.answer) && !/[a-z]/i.test(f.answer); })) optsEl.insertAdjacentHTML("beforeend", MATHKB);
+      if (!ph) {
+        var fAns = (q.fields||[]).filter(function(f){ return f.kind!=="select"; }).map(function(f){ return f.answer; });
+        var bAns = (q.blanks||[]).map(function(b){ return b.answer; });
+        var allAns = bAns.concat(fAns);
+        if (allAns.some(isIntervalStr)) optsEl.insertAdjacentHTML("beforeend", MATHKB);
+        else if (allAns.some(isExprStr)) optsEl.insertAdjacentHTML("beforeend", MATHKB2);
+      }
       if (!ph && DECKS[curDeck].graded[idx]!=null) { var gv=DECKS[curDeck].graded[idx]; scoreEl.textContent = gv+" / "+q.points; scoreEl.style.color=(gv===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
     }
