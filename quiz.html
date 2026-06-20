@@ -898,6 +898,12 @@
       var prog = loadProgress();
       DECKS.forEach(function(d){ if (!d.generated && prog[d.id] && typeof prog[d.id]==="object") d.graded = prog[d.id]; });
     })();
+    // Remember where the user was (deck+question or home level) so a refresh reopens it.
+    var LOC_KEY = "inkling-quiz-location";
+    // Snapshot the last location NOW, before the initial render() can overwrite it.
+    var bootLoc = (function(){ try { return JSON.parse(localStorage.getItem(LOC_KEY) || "null"); } catch(_){ return null; } })();
+    function saveLocDeck(){ try { localStorage.setItem(LOC_KEY, JSON.stringify({ view:"deck", deckId:DECKS[curDeck].id, idx:idx })); } catch(_){} }
+    function saveLocHome(){ try { localStorage.setItem(LOC_KEY, JSON.stringify({ view:"home", homeView:(typeof homeView!=="undefined"?homeView:null) })); } catch(_){} }
     var DECK = DECKS[curDeck].questions;
     function qnum(i){ return DECKS[curDeck].id + "." + (i + 1); }
 
@@ -1044,6 +1050,7 @@
       }
       if (!ph && DECKS[curDeck].graded[idx]!=null) { var gv=DECKS[curDeck].graded[idx]; scoreEl.textContent = gv+" / "+q.points; scoreEl.style.color=(gv===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
+      saveLocDeck();
     }
 
     function clearMarks(){ [].forEach.call(optsEl.querySelectorAll("[data-i]"),function(r){ r.classList.remove("ok","bad"); r.querySelector(".mark").textContent=""; }); }
@@ -1426,6 +1433,7 @@
     var homeView = null;  // null = subjects | "precalc-chapters" | "precalc-ch-<N>"
     function buildHome(){
       if (!homeGrid) return;
+      saveLocHome();   // remember the home level (runs before buildHome's early returns)
       homeGrid.innerHTML = "";
       var dismissed = getDismissed(), titleEl = document.querySelector(".home-title");
       var precalc = SECTIONS.filter(function(s){ return isPrecalc(s.sec); });
@@ -1487,10 +1495,23 @@
         homeGrid.appendChild(makeMiscBox("Restore hidden sets", "↩︎", function(){ setDismissed({}); buildHome(); }));
       }
     }
-    function showHome(){ homeView = null; buildHome(); document.body.classList.add("quiz-home"); closeMenu(); }
+    function showHomeAt(view){ homeView = view || null; buildHome(); document.body.classList.add("quiz-home"); closeMenu(); }
+    function showHome(){ showHomeAt(null); }
     function hideHome(){ document.body.classList.remove("quiz-home"); }
+    // On load, reopen wherever the user last was (deck+question or home level) instead of always the home screen.
+    function restoreLoc(){
+      if (bootLoc && bootLoc.view === "deck"){
+        var di = -1; for (var i=0;i<DECKS.length;i++){ if (DECKS[i].id === bootLoc.deckId){ di = i; break; } }
+        if (di >= 0){
+          hideHome(); switchDeck(di);
+          if (typeof bootLoc.idx === "number" && bootLoc.idx >= 0 && bootLoc.idx < DECK.length){ idx = bootLoc.idx; render(); }
+          closeMenu(); return;
+        }
+      }
+      showHomeAt(bootLoc && bootLoc.view === "home" ? bootLoc.homeView : null);
+    }
     document.getElementById("homeBtn").addEventListener("click", showHome);
-    showHome();
+    restoreLoc();
 
     // Receive generated decks from a host page (Inkling embeds this in an iframe).
     window.addEventListener("message", function(e){
