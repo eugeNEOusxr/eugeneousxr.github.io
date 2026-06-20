@@ -796,6 +796,19 @@
       { type:"mc", prompt:"Which pair of functions are inverses of each other?", options:["<em>f</em>(<em>x</em>) = <em>x</em> + 2 and <em>g</em>(<em>x</em>) = <em>x</em> − 2","<em>f</em>(<em>x</em>) = 2<em>x</em> and <em>g</em>(<em>x</em>) = 2<em>x</em>","<em>f</em>(<em>x</em>) = <em>x</em>² and <em>g</em>(<em>x</em>) = 2<em>x</em>","<em>f</em>(<em>x</em>) = <em>x</em> + 1 and <em>g</em>(<em>x</em>) = <em>x</em> + 1"], correct:0, points:10 }
     ] }
     ];
+    // One hand-built "My set" per section: merge any non-generated decks that
+    // share a section id into a single deck (e.g. 1.3's OpenStax + school WebWork
+    // questions become one My set). Generated AI sets stay separate.
+    (function mergeMySets(){
+      var first = {}, out = [];
+      DECKS.forEach(function(d){
+        if (!d.generated && first[d.id]) { first[d.id].questions = first[d.id].questions.concat(d.questions); return; }
+        if (!d.generated) first[d.id] = d;
+        out.push(d);
+      });
+      out.forEach(function(d){ if (!d.generated) { d.qcount = d.questions.length; d.total = d.qcount * 10; } });
+      DECKS = out;
+    })();
     var DEFAULT_QCOUNT = 20;
     var curDeck = 0;
     DECKS.forEach(function(d){ d.qcount = d.qcount || DEFAULT_QCOUNT; while (d.questions.length < d.qcount) d.questions.push({ type: "placeholder", points: 10 }); d.total = d.qcount * 10; });
