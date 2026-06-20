@@ -1194,7 +1194,8 @@
       return {
         id: String(raw.id || raw.section || raw.title || raw.topic || "AI").slice(0, 40),
         title: String(raw.title || raw.topic || "Generated set").slice(0, 120),
-        graded: {}, qcount: questions.length, total: questions.length * 10, generated: true, questions: questions
+        graded: {}, qcount: questions.length, total: questions.length * 10, generated: true,
+        tier: raw.tier || null, questions: questions
       };
     }
     function addGeneratedDeck(raw){
@@ -1214,19 +1215,23 @@
       return true;
     }
     var setRow = document.getElementById("setRow");
+    function capTier(t){ return t ? String(t).charAt(0).toUpperCase() + String(t).slice(1) : ""; }
     function buildSetRow(){
       var s = SECTIONS[secIndex[DECKS[curDeck].id]];
-      while (setRow.children.length > 1) setRow.removeChild(setRow.lastChild);
-      var hasAi = s.decks.some(function(di){ return DECKS[di].generated; });
+      setRow.innerHTML = "";
+      var aiIdx = s.decks.filter(function(di){ return DECKS[di].generated; })[0];
+      var aiDeck = aiIdx != null ? DECKS[aiIdx] : null;
       var mineCount = s.decks.filter(function(di){ return !DECKS[di].generated; }).length;
       var show = false;
+      // My set / AI set toggle (once both exist).
       if (s.decks.length >= 2){
         show = true;
+        var sl = document.createElement("span"); sl.className = "slbl"; sl.textContent = "Sets"; setRow.appendChild(sl);
         var myN = 0;
         s.decks.forEach(function(di){
           var b = document.createElement("button");
           b.className = "setbtn" + (di===curDeck ? " active" : "");
-          if (DECKS[di].generated) b.textContent = "✨ AI set";
+          if (DECKS[di].generated) b.textContent = "✨ AI" + (DECKS[di].tier ? " · " + capTier(DECKS[di].tier) : "");
           else { myN++; b.textContent = "📷 " + (mineCount > 1 ? "Set " + myN : "My set"); }
           b.addEventListener("click", function(){ switchDeck(di); });
           setRow.appendChild(b);
@@ -1239,13 +1244,17 @@
         });
         setRow.appendChild(nb);
       }
-      // Offer an AI set for this precalc section if it doesn't have one yet.
-      if (!hasAi && isPrecalc(DECKS[curDeck].id)){
+      // Difficulty-tier AI generator (precalc sections): make/remake the AI set at a tier.
+      if (isPrecalc(DECKS[curDeck].id)){
         show = true;
-        var mk = document.createElement("button");
-        mk.className = "setbtn newq"; mk.textContent = "✨ Make an AI set";
-        mk.addEventListener("click", function(){ makeSectionAiSet(mk); });
-        setRow.appendChild(mk);
+        var tl = document.createElement("span"); tl.className = "slbl"; tl.textContent = aiDeck ? "↻ AI tier:" : "✨ Make AI set:"; setRow.appendChild(tl);
+        [["easy","Easy"],["medium","Medium"],["hard","Hard"]].forEach(function(t){
+          var tb = document.createElement("button");
+          tb.className = "setbtn" + (aiDeck && aiDeck.tier === t[0] ? " active" : "");
+          tb.textContent = t[1];
+          tb.addEventListener("click", function(){ makeSectionAiSet(tb, t[0]); });
+          setRow.appendChild(tb);
+        });
       }
       setRow.style.display = show ? "flex" : "none";
     }
@@ -1454,24 +1463,24 @@
 
     // Make an AI set FOR the current precalc section (joins it as the ✨ AI Set,
     // alongside your 📷 screenshot set). Generated on the section's own topic.
-    function makeSectionAiSet(btn){
+    function makeSectionAiSet(btn, difficulty){
       var sec = DECKS[curDeck].id, title = DECKS[curDeck].title;
       var topic = String(title || sec).replace(/^\s*[^·]*·\s*/, "") || sec;
-      if (!authToken()){ btn.textContent = "Sign in to Inkling first"; return; }
-      btn.disabled = true; var orig = btn.textContent; btn.textContent = "✨ Generating…";
+      if (!authToken()){ btn.textContent = "Sign in first"; return; }
+      btn.disabled = true; var orig = btn.textContent; btn.textContent = "✨ …";
       fetch(apiBase()+"/api/inkling/quiz-set", {
         method:"POST",
         headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+authToken(), "X-Inkling-Client":"Inkling" },
-        body: JSON.stringify({ topic: topic, section: sec })
+        body: JSON.stringify({ topic: topic, section: sec, difficulty: difficulty || "" })
       }).then(function(res){ return res.json().catch(function(){ return null; }).then(function(d){ return { ok:res.ok, data:d }; }); })
         .then(function(r){
           btn.disabled = false; btn.textContent = orig;
           var d = r.data;
-          if (!r.ok || !d){ btn.textContent = "Couldn't generate — retry"; return; }
-          if (d.source === "guest"){ btn.textContent = "Sign in first"; return; }
-          if (d.source === "capped"){ btn.textContent = "Daily limit reached"; return; }
-          if (!Array.isArray(d.questions) || !d.questions.length){ btn.textContent = "Try again"; return; }
-          addGeneratedDeck({ id: sec, title: title, topic: topic, questions: d.questions });
+          if (!r.ok || !d){ btn.textContent = "retry"; return; }
+          if (d.source === "guest"){ btn.textContent = "sign in"; return; }
+          if (d.source === "capped"){ btn.textContent = "limit"; return; }
+          if (!Array.isArray(d.questions) || !d.questions.length){ btn.textContent = "retry"; return; }
+          addGeneratedDeck({ id: sec, title: title, topic: topic, tier: difficulty || null, questions: d.questions });
         })
         .catch(function(){ btn.disabled = false; btn.textContent = orig; });
     }
