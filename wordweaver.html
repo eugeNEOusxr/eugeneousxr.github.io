@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>WordWeaver — Knowledge Canvas</title>
+<style>
+  :root{
+    --bg:#070912; --panel:#0e1320; --line:#1f2740; --text:#e8ecf6; --muted:#8a93ad; --accent:#7c5cff;
+    --domain:#ffcf5c; --chapter:#b48bff; --section:#5aa9ff; --subsection:#3fe0d0; --problem:#ff8a4c; --step:#7be08a; --answer:#ffd66b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+  #cv{display:block;width:100vw;height:100vh;touch-action:none;cursor:grab}
+  #cv.drag{cursor:grabbing}
+  /* HUD */
+  .hud{position:fixed;z-index:5;pointer-events:none}
+  #crumb{top:12px;left:14px;right:14px;display:flex;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+  #crumb .cb{pointer-events:auto;cursor:pointer;padding:3px 9px;border:.5px solid var(--line);border-radius:999px;background:rgba(14,19,32,.7);backdrop-filter:blur(6px);color:var(--text);white-space:nowrap;max-width:42vw;overflow:hidden;text-overflow:ellipsis}
+  #crumb .cb:hover{border-color:var(--accent)}
+  #crumb .sep{align-self:center;opacity:.5}
+  #title{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:4;font-weight:700;letter-spacing:.5px;font-size:15px;color:#fff;opacity:.85;pointer-events:none}
+  #title small{font-weight:500;color:var(--muted)}
+  /* node card */
+  #card{position:fixed;left:14px;bottom:14px;z-index:6;width:min(330px,86vw);background:rgba(14,19,32,.92);backdrop-filter:blur(10px);border:.5px solid var(--line);border-radius:16px;padding:14px 15px;box-shadow:0 18px 50px rgba(0,0,0,.5);transform:translateY(140%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+  #card.show{transform:translateY(0)}
+  #card .kind{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  #card h2{margin:3px 0 6px;font-size:18px;line-height:1.2}
+  #card p{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:#c7cee0}
+  #card .row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{pointer-events:auto;border:none;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;cursor:pointer;background:#1a2236;color:var(--text)}
+  .btn:hover{background:#23304c}
+  .btn.acc{background:var(--accent);color:#fff}
+  .btn.acc:hover{filter:brightness(1.08)}
+  .btn:disabled{opacity:.5;cursor:default}
+  /* controls */
+  #ctl{right:14px;bottom:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  #ctl button{pointer-events:auto;width:42px;height:42px;border-radius:12px;border:.5px solid var(--line);background:rgba(14,19,32,.85);color:var(--text);font-size:19px;cursor:pointer}
+  #ctl button:hover{border-color:var(--accent)}
+  #hint{left:50%;bottom:16px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:rgba(14,19,32,.6);padding:5px 12px;border-radius:999px;white-space:nowrap}
+  /* legend */
+  #legend{right:14px;top:48px;display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);text-align:right}
+  #legend .lg{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  #legend .dot{width:9px;height:9px;border-radius:50%}
+  .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="title">Word<span style="color:var(--accent)">Weaver</span> &nbsp;<small>knowledge canvas</small></div>
+<div id="crumb" class="hud"></div>
+<div id="legend" class="hud">
+  <div class="lg"><span>Domain</span><span class="dot" style="background:var(--domain)"></span></div>
+  <div class="lg"><span>Chapter</span><span class="dot" style="background:var(--chapter)"></span></div>
+  <div class="lg"><span>Section</span><span class="dot" style="background:var(--section)"></span></div>
+  <div class="lg"><span>Subsection</span><span class="dot" style="background:var(--subsection)"></span></div>
+  <div class="lg"><span>Problem</span><span class="dot" style="background:var(--problem)"></span></div>
+  <div class="lg"><span>Solution step</span><span class="dot" style="background:var(--step)"></span></div>
+</div>
+<div id="ctl" class="hud">
+  <button id="zin" title="Zoom in">+</button>
+  <button id="zout" title="Zoom out">−</button>
+  <button id="home" title="Reset view">⌂</button>
+</div>
+<div id="hint" class="hud">Scroll / pinch to zoom · drag to pan · click a node to dive in</div>
+<div id="card">
+  <div class="kind" id="cardKind"></div>
+  <h2 id="cardTitle"></h2>
+  <p id="cardDesc"></p>
+  <div class="row">
+    <button class="btn acc" id="cardExpand">✨ Break it down</button>
+    <button class="btn" id="cardUp">↑ Parent</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     DATA — a recursive curriculum graph. Compact authoring form:
+       { t:title, k:contentType, d:description, ch:[ ...children ] }
+     (k = domain | chapter | section | subsection | problem | step | answer)
+     One branch (Ch.1 → 1.1) is expanded to full depth incl. a worked problem;
+     other chapters are stubs you can grow with "✨ Break it down" (AI rule b).
+  ───────────────────────────────────────────────────────────────────────── */
+  var RAW = {
+    t:"Precalculus", k:"domain", d:"OpenStax Precalculus — the whole subject as one living map. Dive into any chapter to see its sections, problems, and the steps that solve them.",
+    ch:[
+      { t:"1 · Functions", k:"chapter", d:"What a function is, how we notate it, its domain/range, rates of change, composition, transformations, and inverses.",
+        ch:[
+          { t:"1.1 Functions & Notation", k:"section", d:"Definition of a function, function notation f(x), evaluating, and reading graphs.",
+            ch:[
+              { t:"1.1.1 Evaluate a function", k:"subsection", d:"Substitute an input value and simplify.",
+                ch:[
+                  { t:"Find f(−2) for f(x)=3x²−7x+3", k:"problem", d:"Evaluate the quadratic function at x = −2.",
+                    ch:[
+                      { t:"Substitute x = −2", k:"step", d:"f(−2) = 3(−2)² − 7(−2) + 3." },
+                      { t:"Square first", k:"step", d:"(−2)² = 4, so the term is 3·4 = 12." },
+                      { t:"Multiply & add", k:"step", d:"12 + 14 + 3." },
+                      { t:"Answer: 29", k:"answer", d:"f(−2) = 29." }
+                    ] }
+                ] },
+              { t:"1.1.2 Domain & range", k:"subsection", d:"The set of valid inputs and resulting outputs.",
+                ch:[
+                  { t:"Domain of f(x)=√(7−x)", k:"problem", d:"Find the domain in interval notation.",
+                    ch:[
+                      { t:"Radicand ≥ 0", k:"step", d:"Need 7 − x ≥ 0." },
+                      { t:"Solve", k:"step", d:"x ≤ 7." },
+                      { t:"Answer: (−∞, 7]", k:"answer", d:"Domain = (−∞, 7]." }
+                    ] }
+                ] },
+              { t:"1.1.3 Graph interpretation", k:"subsection", d:"Read values and behavior directly off a graph.",
+                ch:[
+                  { t:"Read f(4) from a graph", k:"problem", d:"Use the plotted curve to find the output at x = 4.",
+                    ch:[
+                      { t:"Locate x = 4", k:"step", d:"Trace up from 4 on the x-axis." },
+                      { t:"Find the curve height", k:"step", d:"The point sits at y = 3." },
+                      { t:"Answer: f(4) = 3", k:"answer", d:"f(4) = 3." }
+                    ] }
+                ] }
+            ] },
+          { t:"1.2 Domain & Range", k:"section", d:"Find domains of rational/radical functions; describe range; interval notation.",
+            ch:[
+              { t:"1.2.1 Interval notation", k:"subsection", d:"Write sets of real numbers as intervals." },
+              { t:"1.2.2 Piecewise functions", k:"subsection", d:"Evaluate functions defined in pieces." }
+            ] },
+          { t:"1.3 Rates of Change", k:"section", d:"Average rate of change; increasing/decreasing; local & absolute extrema." },
+          { t:"1.4 Composition", k:"section", d:"Combine functions with +,−,×,÷ and composition (f∘g)." },
+          { t:"1.5 Transformations", k:"section", d:"Shifts, reflections, stretches; even & odd symmetry." },
+          { t:"1.6 Absolute Value", k:"section", d:"Graph, solve equations & inequalities with |x|." },
+          { t:"1.7 Inverse Functions", k:"section", d:"One-to-one functions, the horizontal line test, and finding inverses." }
+        ] },
+      { t:"2 · Linear Functions", k:"chapter", d:"Slope, equations of lines, modeling, and fitting linear models to data.",
+        ch:[
+          { t:"2.1 Linear Functions", k:"section", d:"Slope-intercept and point-slope forms." },
+          { t:"2.2 Graphs of Lines", k:"section", d:"Graphing lines; parallel & perpendicular." },
+          { t:"2.3 Modeling", k:"section", d:"Build linear models from words." },
+          { t:"2.4 Fitting Models", k:"section", d:"Lines of best fit / regression intuition." }
+        ] },
+      { t:"3 · Polynomial & Rational", k:"chapter", d:"Power, polynomial, and rational functions; zeros and asymptotes." },
+      { t:"4 · Exponential & Log", k:"chapter", d:"Exponential growth/decay, logarithms, and their equations." },
+      { t:"5 · Trig Functions", k:"chapter", d:"Angles, the unit circle, and the six trigonometric functions." },
+      { t:"6 · Periodic Functions", k:"chapter", d:"Graphs of sine, cosine, and other periodic models." },
+      { t:"7 · Trig Identities", k:"chapter", d:"Identities and solving trigonometric equations." },
+      { t:"8 · Applied Trig", k:"chapter", d:"Law of sines/cosines, vectors, polar coordinates." },
+      { t:"9 · Systems", k:"chapter", d:"Systems of equations & inequalities; matrices." },
+      { t:"10 · Analytic Geometry", k:"chapter", d:"Conic sections: parabolas, ellipses, hyperbolas." },
+      { t:"11 · Sequences & Prob.", k:"chapter", d:"Sequences, series, counting, and probability." },
+      { t:"12 · Intro to Calculus", k:"chapter", d:"Limits and the idea of the derivative." }
+    ]
+  };
+
+  /* ── Build the node model: id, title, description, parentId, children[], depthLevel, contentType ── */
+  var NODES = [], byId = {}, _uid = 0;
+  function build(raw, parent, depth){
+    var node = {
+      id: "n" + (_uid++),
+      title: raw.t,
+      description: raw.d || "",
+      contentType: raw.k,
+      parentId: parent ? parent.id : null,
+      depthLevel: depth,
+      children: [],
+      _expanded: false, _aiKids: false,
+      appear: parent ? 0 : 1            // grow-in animation progress
+    };
+    NODES.push(node); byId[node.id] = node;
+    if (parent) parent.children.push(node);
+    (raw.ch || []).forEach(function(c){ build(c, node, depth + 1); });
+    return node;
+  }
+  var ROOT = build(RAW, null, 0);
+
+  var COLOR = { domain:"#ffcf5c", chapter:"#b48bff", section:"#5aa9ff", subsection:"#3fe0d0", problem:"#ff8a4c", step:"#7be08a", answer:"#ffd66b" };
+  var KINDLABEL = { domain:"Domain", chapter:"Chapter", section:"Section", subsection:"Subsection", problem:"Problem", step:"Solution step", answer:"Final answer" };
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     LAYOUT — radial sunburst. Each node owns an angular wedge sized by how
+     many leaves live beneath it; depth maps to a ring radius. Children stay
+     positioned relative to their parent (same wedge, next ring out).
+  ───────────────────────────────────────────────────────────────────────── */
+  var RING  = [0, 560, 1080, 1560, 1980, 2360, 2700];   // radius per depth
+  var SIZE  = [120, 52, 30, 18, 12, 8, 6];               // node radius per depth
+  function ringAt(d){ return RING[Math.min(d, RING.length-1)] + (d>=RING.length ? (d-RING.length+1)*340 : 0); }
+  function sizeAt(d){ return SIZE[Math.min(d, SIZE.length-1)]; }
+  function countLeaves(n){ if(!n.children.length){ n._leaves=1; return 1; } var s=0; n.children.forEach(function(c){ s+=countLeaves(c); }); n._leaves=s; return s; }
+  function layout(n, a0, a1){
+    var mid = (a0 + a1) / 2;
+    n._a0=a0; n._a1=a1; n.angle=mid;
+    var r = ringAt(n.depthLevel);
+    n.x = Math.cos(mid) * r;  n.y = Math.sin(mid) * r;
+    n.size = sizeAt(n.depthLevel);
+    if (!n.children.length) return;
+    // give every child at least a small slice so deep branches stay clickable
+    var span = a1 - a0, n2 = n.children.length, minFrac = 0.18 / n2;
+    var weights = n.children.map(function(c){ return Math.max(c._leaves, 0.0001); });
+    var tot = weights.reduce(function(s,w){ return s+w; }, 0);
+    var a = a0;
+    n.children.forEach(function(c, i){
+      var frac = weights[i]/tot; frac = Math.max(frac, minFrac);
+      var cspan = span * frac;
+      layout(c, a, a + cspan); a += cspan;
+    });
+  }
+  function relayout(){ countLeaves(ROOT); layout(ROOT, -Math.PI/2 - Math.PI, -Math.PI/2 + Math.PI); }
+  relayout();
+
+  /* ── Camera (with a smooth target it eases toward) ── */
+  var cam = { x:0, y:0, s:0.34 }, camT = { x:0, y:0, s:0.34 };
+  var cv = document.getElementById("cv"), ctx = cv.getContext("2d"), DPR = Math.min(devicePixelRatio||1, 2);
+  var W=0, H=0;
+  function resize(){ W=cv.clientWidth; H=cv.clientHeight; cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); }
+  window.addEventListener("resize", resize); resize();
+
+  function w2s(wx, wy){ return [ (wx - cam.x)*cam.s + W/2, (wy - cam.y)*cam.s + H/2 ]; }
+  function s2w(sx, sy){ return [ (sx - W/2)/cam.s + cam.x, (sy - H/2)/cam.s + cam.y ]; }
+
+  /* ── Starfield backdrop (cosmos vibe) ── */
+  var STARS = []; for(var i=0;i<160;i++) STARS.push({ x:Math.random(), y:Math.random(), r:Math.random()*1.3+.2, a:Math.random()*.5+.15 });
+
+  var focusId = ROOT.id, hoverId = null;
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     LEVEL OF DETAIL — a node fades in as its on-screen size grows, so the map
+     "clusters" when zoomed out (only big parents show) and reveals detail as
+     you zoom in. Returns 0..1 visibility; 0 means cull.
+  ───────────────────────────────────────────────────────────────────────── */
+  function vis(n){
+    var ss = n.size * cam.s;                 // on-screen radius (px)
+    if (ss < 0.8) return 0;
+    return Math.max(0, Math.min(1, (ss - 1.2) / 7));
+  }
+
+  function draw(){
+    // ease camera
+    cam.x += (camT.x - cam.x) * 0.16;
+    cam.y += (camT.y - cam.y) * 0.16;
+    cam.s += (camT.s - cam.s) * 0.16;
+
+    ctx.clearRect(0,0,W,H);
+    // background gradient
+    var g = ctx.createRadialGradient(W/2,H*0.42,0, W/2,H*0.42, Math.max(W,H)*0.75);
+    g.addColorStop(0,"#0d1226"); g.addColorStop(1,"#05060d");
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    ctx.save();
+    STARS.forEach(function(st){ ctx.globalAlpha=st.a; ctx.fillStyle="#aab6ff"; ctx.beginPath(); ctx.arc(st.x*W, st.y*H, st.r, 0, 7); ctx.fill(); });
+    ctx.restore();
+
+    // edges first
+    ctx.lineWidth = 1;
+    for (var i=0;i<NODES.length;i++){
+      var n = NODES[i]; if (!n.parentId) continue;
+      var p = byId[n.parentId];
+      var va = Math.min(vis(n), vis(p)); if (va <= 0) continue;
+      var s1 = w2s(p.x, p.y), s2 = w2s(n.x, n.y);
+      if (offscreen(s1) && offscreen(s2)) continue;
+      ctx.globalAlpha = va * 0.32 * (n.appear);
+      ctx.strokeStyle = COLOR[n.contentType] || "#5aa9ff";
+      ctx.beginPath(); ctx.moveTo(s1[0],s1[1]); ctx.lineTo(s2[0],s2[1]); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // nodes (parents under children: draw shallow→deep)
+    var order = NODES.slice().sort(function(a,b){ return a.depthLevel-b.depthLevel; });
+    for (var j=0;j<order.length;j++){
+      var nd = order[j];
+      // appear animation
+      var want = vis(nd) > 0 ? 1 : 0;
+      nd.appear += ((nd.parentId? want:1) - nd.appear) * 0.18;
+      var va2 = vis(nd) * (nd.appear>0.02?1:0); if (va2 <= 0) continue;
+      var sc = w2s(nd.x, nd.y); if (offscreen(sc, 80)) continue;
+      var rad = nd.size * cam.s * (0.4 + 0.6*nd.appear);
+      var col = COLOR[nd.contentType] || "#5aa9ff";
+      var isFocus = nd.id===focusId, isHover = nd.id===hoverId;
+
+      // glow
+      ctx.globalAlpha = va2;
+      if (rad > 4){
+        var gg = ctx.createRadialGradient(sc[0],sc[1],0, sc[0],sc[1], rad*2.6);
+        gg.addColorStop(0, hexA(col, .35)); gg.addColorStop(1, hexA(col, 0));
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(sc[0],sc[1], rad*2.6, 0, 7); ctx.fill();
+      }
+      // body
+      ctx.beginPath(); ctx.arc(sc[0],sc[1], rad, 0, 7);
+      ctx.fillStyle = hexA(col, isFocus?1:0.92); ctx.fill();
+      if (isFocus || isHover){ ctx.lineWidth=2; ctx.strokeStyle="#fff"; ctx.globalAlpha=va2*(isFocus?0.95:0.6); ctx.stroke(); ctx.globalAlpha=va2; }
+      // child-count ring when collapsed cluster is small
+      if (nd.children.length && rad < 13 && rad > 3){
+        ctx.lineWidth=1.5; ctx.strokeStyle=hexA(col,.5); ctx.beginPath(); ctx.arc(sc[0],sc[1], rad+3, 0, 7); ctx.stroke();
+      }
+      // label
+      var lblA = Math.max(0, Math.min(1, (rad-9)/10)) * va2;
+      if (lblA > 0.03){
+        ctx.globalAlpha = lblA;
+        ctx.fillStyle = "#f3f5fc";
+        var fs = Math.max(11, Math.min(18, rad*0.62));
+        ctx.font = (nd.depthLevel<=1?"700 ":"600 ")+fs+"px system-ui";
+        ctx.textAlign="center"; ctx.textBaseline="middle";
+        var txt = nd.title, maxw = Math.max(90, rad*4.2);
+        ctx.fillText(fit(txt, maxw, fs), sc[0], sc[1] + (rad>26? 0 : rad+fs*0.9));
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // keep the node card glued to nothing — it's a fixed panel; just update crumb live
+    requestAnimationFrame(draw);
+  }
+  function offscreen(s, m){ m=m||0; return s[0]< -m || s[0]>W+m || s[1]< -m || s[1]>H+m; }
+  function hexA(hex, a){ var n=parseInt(hex.slice(1),16); return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"; }
+  function fit(t, maxw, fs){ if (ctx.measureText(t).width<=maxw) return t; while(t.length>1 && ctx.measureText(t+"…").width>maxw) t=t.slice(0,-1); return t+"…"; }
+  requestAnimationFrame(draw);
+
+  /* ── Focus a node: smoothly center it and zoom so its children are readable ── */
+  function targetScaleFor(n){
+    // scale so this node's ring of children comfortably fills the viewport
+    var childR = n.children.length ? ringAt(n.depthLevel+1) - ringAt(n.depthLevel) : ringAt(n.depthLevel)*0.5+200;
+    var want = Math.min(W,H) * 0.42 / Math.max(childR, 120);
+    return Math.max(0.04, Math.min(4.5, want));
+  }
+  function focusNode(n, soft){
+    focusId = n.id;
+    camT.s = targetScaleFor(n);
+    // aim a touch past the node (toward its children) so they sit in view
+    var r = ringAt(n.depthLevel), rc = ringAt(n.depthLevel+1);
+    var aimR = n.children.length ? (r+rc)/2 : r;
+    camT.x = Math.cos(n.angle||0) * aimR;
+    camT.y = Math.sin(n.angle||0) * aimR;
+    if (n.depthLevel===0){ camT.x=0; camT.y=0; }
+    updateCard(n); updateCrumb(n);
+  }
+
+  /* ── UI: card + breadcrumb ── */
+  var card=document.getElementById("card"), cardKind=document.getElementById("cardKind"),
+      cardTitle=document.getElementById("cardTitle"), cardDesc=document.getElementById("cardDesc"),
+      cardExpand=document.getElementById("cardExpand"), cardUp=document.getElementById("cardUp"),
+      crumb=document.getElementById("crumb");
+  function updateCard(n){
+    cardKind.textContent = KINDLABEL[n.contentType] || n.contentType;
+    cardKind.style.color = COLOR[n.contentType];
+    cardTitle.textContent = n.title;
+    cardDesc.textContent = n.description || "—";
+    cardUp.style.display = n.parentId ? "" : "none";
+    var canGrow = !n.children.length || (!n._aiKids && (n.contentType==="problem"||n.contentType==="subsection"||n.contentType==="section"));
+    cardExpand.disabled = false;
+    cardExpand.textContent = n.children.length ? (n._aiKids? "✨ Break down further" : "↓ Open "+n.children.length+" inside") : "✨ Break it down";
+    cardExpand.dataset.id = n.id;
+    card.classList.add("show");
+  }
+  function pathTo(n){ var p=[]; var c=n; while(c){ p.unshift(c); c=c.parentId?byId[c.parentId]:null; } return p; }
+  function updateCrumb(n){
+    var p = pathTo(n); crumb.innerHTML="";
+    p.forEach(function(node, i){
+      if (i) { var s=document.createElement("span"); s.className="sep"; s.textContent="›"; crumb.appendChild(s); }
+      var b=document.createElement("span"); b.className="cb"; b.textContent=node.title;
+      b.onclick=function(){ focusNode(node); };
+      crumb.appendChild(b);
+    });
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     DATA RULE (b) — dynamic decomposition. If a node has no predefined
+     children (or we want to go deeper), generate child nodes. This is the hook
+     where Inkling's AI plugs in; offline we synthesize sensible sub-nodes by
+     content type so the prototype is fully demonstrable.
+  ───────────────────────────────────────────────────────────────────────── */
+  function synth(n){
+    var k=n.contentType, T=n.title;
+    if (k==="problem") return [
+      {t:"Understand", k:"step", d:"Restate what's given and what's asked in “"+T+"”."},
+      {t:"Plan", k:"step", d:"Pick the rule or formula that applies."},
+      {t:"Solve", k:"step", d:"Carry out the algebra carefully."},
+      {t:"Check", k:"step", d:"Verify the result is reasonable."},
+      {t:"Final answer", k:"answer", d:"State the answer clearly."}
+    ];
+    if (k==="section"||k==="subsection") return [
+      {t:T+" · definition", k:"subsection", d:"The core idea, stated plainly."},
+      {t:T+" · worked example", k:"problem", d:"A representative problem to solve."},
+      {t:T+" · common mistake", k:"subsection", d:"What trips students up here."}
+    ];
+    if (k==="chapter") return [
+      {t:T.replace(/^\d+\s·\s/,"")+" · key idea", k:"section", d:"The big concept of this chapter."},
+      {t:T.replace(/^\d+\s·\s/,"")+" · practice", k:"section", d:"Where to practice it."}
+    ];
+    return [
+      {t:T+" — part A", k:"step", d:"First facet of this idea."},
+      {t:T+" — part B", k:"step", d:"Second facet of this idea."}
+    ];
+  }
+  function decompose(n){
+    if (n.children.length && n._aiKids){ /* allow growing leaves deeper */ }
+    if (n.children.length && !n._aiKids){ focusNode(n); return; }   // already has real children → just dive in
+    var made = synth(n); n._aiKids = true;
+    made.forEach(function(c){ build(c, n, n.depthLevel+1); c=n.children[n.children.length-1]; c.appear=0; });
+    relayout();
+    focusNode(n);
+  }
+  // (To use the real Inkling backend instead of synth(), POST {title,contentType}
+  //  to a decomposition route and map the returned items through build(); the
+  //  layout + render below need no changes.)
+
+  cardExpand.onclick = function(){
+    var n = byId[this.dataset.id]; if(!n) return;
+    if (n.children.length && !n._aiKids){ focusNode(n); return; }
+    var html = this.innerHTML; this.disabled=true; this.innerHTML='<span class="spin"></span>weaving…';
+    var btn=this;
+    setTimeout(function(){ decompose(n); btn.disabled=false; btn.innerHTML=html; updateCard(byId[n.id]); }, 260); // tiny delay = "thinking"
+  };
+  cardUp.onclick = function(){ var n=byId[cardExpand.dataset.id]; if(n&&n.parentId) focusNode(byId[n.parentId]); };
+
+  /* ── Hit-testing (topmost = smallest visible circle under the cursor) ── */
+  function hit(sx, sy){
+    var best=null, bestR=1e9;
+    for (var i=0;i<NODES.length;i++){
+      var n=NODES[i]; if (vis(n)<=0) continue;
+      var sc=w2s(n.x,n.y); var rad=Math.max(n.size*cam.s, 7);
+      var dx=sx-sc[0], dy=sy-sc[1];
+      if (dx*dx+dy*dy <= rad*rad && rad<bestR){ best=n; bestR=rad; }
+    }
+    return best;
+  }
+
+  /* ── Pointer: drag to pan, click to focus, wheel/pinch to zoom ── */
+  var down=false, moved=false, lastX=0, lastY=0, downX=0, downY=0;
+  cv.addEventListener("pointerdown", function(e){ down=true; moved=false; lastX=downX=e.clientX; lastY=downY=e.clientY; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); });
+  cv.addEventListener("pointermove", function(e){
+    if (!down){ var h=hit(e.clientX,e.clientY); hoverId = h?h.id:null; cv.style.cursor = h?"pointer":"grab"; return; }
+    var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
+    if (Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY) > 4) moved=true;
+    cam.x -= dx/cam.s; cam.y -= dy/cam.s; camT.x=cam.x; camT.y=cam.y;
+  });
+  cv.addEventListener("pointerup", function(e){
+    down=false; cv.classList.remove("drag"); cv.style.cursor="grab";
+    if (!moved){ var n=hit(e.clientX,e.clientY); if (n) focusNode(n); }
+  });
+  function zoomAt(sx, sy, factor){
+    var before = s2w(sx, sy);
+    camT.s = Math.max(0.04, Math.min(5, camT.s*factor)); cam.s = camT.s;   // apply now for anchor math
+    var after = s2w(sx, sy);
+    camT.x += before[0]-after[0]; camT.y += before[1]-after[1]; cam.x=camT.x; cam.y=camT.y;
+  }
+  cv.addEventListener("wheel", function(e){ e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY<0?1.12:1/1.12); }, {passive:false});
+  // pinch
+  var pinch=null;
+  cv.addEventListener("touchmove", function(e){
+    if (e.touches.length===2){ e.preventDefault();
+      var a=e.touches[0], b=e.touches[1], d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY), mx=(a.clientX+b.clientX)/2, my=(a.clientY+b.clientY)/2;
+      if (pinch) zoomAt(mx,my, d/pinch); pinch=d;
+    }
+  }, {passive:false});
+  cv.addEventListener("touchend", function(){ pinch=null; });
+
+  document.getElementById("zin").onclick=function(){ zoomAt(W/2,H/2,1.5); };
+  document.getElementById("zout").onclick=function(){ zoomAt(W/2,H/2,1/1.5); };
+  document.getElementById("home").onclick=function(){ focusNode(ROOT); };
+
+  // start focused on the whole subject
+  focusNode(ROOT);
+})();
+</script>
+</body>
+</html>
