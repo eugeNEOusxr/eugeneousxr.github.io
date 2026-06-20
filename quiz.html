@@ -98,6 +98,21 @@
     .mathkb button{min-width:48px;height:42px;border:.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:16px;cursor:pointer}
     .mathkb button:active{background:var(--accent);color:#fff}
     .mathkb .kbtag{flex-basis:100%;font-size:12px;color:var(--muted);margin:-4px 0 2px}
+    /* Standardized math keyboard (tabbed, mirrors the school MathQuill pad) */
+    .mathpad{margin-top:16px;padding-top:10px;border-top:.5px solid var(--line)}
+    .mp-tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:9px;border-bottom:.5px solid var(--line)}
+    .mp-tab{padding:6px 11px;border:none;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+    .mp-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .mp-grid{display:none;flex-wrap:wrap;gap:6px}
+    .mp-grid.on{display:flex}
+    .mp-grid-abc{flex-direction:column;gap:5px}
+    .mp-row{display:flex;gap:5px;justify-content:center}
+    .mp-key{min-width:46px;height:44px;flex:0 0 auto;border:.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:16px;line-height:1;cursor:pointer;padding:0 9px;display:inline-flex;align-items:center;justify-content:center}
+    .mp-key:active{background:var(--accent);color:#fff}
+    .mp-key sup{font-size:10px} .mp-key sub{font-size:10px}
+    .mp-abc{min-width:0;flex:1 1 0;padding:0;font-size:15px}
+    .mp-space{flex:1 1 auto}
+    .mp-fn{color:var(--accent);font-weight:600}
     footer{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-top:.5px solid var(--line)}
     .btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--text);border:.5px solid var(--line);border-radius:10px;padding:10px 17px;font-size:14px;font-weight:500;cursor:pointer}
     .btn.primary{background:var(--accent);color:#fff;border-color:transparent}
@@ -329,16 +344,19 @@
       if (blank.accept) for (var i=0;i<blank.accept.length;i++){ if (n===normExpr(blank.accept[i])) return true; }
       return false;
     }
-    // Convert a math-y answer/input string into evaluable JS (implicit mult, ^, −).
+    // Convert a math-y answer/input string into evaluable JS (implicit mult, ^, −, roots, π, |abs|).
     function toJsExpr(s){
       s = String(s).toLowerCase().replace(/\s+/g,"").replace(/−/g,"-").replace(/²/g,"^2").replace(/³/g,"^3").replace(/\^/g,"**");
-      s = s.replace(/([0-9a-z)\]])√/g,"$1*√");  // 2√ -> 2*√ , x√ -> x*√
-      s = s.replace(/√\s*\(/g,"§(");       // protect sqrt( from implicit-mult / letter rules
+      s = s.replace(/\|([^|]*)\|/g,"¢($1)");        // |expr| -> abs(expr)
+      s = s.replace(/([0-9a-z)\]])([√∛π¢(])/g,"$1*$2"); // implicit mult before a root / π / abs / paren
+      s = s.replace(/√\s*\(/g,"§(");                // protect sqrt(  from implicit-mult / letter rules
+      s = s.replace(/∛\s*\(/g,"¤(");                // protect cbrt(
+      s = s.replace(/π/g,"°");                      // protect pi
       s = s.replace(/(\d)([a-z(])/g,"$1*$2");   // 6b -> 6*b , 11( -> 11*(
       s = s.replace(/([a-z)])(\()/g,"$1*$2");   // b( -> b*( , )( -> )*(
       s = s.replace(/(\))([a-z0-9])/g,"$1*$2"); // )b -> )*b , )2 -> )*2
       s = s.replace(/([a-z])([a-z])/g,"$1*$2"); // xh -> x*h
-      s = s.replace(/§/g,"Math.sqrt");      // restore protected sqrt
+      s = s.replace(/§/g,"Math.sqrt").replace(/¤/g,"Math.cbrt").replace(/¢/g,"Math.abs").replace(/°/g,"(Math.PI)");
       return s;
     }
     // Numeric equivalence: do input & answer agree as functions of their variable?
@@ -370,31 +388,69 @@
       if (blank.accept) for (var i=0;i<blank.accept.length;i++){ if (n===normText(blank.accept[i])) return true; }
       return false;
     }
-    var MATHKB = '<div class="mathkb" aria-label="Interval keyboard"><span class="kbtag">Interval keyboard — tap to insert</span>'
-      + '<button type="button" data-b="(" data-a=")">( )</button>'
-      + '<button type="button" data-b="[" data-a="]">[ ]</button>'
-      + '<button type="button" data-b="(" data-a="]">( ]</button>'
-      + '<button type="button" data-b="[" data-a=")">[ )</button>'
-      + '<button type="button" data-b="∞">∞</button>'
-      + '<button type="button" data-b="-∞">−∞</button>'
-      + '<button type="button" data-b="∪">∪</button>'
-      + '<button type="button" data-b=",">,</button></div>';
-    // Math keyboard — insert symbols for expression answers (exponents, roots, reciprocal).
-    var MATHKB2 = '<div class="mathkb" aria-label="Math keyboard"><span class="kbtag">Math keyboard — tap to insert</span>'
-      + '<button type="button" data-b="²" title="squared / quadratic">x²</button>'
-      + '<button type="button" data-b="³" title="cubed / cubic">x³</button>'
-      + '<button type="button" data-b="^" title="exponent">x^</button>'
-      + '<button type="button" data-b="√(" data-a=")" title="square root">√(&nbsp;)</button>'
-      + '<button type="button" data-b="1/(" data-a=")" title="reciprocal">1/(&nbsp;)</button>'
-      + '<button type="button" data-b="(" data-a=")">(&nbsp;)</button>'
-      + '<button type="button" data-b="/">a/b</button></div>';
-    // Answer-shape detectors: interval (no letters) vs. algebraic expression (lettered, not a plain word).
+    // ── Standardized math keyboard — one tabbed pad (mirrors the school's), shown on every typed answer ──
+    var MP_TABS = ["Basic","Funcs","Trig","Interval","Relate","ABC"];
+    var MP_TABLABEL = { Basic:"Basic", Funcs:"Funcs", Trig:"Trig", Interval:"Interval", Relate:"=", ABC:"ABC" };
+    var MP_KEYS = {
+      Basic: [
+        {l:"( )",b:"(",a:")"},{l:"x<sup>□</sup>",b:"^"},{l:"x<sub>□</sub>",b:"_"},{l:"□/□",b:"/"},
+        {l:"√",b:"√(",a:")"},{l:"<sup>3</sup>√",b:"∛(",a:")"},{l:"|□|",b:"|",a:"|"},{l:"π",b:"π"},
+        {l:"7",b:"7"},{l:"8",b:"8"},{l:"9",b:"9"},{l:"+",b:"+"},
+        {l:"4",b:"4"},{l:"5",b:"5"},{l:"6",b:"6"},{l:"−",b:"-"},
+        {l:"1",b:"1"},{l:"2",b:"2"},{l:"3",b:"3"},{l:"×",b:"*"},
+        {l:"0",b:"0"},{l:".",b:"."},{l:",",b:","},{l:"DNE",b:"DNE"},
+        {l:"↑",k:"up"},{l:"↓",k:"down"},{l:"←",k:"left"},{l:"→",k:"right"},{l:"⌫",k:"bs"}
+      ],
+      Funcs: [
+        {l:"log",b:"log(",a:")"},{l:"ln",b:"ln(",a:")"},{l:"log<sub>□</sub>",b:"log_(",a:")"},{l:"e<sup>□</sup>",b:"e^"}
+      ],
+      Trig: [
+        {l:"sin",b:"sin(",a:")"},{l:"cos",b:"cos(",a:")"},{l:"tan",b:"tan(",a:")"},
+        {l:"sec",b:"sec(",a:")"},{l:"csc",b:"csc(",a:")"},{l:"cot",b:"cot(",a:")"},
+        {l:"sin<sup>-1</sup>",b:"arcsin(",a:")"},{l:"cos<sup>-1</sup>",b:"arccos(",a:")"},{l:"tan<sup>-1</sup>",b:"arctan(",a:")"},
+        {l:"sinh",b:"sinh(",a:")"},{l:"cosh",b:"cosh(",a:")"},{l:"tanh",b:"tanh(",a:")"},{l:"π",b:"π"}
+      ],
+      Interval: [
+        {l:"( )",b:"(",a:")"},{l:"[ ]",b:"[",a:"]"},{l:"( ]",b:"(",a:"]"},{l:"[ )",b:"[",a:")"},
+        {l:"∞",b:"∞"},{l:"−∞",b:"-∞"},{l:"∪",b:"∪"},{l:",",b:","}
+      ],
+      Relate: [
+        {l:"=",b:"="},{l:"&lt;",b:"<"},{l:"&gt;",b:">"},{l:"≤",b:"≤"},{l:"≥",b:"≥"},{l:"≠",b:"≠"},{l:"%",b:"%"},{l:"!",b:"!"}
+      ]
+    };
+    function mpKeyHTML(k){
+      if (k.k) return '<button type="button" class="mp-key mp-fn" data-k="'+k.k+'">'+k.l+'</button>';
+      return '<button type="button" class="mp-key" data-b="'+k.b+'"'+(k.a?' data-a="'+k.a+'"':'')+'>'+k.l+'</button>';
+    }
+    function abcKeysHTML(){
+      var rows=["qwertyuiop","asdfghjkl","zxcvbnm"], h="";
+      rows.forEach(function(r){ h+='<div class="mp-row">'+r.split("").map(function(c){return '<button type="button" class="mp-key mp-abc" data-b="'+c+'">'+c+'</button>';}).join("")+'</div>'; });
+      h+='<div class="mp-row"><button type="button" class="mp-key" data-b=",">,</button><button type="button" class="mp-key mp-space" data-b=" ">space</button><button type="button" class="mp-key" data-b=".">.</button><button type="button" class="mp-key" data-b="-">-</button><button type="button" class="mp-key mp-fn" data-k="bs">⌫</button></div>';
+      return h;
+    }
+    function buildMathPad(defaultTab){
+      defaultTab = MP_TABS.indexOf(defaultTab)>-1 ? defaultTab : "Basic";
+      var tabs = MP_TABS.map(function(t){ return '<button type="button" class="mp-tab'+(t===defaultTab?' on':'')+'" data-tab="'+t+'">'+MP_TABLABEL[t]+'</button>'; }).join("");
+      var grids = MP_TABS.map(function(t){
+        var keys = (t==="ABC") ? abcKeysHTML() : MP_KEYS[t].map(mpKeyHTML).join("");
+        return '<div class="mp-grid'+(t==="ABC"?" mp-grid-abc":"")+(t===defaultTab?' on':'')+'" data-grid="'+t+'">'+keys+'</div>';
+      }).join("");
+      return '<div class="mathpad" aria-label="Math keyboard"><div class="mp-tabs">'+tabs+'</div>'+grids+'</div>';
+    }
+    // Answer-shape detector: interval-style (no letters) → open the Interval tab by default.
     function isIntervalStr(a){ return typeof a==="string" && /[∞∪\[\]()]/.test(a) && !/[a-z]/i.test(a); }
-    function isExprStr(a){ return typeof a==="string" && /[a-z]/i.test(a) && !isWordAnswer(a); }
     function insertAtCursor(input, before, after){
       after = after || ""; var s=input.selectionStart, e=input.selectionEnd, v=input.value;
       input.value = v.slice(0,s) + before + after + v.slice(e);
       var pos = s + before.length; input.setSelectionRange(pos,pos); input.focus();
+    }
+    // Keyboard special keys: backspace, cursor moves, and ↑/↓ jump between answer fields.
+    function mpSpecial(inp, k){
+      var s=inp.selectionStart, en=inp.selectionEnd, v=inp.value;
+      if(k==="bs"){ if(s!==en){ inp.value=v.slice(0,s)+v.slice(en); inp.setSelectionRange(s,s); } else if(s>0){ inp.value=v.slice(0,s-1)+v.slice(s); inp.setSelectionRange(s-1,s-1); } inp.focus(); }
+      else if(k==="left"){ var p=Math.max(0,s-1); inp.setSelectionRange(p,p); inp.focus(); }
+      else if(k==="right"){ var p2=Math.min(v.length,en+1); inp.setSelectionRange(p2,p2); inp.focus(); }
+      else if(k==="up"||k==="down"){ var ins=[].slice.call(optsEl.querySelectorAll(".ansin")); var i=ins.indexOf(inp); var ni=k==="up"?i-1:i+1; if(ins[ni]){ ins[ni].focus(); lastFocusedAnsin=ins[ni]; } else inp.focus(); }
     }
 
     function tableHTML(item){
@@ -975,11 +1031,12 @@
         optsEl.innerHTML = lh;
       }
       if (!ph) {
-        var fAns = (q.fields||[]).filter(function(f){ return f.kind!=="select"; }).map(function(f){ return f.answer; });
-        var bAns = (q.blanks||[]).map(function(b){ return b.answer; });
-        var allAns = bAns.concat(fAns);
-        if (allAns.some(isIntervalStr)) optsEl.insertAdjacentHTML("beforeend", MATHKB);
-        else if (allAns.some(isExprStr)) optsEl.insertAdjacentHTML("beforeend", MATHKB2);
+        var textFields = (q.fields||[]).filter(function(f){ return f.kind!=="select"; });
+        var hasTextInput = (q.blanks && q.blanks.length) || textFields.length;
+        if (hasTextInput) {
+          var allAns = (q.blanks||[]).map(function(b){ return b.answer; }).concat(textFields.map(function(f){ return f.answer; }));
+          optsEl.insertAdjacentHTML("beforeend", buildMathPad(allAns.some(isIntervalStr) ? "Interval" : "Basic"));
+        }
       }
       if (!ph && DECKS[curDeck].graded[idx]!=null) { var gv=DECKS[curDeck].graded[idx]; scoreEl.textContent = gv+" / "+q.points; scoreEl.style.color=(gv===q.points)?"var(--ok)":"var(--text)"; }
       document.querySelector("main").scrollTop = 0;
@@ -1117,8 +1174,22 @@
     optsEl.addEventListener("keydown",function(e){ if(e.key==="Enter" && e.target.classList && e.target.classList.contains("ansin")){ e.preventDefault(); grade(); } });
     optsEl.addEventListener("focusin",function(e){ if(e.target.classList && e.target.classList.contains("ansin")) lastFocusedAnsin = e.target; });
     optsEl.addEventListener("click",function(e){
-      var kb=e.target.closest(".mathkb button[data-b]");
-      if(kb){ e.preventDefault(); var inp=lastFocusedAnsin||optsEl.querySelector(".ansin"); if(inp) insertAtCursor(inp, kb.getAttribute("data-b"), kb.getAttribute("data-a")||""); return; }
+      var pad=e.target.closest(".mathpad");
+      if(pad){
+        var tab=e.target.closest(".mp-tab");
+        if(tab){ e.preventDefault(); var t=tab.getAttribute("data-tab");
+          [].forEach.call(pad.querySelectorAll(".mp-tab"),function(x){ x.classList.toggle("on", x===tab); });
+          [].forEach.call(pad.querySelectorAll(".mp-grid"),function(g){ g.classList.toggle("on", g.getAttribute("data-grid")===t); });
+          return; }
+        var key=e.target.closest(".mp-key");
+        if(key){ e.preventDefault();
+          var inp=lastFocusedAnsin||optsEl.querySelector(".ansin"); if(!inp) return;
+          var sk=key.getAttribute("data-k");
+          if(sk) mpSpecial(inp, sk);
+          else insertAtCursor(inp, key.getAttribute("data-b"), key.getAttribute("data-a")||"");
+          return; }
+        return;
+      }
       var z=e.target.closest(".zoom");
       if(z){ openZoom(z.parentElement.querySelector(".qmedia").innerHTML); return; }
       var m=e.target.closest(".qmedia");
