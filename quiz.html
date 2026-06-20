@@ -91,6 +91,12 @@
     .ansin{font:500 16px system-ui;padding:9px 12px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);width:150px;outline:none}
     .ansin.ok{box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
     .ansin.bad{box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
+    /* MathLive math-field answer boxes (2D math input) */
+    math-field.mathfield{font-size:17px;min-width:150px;padding:7px 11px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);outline:none;display:inline-block;vertical-align:middle}
+    math-field.mathfield:focus,math-field.mathfield:focus-within{border-color:var(--accent)}
+    math-field.mathfield.ok{box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
+    math-field.mathfield.bad{box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
+    math-field.mathfield::part(virtual-keyboard-toggle),math-field.mathfield::part(menu-toggle){display:none}
     .fsel{font:500 15px system-ui;padding:8px 10px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer}
     .fsel.ok{box-shadow:inset 0 0 0 1.5px var(--ok);border-color:transparent}
     .fsel.bad{box-shadow:inset 0 0 0 1.5px var(--bad);border-color:transparent}
@@ -176,6 +182,8 @@
     .homebox .hx:hover{background:#dc2626}
   </style>
   <script src="/inkling-config.js"></script>
+  <!-- MathLive: 2D math input field (stacked fractions, editable exponents) — driven by our keyboard -->
+  <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
 </head>
 <body data-theme="dark">
   <header>
@@ -397,37 +405,38 @@
     var MP_TABS = ["Basic","Funcs","Trig","Interval","Relate","ABC"];
     var MP_TABLABEL = { Basic:"Basic", Funcs:"Funcs", Trig:"Trig", Interval:"Interval", Relate:"=", ABC:"ABC" };
     var MP_COLS = { Basic:7, Funcs:4, Trig:6, Interval:4, Relate:6 };
+    // Each key: b/a = text insert (plain inputs), j = LaTeX insert (math-field). #@ = selection, #? = empty editable box.
     var MP_KEYS = {
       // 7-col calculator layout (matches the school Basic tab); {arrows} = a ←→ pair in one cell.
       Basic: [
-        {l:"( )",b:"(",a:")"},{l:"x<sup>□</sup>",b:"^"},{l:"7",b:"7"},{l:"8",b:"8"},{l:"9",b:"9"},{l:"□/□",b:"/"},{l:"↑",k:"up"},
-        {l:"π",b:"π"},{l:"√",b:"√(",a:")"},{l:"4",b:"4"},{l:"5",b:"5"},{l:"6",b:"6"},{l:"×",b:"*"},{arrows:true},
-        {l:"x<sub>□</sub>",b:"_"},{l:"<sup>3</sup>√",b:"∛(",a:")"},{l:"1",b:"1"},{l:"2",b:"2"},{l:"3",b:"3"},{l:"−",b:"-"},{l:"↓",k:"down"},
-        {l:"DNE",b:"DNE"},{l:"|□|",b:"|",a:"|"},{l:"0",b:"0"},{l:".",b:"."},{l:",",b:","},{l:"+",b:"+"},{l:"⌫",k:"bs"}
+        {l:"( )",b:"(",a:")",j:"(#@)"},{l:"x<sup>□</sup>",b:"^",j:"^{#?}"},{l:"7",b:"7"},{l:"8",b:"8"},{l:"9",b:"9"},{l:"□/□",b:"/",j:"\\frac{#@}{#?}"},{l:"↑",k:"up"},
+        {l:"π",b:"π",j:"\\pi"},{l:"√",b:"√(",a:")",j:"\\sqrt{#@}"},{l:"4",b:"4"},{l:"5",b:"5"},{l:"6",b:"6"},{l:"×",b:"*",j:"\\cdot"},{arrows:true},
+        {l:"x<sub>□</sub>",b:"_",j:"_{#?}"},{l:"<sup>3</sup>√",b:"∛(",a:")",j:"\\sqrt[3]{#@}"},{l:"1",b:"1"},{l:"2",b:"2"},{l:"3",b:"3"},{l:"−",b:"-",j:"-"},{l:"↓",k:"down"},
+        {l:"DNE",b:"DNE",j:"\\mathrm{DNE}"},{l:"|□|",b:"|",a:"|",j:"\\left|#@\\right|"},{l:"0",b:"0"},{l:".",b:"."},{l:",",b:","},{l:"+",b:"+"},{l:"⌫",k:"bs"}
       ],
       Funcs: [
-        {l:"log",b:"log(",a:")"},{l:"ln",b:"ln(",a:")"},{l:"log<sub>□</sub>",b:"log_(",a:")"},{l:"e<sup>□</sup>",b:"e^"}
+        {l:"log",b:"log(",a:")",j:"\\log(#@)"},{l:"ln",b:"ln(",a:")",j:"\\ln(#@)"},{l:"log<sub>□</sub>",b:"log_(",a:")",j:"\\log_{#?}(#@)"},{l:"e<sup>□</sup>",b:"e^",j:"e^{#?}"}
       ],
       Trig: [
-        {l:"sin",b:"sin(",a:")"},{l:"cos",b:"cos(",a:")"},{l:"tan",b:"tan(",a:")"},
-        {l:"sec",b:"sec(",a:")"},{l:"csc",b:"csc(",a:")"},{l:"cot",b:"cot(",a:")"},
-        {l:"sin<sup>-1</sup>",b:"arcsin(",a:")"},{l:"cos<sup>-1</sup>",b:"arccos(",a:")"},{l:"tan<sup>-1</sup>",b:"arctan(",a:")"},
-        {l:"sinh",b:"sinh(",a:")"},{l:"cosh",b:"cosh(",a:")"},{l:"tanh",b:"tanh(",a:")"},{l:"π",b:"π"}
+        {l:"sin",b:"sin(",a:")",j:"\\sin(#@)"},{l:"cos",b:"cos(",a:")",j:"\\cos(#@)"},{l:"tan",b:"tan(",a:")",j:"\\tan(#@)"},
+        {l:"sec",b:"sec(",a:")",j:"\\sec(#@)"},{l:"csc",b:"csc(",a:")",j:"\\csc(#@)"},{l:"cot",b:"cot(",a:")",j:"\\cot(#@)"},
+        {l:"sin<sup>-1</sup>",b:"arcsin(",a:")",j:"\\arcsin(#@)"},{l:"cos<sup>-1</sup>",b:"arccos(",a:")",j:"\\arccos(#@)"},{l:"tan<sup>-1</sup>",b:"arctan(",a:")",j:"\\arctan(#@)"},
+        {l:"sinh",b:"sinh(",a:")",j:"\\sinh(#@)"},{l:"cosh",b:"cosh(",a:")",j:"\\cosh(#@)"},{l:"tanh",b:"tanh(",a:")",j:"\\tanh(#@)"},{l:"π",b:"π",j:"\\pi"}
       ],
       Interval: [
-        {l:"( )",b:"(",a:")"},{l:"[ ]",b:"[",a:"]"},{l:"( ]",b:"(",a:"]"},{l:"[ )",b:"[",a:")"},
-        {l:"∞",b:"∞"},{l:"−∞",b:"-∞"},{l:"∪",b:"∪"},{l:",",b:","}
+        {l:"( )",b:"(",a:")",j:"(#@)"},{l:"[ ]",b:"[",a:"]",j:"[#@]"},{l:"( ]",b:"(",a:"]",j:"(#@]"},{l:"[ )",b:"[",a:")",j:"[#@)"},
+        {l:"∞",b:"∞",j:"\\infty"},{l:"−∞",b:"-∞",j:"-\\infty"},{l:"∪",b:"∪",j:"\\cup"},{l:",",b:","}
       ],
       Relate: [
-        {l:"[",b:"["},{l:"]",b:"]"},{l:"{",b:"{"},{l:"}",b:"}"},{l:"(",b:"("},{l:")",b:")"},
-        {l:"⟨ ⟩",b:"⟨",a:"⟩"},{l:"|□|",b:"|",a:"|"},{l:"=",b:"="},{l:"&lt;",b:"<"},{l:"&gt;",b:">"},{l:"≤",b:"≤"},
-        {l:"≥",b:"≥"},{l:"≠",b:"≠"},{l:"%",b:"%"},{l:",",b:","},{l:"∞",b:"∞"},{l:"!",b:"!"}
+        {l:"[",b:"["},{l:"]",b:"]"},{l:"{",b:"{",j:"\\{"},{l:"}",b:"}",j:"\\}"},{l:"(",b:"("},{l:")",b:")"},
+        {l:"⟨ ⟩",b:"⟨",a:"⟩",j:"\\langle#@\\rangle"},{l:"|□|",b:"|",a:"|",j:"\\left|#@\\right|"},{l:"=",b:"="},{l:"&lt;",b:"<",j:"<"},{l:"&gt;",b:">",j:">"},{l:"≤",b:"≤",j:"\\le"},
+        {l:"≥",b:"≥",j:"\\ge"},{l:"≠",b:"≠",j:"\\ne"},{l:"%",b:"%",j:"\\%"},{l:",",b:","},{l:"∞",b:"∞",j:"\\infty"},{l:"!",b:"!"}
       ]
     };
     function mpKeyHTML(k){
       if (k.arrows) return '<div class="mp-arrows"><button type="button" class="mp-key mp-fn" data-k="left">←</button><button type="button" class="mp-key mp-fn" data-k="right">→</button></div>';
       if (k.k) return '<button type="button" class="mp-key mp-fn" data-k="'+k.k+'">'+k.l+'</button>';
-      return '<button type="button" class="mp-key" data-b="'+k.b+'"'+(k.a?' data-a="'+k.a+'"':'')+'>'+k.l+'</button>';
+      return '<button type="button" class="mp-key" data-b="'+k.b+'"'+(k.a?' data-a="'+k.a+'"':'')+(k.j!=null?' data-j="'+k.j.replace(/"/g,"&quot;")+'"':'')+'>'+k.l+'</button>';
     }
     function abcKeysHTML(){
       var rows=["qwertyuiop","asdfghjkl","zxcvbnm"], h="";
@@ -457,7 +466,49 @@
       if(k==="bs"){ if(s!==en){ inp.value=v.slice(0,s)+v.slice(en); inp.setSelectionRange(s,s); } else if(s>0){ inp.value=v.slice(0,s-1)+v.slice(s); inp.setSelectionRange(s-1,s-1); } inp.focus(); }
       else if(k==="left"){ var p=Math.max(0,s-1); inp.setSelectionRange(p,p); inp.focus(); }
       else if(k==="right"){ var p2=Math.min(v.length,en+1); inp.setSelectionRange(p2,p2); inp.focus(); }
-      else if(k==="up"||k==="down"){ var ins=[].slice.call(optsEl.querySelectorAll(".ansin")); var i=ins.indexOf(inp); var ni=k==="up"?i-1:i+1; if(ins[ni]){ ins[ni].focus(); lastFocusedAnsin=ins[ni]; } else inp.focus(); }
+      else if(k==="up"||k==="down"){ fieldNav(inp, k); }
+    }
+    function fieldNav(inp, k){ var ins=[].slice.call(optsEl.querySelectorAll(".ansin")); var i=ins.indexOf(inp); var ni=k==="up"?i-1:i+1; if(ins[ni]){ ins[ni].focus(); lastFocusedAnsin=ins[ni]; } else inp.focus(); }
+
+    // ── MathLive bridge: <math-field> answer boxes (2D fractions/exponents) ──
+    function isMF(el){ return el && el.tagName && el.tagName.toLowerCase()==="math-field"; }
+    // MathLive ascii-math → our grader's text conventions.
+    function asciiToText(a){
+      a = String(a==null?"":a);
+      a = a.replace(/root\(\s*3\s*\)\s*\(([^()]*)\)/g, "∛($1)");          // cube root
+      a = a.replace(/root\(\s*([^()]+?)\s*\)\s*\(([^()]*)\)/g, "($2)^(1/($1))"); // other nth roots
+      a = a.replace(/sqrt\s*\(/g, "√(");
+      a = a.replace(/oo/g, "∞").replace(/<=/g, "≤").replace(/>=/g, "≥").replace(/!=/g, "≠").replace(/\bpi\b/g, "π");
+      return a;
+    }
+    // Our answer text → ascii-math so MathLive can render the answer key nicely.
+    function textToAscii(t){
+      return String(t==null?"":t).replace(/²/g,"^2").replace(/³/g,"^3").replace(/√/g,"sqrt").replace(/∛/g,"root(3)")
+        .replace(/∞/g,"oo").replace(/π/g,"pi").replace(/≤/g,"<=").replace(/≥/g,">=").replace(/×/g,"*").replace(/·/g,"*").replace(/−/g,"-");
+    }
+    function aval(el){ return isMF(el) ? asciiToText(el.getValue ? el.getValue("ascii-math") : el.value) : el.value; }
+    function numText(el){ return String(aval(el)).replace(/[()]/g,""); }  // numeric read (a built fraction → 1/2)
+    function setval(el, t){ if(isMF(el)){ try{ el.setValue(textToAscii(t), {format:"ascii-math"}); }catch(_){ el.value=textToAscii(t); } } else { el.value = t; } }
+    // An answer box: a math-field for math answers, a plain input for word answers.
+    function ansInputHTML(answer, attrs, extraCls){
+      attrs = attrs || ""; var xc = extraCls ? (" "+extraCls) : "";
+      if (isWordAnswer(answer)) return '<input type="text" class="ansin'+xc+'" inputmode="none" autocomplete="off" '+attrs+'>';
+      return '<math-field class="ansin mathfield'+xc+'" math-virtual-keyboard-policy="manual" '+attrs+'></math-field>';
+    }
+    // Insert a key into a math-field (LaTeX via data-j) or run a command for special keys.
+    function mfKey(mf, btn){
+      var sk=btn.getAttribute("data-k");
+      if (sk){
+        if(sk==="bs") mf.executeCommand("deleteBackward");
+        else if(sk==="left") mf.executeCommand("moveToPreviousChar");
+        else if(sk==="right") mf.executeCommand("moveToNextChar");
+        else if(sk==="up") mf.executeCommand("moveUp");      // into numerator / exponent
+        else if(sk==="down") mf.executeCommand("moveDown");  // into denominator / base
+        mf.focus(); return;
+      }
+      var j=btn.getAttribute("data-j");
+      mf.insert(j!=null ? j : (btn.getAttribute("data-b")||""), { focus:true });
+      mf.focus();
     }
 
     function tableHTML(item){
@@ -979,25 +1030,25 @@
         optsEl.innerHTML =
           '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>'
           + '<div class="ask">'+q.ask+'</div>'
-          + '<div class="inwrap"><span class="inlabel">'+q.label+'</span><input type="text" class="ansin" inputmode="none" autocomplete="off" aria-label="Your answer"><span class="mark"></span></div>';
+          + '<div class="inwrap"><span class="inlabel">'+q.label+'</span>'+ansInputHTML(q.answer,'aria-label="Your answer"')+'<span class="mark"></span></div>';
       } else if (q.type==="tableinput") {
         promptEl.innerHTML = q.prompt;
         var html = '<div class="tscroll">'+tableHTML(q.table)+'</div>';
         q.blanks.forEach(function(b,bi){
-          html += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="none" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+          html += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span>'+ansInputHTML(b.answer,'data-b="'+bi+'" aria-label="Answer '+(bi+1)+'"')+'<span class="mark"></span></div>';
         });
         optsEl.innerHTML = html;
       } else if (q.type==="graphinput") {
         promptEl.innerHTML = q.prompt;
         var gh = '<div class="grow"><div class="qmedia gfx" style="width:210px;max-width:62%">'+graphSVG(q.graph)+'</div><button class="zoom" aria-label="Zoom graph">🔍</button></div>';
         q.blanks.forEach(function(b,bi){
-          gh += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="none" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>';
+          gh += (b.ask?'<div class="ask">'+b.ask+'</div>':'')+'<div class="inwrap"><span class="inlabel">'+b.label+'</span>'+ansInputHTML(b.answer,'data-b="'+bi+'" aria-label="Answer '+(bi+1)+'"')+'<span class="mark"></span></div>';
         });
         optsEl.innerHTML = gh;
       } else if (q.type==="multiinput") {
         promptEl.innerHTML = q.prompt;
         var mh = "";
-        q.blanks.forEach(function(b,bi){ mh += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+b.label+'</span><input type="text" class="ansin" data-b="'+bi+'" inputmode="none" autocomplete="off" aria-label="Answer '+(bi+1)+'"><span class="mark"></span></div>'; });
+        q.blanks.forEach(function(b,bi){ mh += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+b.label+'</span>'+ansInputHTML(b.answer,'data-b="'+bi+'" aria-label="Answer '+(bi+1)+'"')+'<span class="mark"></span></div>'; });
         optsEl.innerHTML = mh;
       } else if (q.type==="graphform") {
         promptEl.innerHTML = q.prompt;
@@ -1008,7 +1059,7 @@
             f.choices.forEach(function(c,k){ o+='<option value="'+k+'">'+c+'</option>'; });
             ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span><select class="ffield fsel" data-f="'+fi+'" aria-label="Field '+(fi+1)+'">'+o+'</select><span class="mark"></span></div>';
           } else {
-            ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span><input type="text" class="ffield ansin" data-f="'+fi+'" inputmode="none" autocomplete="off" aria-label="Field '+(fi+1)+'"><span class="mark"></span></div>';
+            ff += '<div class="inwrap" style="margin:7px 0"><span class="inlabel">'+(f.label||"")+'</span>'+ansInputHTML(f.answer,'data-f="'+fi+'" aria-label="Field '+(fi+1)+'"','ffield')+'<span class="mark"></span></div>';
           }
         });
         optsEl.innerHTML = ff;
@@ -1066,9 +1117,9 @@
       var q=DECK[idx]; if(q.type==="placeholder") return;
       if (q.type==="input") {
         var inp=optsEl.querySelector(".ansin"), mk=optsEl.querySelector(".mark");
-        if (!(inp.value||"").trim()) { scoreEl.textContent="Type an answer"; return; }
+        if (!(aval(inp)||"").trim()) { scoreEl.textContent="Type an answer"; return; }
         inp.classList.remove("ok","bad");
-        var parsed=evalAnswer(inp.value);
+        var parsed=evalAnswer(numText(inp));
         var correct=(parsed!==null && Math.abs(parsed-q.answer)<1e-9);
         inp.classList.add(correct?"ok":"bad"); if(mk) mk.textContent=correct?"✓":"✗";
         finishGrade(correct?q.points:0, q.points);
@@ -1078,14 +1129,14 @@
         var inps=optsEl.querySelectorAll(".ansin"), ok2=0, pendingWord=[];
         [].forEach.call(inps,function(inp,bi){
           inp.classList.remove("ok","bad");
-          var ans=q.blanks[bi].answer, right;
-          if (typeof ans === "number") { var p=evalAnswer(inp.value); right=(p!==null && Math.abs(p-ans)<1e-9); }
-          else if (/[a-z]/i.test(ans)) { right = isWordAnswer(ans) ? wordMatch(inp.value, ans) : (exprEquiv(inp.value, ans) || exprMatch(inp.value, q.blanks[bi])); }
-          else { right = textMatch(inp.value, q.blanks[bi]); }
+          var ans=q.blanks[bi].answer, right, av=aval(inp);
+          if (typeof ans === "number") { var p=evalAnswer(numText(inp)); right=(p!==null && Math.abs(p-ans)<1e-9); }
+          else if (/[a-z]/i.test(ans)) { right = isWordAnswer(ans) ? wordMatch(av, ans) : (exprEquiv(av, ans) || exprMatch(av, q.blanks[bi])); }
+          else { right = textMatch(av, q.blanks[bi]); }
           inp.classList.add(right?"ok":"bad");
           var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent=right?"✓":"✗";
           if(right)ok2++;
-          else if(isWordAnswer(ans) && (inp.value||"").trim()) pendingWord.push({ inp:inp, bi:bi });
+          else if(isWordAnswer(ans) && (av||"").trim()) pendingWord.push({ inp:inp, bi:bi });
         });
         finishGrade(Math.round(ok2/q.blanks.length*q.points), q.points);
         if (pendingWord.length) llmRegrade(q, pendingWord);  // synonyms / phrasing → AI second opinion
@@ -1098,10 +1149,10 @@
           el.classList.remove("ok","bad");
           if (f.kind==="select"){ var v=(el.value===""?-1:parseInt(el.value,10)); right=(v===f.answer); }
           else {
-            var ans=f.answer;
-            if (typeof ans==="number"){ var p=evalAnswer(el.value); right=(p!==null && Math.abs(p-ans)<1e-9); }
-            else if (/[a-z]/i.test(ans)){ right = isWordAnswer(ans) ? wordMatch(el.value, ans) : (exprEquiv(el.value,ans)||exprMatch(el.value,{answer:ans})); }
-            else { right=textMatch(el.value,{answer:ans}); }
+            var ans=f.answer, av=aval(el);
+            if (typeof ans==="number"){ var p=evalAnswer(numText(el)); right=(p!==null && Math.abs(p-ans)<1e-9); }
+            else if (/[a-z]/i.test(ans)){ right = isWordAnswer(ans) ? wordMatch(av, ans) : (exprEquiv(av,ans)||exprMatch(av,{answer:ans})); }
+            else { right=textMatch(av,{answer:ans}); }
           }
           el.classList.add(right?"ok":"bad");
           var mk=el.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent=right?"✓":"✗";
@@ -1146,7 +1197,7 @@
       if (q.type==="input") {
         var inp=optsEl.querySelector(".ansin"), mk=optsEl.querySelector(".mark");
         inp.classList.remove("bad"); inp.classList.add("ok");
-        inp.value = (q.answerText!=null ? q.answerText : q.answer);
+        setval(inp, (q.answerText!=null ? q.answerText : q.answer));
         if(mk) mk.textContent="✓";
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)";
         return;
@@ -1154,7 +1205,7 @@
       if (q.type==="tableinput" || q.type==="graphinput" || q.type==="multiinput") {
         [].forEach.call(optsEl.querySelectorAll(".ansin"),function(inp,bi){
           inp.classList.remove("bad"); inp.classList.add("ok");
-          inp.value = (q.blanks[bi].answerText!=null?q.blanks[bi].answerText:q.blanks[bi].answer);
+          setval(inp, (q.blanks[bi].answerText!=null?q.blanks[bi].answerText:q.blanks[bi].answer));
           var mk=inp.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent="✓";
         });
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
@@ -1164,7 +1215,7 @@
           var f=q.fields[parseInt(el.getAttribute("data-f"),10)];
           el.classList.remove("bad"); el.classList.add("ok");
           if (f.kind==="select"){ el.value=String(f.answer); }
-          else { el.value=(f.answerText!=null?f.answerText:f.answer); }
+          else { setval(el, (f.answerText!=null?f.answerText:f.answer)); }
           var mk=el.nextElementSibling; if(mk&&mk.classList.contains("mark")) mk.textContent="✓";
         });
         scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return;
@@ -1206,6 +1257,7 @@
         var key=e.target.closest(".mp-key");
         if(key){ e.preventDefault();
           var inp=lastFocusedAnsin||optsEl.querySelector(".ansin"); if(!inp) return;
+          if(isMF(inp)){ mfKey(inp, key); return; }
           var sk=key.getAttribute("data-k");
           if(sk) mpSpecial(inp, sk);
           else insertAtCursor(inp, key.getAttribute("data-b"), key.getAttribute("data-a")||"");
@@ -1731,7 +1783,7 @@
       var atDeck=curDeck, atIdx=idx, total=q.blanks.length;
       var promptText=String(q.prompt||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim();
       pending.forEach(function(p){
-        var inp=p.inp, mk=inp.nextElementSibling, expected=q.blanks[p.bi].answer, given=inp.value;
+        var inp=p.inp, mk=inp.nextElementSibling, expected=q.blanks[p.bi].answer, given=aval(inp);
         fetch(apiBase()+"/api/inkling/grade",{ method:"POST",
           headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+authToken() },
           body: JSON.stringify({ question:promptText, expected:expected, given:given }) })
