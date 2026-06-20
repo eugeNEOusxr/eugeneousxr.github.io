@@ -98,20 +98,22 @@
     .mathkb button{min-width:48px;height:42px;border:.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:16px;cursor:pointer}
     .mathkb button:active{background:var(--accent);color:#fff}
     .mathkb .kbtag{flex-basis:100%;font-size:12px;color:var(--muted);margin:-4px 0 2px}
-    /* Standardized math keyboard (tabbed, mirrors the school MathQuill pad) */
-    .mathpad{margin-top:16px;padding-top:10px;border-top:.5px solid var(--line)}
+    /* Standardized math keyboard (tabbed grid, mirrors the school MathQuill pad) */
+    .mathpad{margin-top:16px;padding-top:10px;border-top:.5px solid var(--line);max-width:420px}
     .mp-tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:9px;border-bottom:.5px solid var(--line)}
-    .mp-tab{padding:6px 11px;border:none;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+    .mp-tab{padding:6px 10px;border:none;background:none;color:var(--muted);font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
     .mp-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
-    .mp-grid{display:none;flex-wrap:wrap;gap:6px}
-    .mp-grid.on{display:flex}
-    .mp-grid-abc{flex-direction:column;gap:5px}
-    .mp-row{display:flex;gap:5px;justify-content:center}
-    .mp-key{min-width:46px;height:44px;flex:0 0 auto;border:.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:16px;line-height:1;cursor:pointer;padding:0 9px;display:inline-flex;align-items:center;justify-content:center}
+    .mp-grid{display:none;gap:5px;grid-template-columns:repeat(var(--cols,6),1fr)}
+    .mp-grid.on{display:grid}
+    .mp-grid-abc.on{display:flex;flex-direction:column;gap:5px}
+    .mp-row{display:flex;gap:5px}
+    .mp-key{height:44px;border:.5px solid var(--line);border-radius:9px;background:var(--surface);color:var(--text);font-size:15px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
     .mp-key:active{background:var(--accent);color:#fff}
-    .mp-key sup{font-size:10px} .mp-key sub{font-size:10px}
-    .mp-abc{min-width:0;flex:1 1 0;padding:0;font-size:15px}
-    .mp-space{flex:1 1 auto}
+    .mp-key sup{font-size:9px;vertical-align:super} .mp-key sub{font-size:9px;vertical-align:sub}
+    .mp-row .mp-key{flex:1 1 0;min-width:0}
+    .mp-space{flex:4 1 0}
+    .mp-arrows{display:flex;gap:4px}
+    .mp-arrows .mp-key{flex:1 1 0}
     .mp-fn{color:var(--accent);font-weight:600}
     footer{flex:0 0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-top:.5px solid var(--line)}
     .btn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--text);border:.5px solid var(--line);border-radius:10px;padding:10px 17px;font-size:14px;font-weight:500;cursor:pointer}
@@ -391,15 +393,14 @@
     // ── Standardized math keyboard — one tabbed pad (mirrors the school's), shown on every typed answer ──
     var MP_TABS = ["Basic","Funcs","Trig","Interval","Relate","ABC"];
     var MP_TABLABEL = { Basic:"Basic", Funcs:"Funcs", Trig:"Trig", Interval:"Interval", Relate:"=", ABC:"ABC" };
+    var MP_COLS = { Basic:7, Funcs:4, Trig:6, Interval:4, Relate:6 };
     var MP_KEYS = {
+      // 7-col calculator layout (matches the school Basic tab); {arrows} = a ←→ pair in one cell.
       Basic: [
-        {l:"( )",b:"(",a:")"},{l:"x<sup>□</sup>",b:"^"},{l:"x<sub>□</sub>",b:"_"},{l:"□/□",b:"/"},
-        {l:"√",b:"√(",a:")"},{l:"<sup>3</sup>√",b:"∛(",a:")"},{l:"|□|",b:"|",a:"|"},{l:"π",b:"π"},
-        {l:"7",b:"7"},{l:"8",b:"8"},{l:"9",b:"9"},{l:"+",b:"+"},
-        {l:"4",b:"4"},{l:"5",b:"5"},{l:"6",b:"6"},{l:"−",b:"-"},
-        {l:"1",b:"1"},{l:"2",b:"2"},{l:"3",b:"3"},{l:"×",b:"*"},
-        {l:"0",b:"0"},{l:".",b:"."},{l:",",b:","},{l:"DNE",b:"DNE"},
-        {l:"↑",k:"up"},{l:"↓",k:"down"},{l:"←",k:"left"},{l:"→",k:"right"},{l:"⌫",k:"bs"}
+        {l:"( )",b:"(",a:")"},{l:"x<sup>□</sup>",b:"^"},{l:"7",b:"7"},{l:"8",b:"8"},{l:"9",b:"9"},{l:"□/□",b:"/"},{l:"↑",k:"up"},
+        {l:"π",b:"π"},{l:"√",b:"√(",a:")"},{l:"4",b:"4"},{l:"5",b:"5"},{l:"6",b:"6"},{l:"×",b:"*"},{arrows:true},
+        {l:"x<sub>□</sub>",b:"_"},{l:"<sup>3</sup>√",b:"∛(",a:")"},{l:"1",b:"1"},{l:"2",b:"2"},{l:"3",b:"3"},{l:"−",b:"-"},{l:"↓",k:"down"},
+        {l:"DNE",b:"DNE"},{l:"|□|",b:"|",a:"|"},{l:"0",b:"0"},{l:".",b:"."},{l:",",b:","},{l:"+",b:"+"},{l:"⌫",k:"bs"}
       ],
       Funcs: [
         {l:"log",b:"log(",a:")"},{l:"ln",b:"ln(",a:")"},{l:"log<sub>□</sub>",b:"log_(",a:")"},{l:"e<sup>□</sup>",b:"e^"}
@@ -415,10 +416,13 @@
         {l:"∞",b:"∞"},{l:"−∞",b:"-∞"},{l:"∪",b:"∪"},{l:",",b:","}
       ],
       Relate: [
-        {l:"=",b:"="},{l:"&lt;",b:"<"},{l:"&gt;",b:">"},{l:"≤",b:"≤"},{l:"≥",b:"≥"},{l:"≠",b:"≠"},{l:"%",b:"%"},{l:"!",b:"!"}
+        {l:"[",b:"["},{l:"]",b:"]"},{l:"{",b:"{"},{l:"}",b:"}"},{l:"(",b:"("},{l:")",b:")"},
+        {l:"⟨ ⟩",b:"⟨",a:"⟩"},{l:"|□|",b:"|",a:"|"},{l:"=",b:"="},{l:"&lt;",b:"<"},{l:"&gt;",b:">"},{l:"≤",b:"≤"},
+        {l:"≥",b:"≥"},{l:"≠",b:"≠"},{l:"%",b:"%"},{l:",",b:","},{l:"∞",b:"∞"},{l:"!",b:"!"}
       ]
     };
     function mpKeyHTML(k){
+      if (k.arrows) return '<div class="mp-arrows"><button type="button" class="mp-key mp-fn" data-k="left">←</button><button type="button" class="mp-key mp-fn" data-k="right">→</button></div>';
       if (k.k) return '<button type="button" class="mp-key mp-fn" data-k="'+k.k+'">'+k.l+'</button>';
       return '<button type="button" class="mp-key" data-b="'+k.b+'"'+(k.a?' data-a="'+k.a+'"':'')+'>'+k.l+'</button>';
     }
@@ -432,8 +436,8 @@
       defaultTab = MP_TABS.indexOf(defaultTab)>-1 ? defaultTab : "Basic";
       var tabs = MP_TABS.map(function(t){ return '<button type="button" class="mp-tab'+(t===defaultTab?' on':'')+'" data-tab="'+t+'">'+MP_TABLABEL[t]+'</button>'; }).join("");
       var grids = MP_TABS.map(function(t){
-        var keys = (t==="ABC") ? abcKeysHTML() : MP_KEYS[t].map(mpKeyHTML).join("");
-        return '<div class="mp-grid'+(t==="ABC"?" mp-grid-abc":"")+(t===defaultTab?' on':'')+'" data-grid="'+t+'">'+keys+'</div>';
+        if (t==="ABC") return '<div class="mp-grid mp-grid-abc'+(t===defaultTab?' on':'')+'" data-grid="ABC">'+abcKeysHTML()+'</div>';
+        return '<div class="mp-grid'+(t===defaultTab?' on':'')+'" data-grid="'+t+'" style="--cols:'+(MP_COLS[t]||6)+'">'+MP_KEYS[t].map(mpKeyHTML).join("")+'</div>';
       }).join("");
       return '<div class="mathpad" aria-label="Math keyboard"><div class="mp-tabs">'+tabs+'</div>'+grids+'</div>';
     }
