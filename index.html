@@ -92,12 +92,21 @@
       transition: opacity .5s ease;
     }
     #boot-loader.gone { opacity: 0; pointer-events: none; }
-    /* the dino strolls back and forth (the track), bobbing as it walks (the emoji),
-       flipping to face whichever way it's headed */
-    #boot-loader .dino-track { animation: dino-walk 5s ease-in-out infinite; }
-    #boot-loader .dino { display: inline-block; font-size: 54px; line-height: 1;
-      animation: dino-bob .45s ease-in-out infinite; filter: drop-shadow(0 8px 6px rgba(0,0,0,.45)); }
-    #boot-loader .blabel { font-size: 14px; letter-spacing: .09em; opacity: .85; margin-top: 26px; }
+    /* the dino strolls back and forth on a 3D-tilted glowing floor, casting a
+       reflection — so it reads as a real object in space, not a flat sticker */
+    #boot-loader .dino-stage { position: relative; width: 250px; height: 116px; perspective: 560px;
+      display: flex; align-items: flex-end; justify-content: center; }
+    #boot-loader .dino-floor { position: absolute; left: 50%; bottom: 16px; width: 220px; height: 50px;
+      transform: translateX(-50%) rotateX(74deg); border-radius: 50%; filter: blur(2px);
+      background: radial-gradient(ellipse at center, rgba(96,200,180,.34), rgba(96,200,180,.07) 48%, transparent 72%); }
+    #boot-loader .dino-track { position: relative; margin-bottom: 14px; animation: dino-walk 5s ease-in-out infinite; }
+    #boot-loader .dino { display: block; font-size: 52px; line-height: 1;
+      animation: dino-bob .45s ease-in-out infinite; filter: drop-shadow(0 10px 5px rgba(0,0,0,.55)); }
+    #boot-loader .dino-reflect { position: absolute; left: 0; top: calc(100% - 7px); font-size: 52px; line-height: 1;
+      transform: scaleY(-1); opacity: .26; filter: blur(.7px);
+      -webkit-mask-image: linear-gradient(to bottom, #000, transparent 68%);
+      mask-image: linear-gradient(to bottom, #000, transparent 68%); }
+    #boot-loader .blabel { font-size: 14px; letter-spacing: .09em; opacity: .85; margin-top: 22px; }
     #boot-loader .blabel b { color: #a78bfa; font-weight: 700; }
     #boot-loader .blabel .dots::after { content: ""; animation: bdots 1.25s steps(1,end) infinite; }
     @keyframes dino-walk {
@@ -118,7 +127,10 @@
 </head>
 <body>
   <div id="boot-loader" role="status" aria-label="Loading Inkling">
-    <div class="dino-track"><div class="dino">🦕</div></div>
+    <div class="dino-stage">
+      <div class="dino-floor"></div>
+      <div class="dino-track"><span class="dino">🦕</span><span class="dino-reflect" aria-hidden="true">🦕</span></div>
+    </div>
     <div class="blabel">Loading <b>Inkling</b><span class="dots"></span></div>
   </div>
   <script>
