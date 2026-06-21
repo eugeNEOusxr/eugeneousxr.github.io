@@ -377,7 +377,10 @@
       layout(c, a, a + cspan); a += cspan;
     });
   }
-  function relayout(){ countLeaves(ROOT); layout(ROOT, -Math.PI/2 - Math.PI, -Math.PI/2 + Math.PI); }
+  // shallow→deep paint order; only changes when nodes are added, so cache it
+  var drawOrder = [];
+  function rebuildDrawOrder(){ drawOrder = NODES.slice().sort(function(a,b){ return a.depthLevel-b.depthLevel; }); }
+  function relayout(){ countLeaves(ROOT); layout(ROOT, -Math.PI/2 - Math.PI, -Math.PI/2 + Math.PI); rebuildDrawOrder(); }
   relayout();
 
   /* ── Camera (with a smooth target it eases toward) ── */
@@ -506,8 +509,8 @@
     }
     ctx.globalAlpha = 1;
 
-    // nodes (parents under children: draw shallow→deep)
-    var order = NODES.slice().sort(function(a,b){ return a.depthLevel-b.depthLevel; });
+    // nodes (parents under children: draw shallow→deep — order cached, rebuilt only on add)
+    var order = drawOrder;
     for (var j=0;j<order.length;j++){
       var nd = order[j];
       // appear animation
@@ -663,7 +666,6 @@
     ];
   }
   function decompose(n){
-    if (n.children.length && n._aiKids){ /* allow growing leaves deeper */ }
     if (n.children.length && !n._aiKids){ focusNode(n); return; }   // already has real children → just dive in
     var made = synth(n); n._aiKids = true;
     made.forEach(function(c){ build(c, n, n.depthLevel+1); c=n.children[n.children.length-1]; c.appear=0; });
