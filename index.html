@@ -92,30 +92,24 @@
       transition: opacity .5s ease;
     }
     #boot-loader.gone { opacity: 0; pointer-events: none; }
-    /* a real low-poly 3D dino built from shaded cuboids — it walks across a glowing
-       floor and PIVOTS in 3D to turn around, so you see its depth/displacement */
-    #boot-loader .dino-stage { position: relative; width: 250px; height: 130px; perspective: 620px;
-      display: flex; align-items: flex-end; justify-content: center; }
-    #boot-loader .dino-floor { position: absolute; left: 50%; bottom: 14px; width: 210px; height: 48px;
-      transform: translateX(-50%) rotateX(74deg); border-radius: 50%; filter: blur(2px);
-      background: radial-gradient(ellipse at center, rgba(96,200,180,.32), rgba(96,200,180,.06) 50%, transparent 72%); }
-    #boot-loader .dino3d-walk { position: absolute; left: 50%; bottom: 50px; transform-style: preserve-3d;
-      animation: dino3d-walk 6s ease-in-out infinite; }
-    #boot-loader .dino3d-bob { transform-style: preserve-3d; animation: dino3d-bob .5s ease-in-out infinite; }
-    #boot-loader .dino3d-walk div { backface-visibility: hidden; }
+    /* a simple 2D dino strolls back and forth (the track) and flips (scaleX) to
+       turn around at each edge, bobbing as it walks (the emoji) */
+    #boot-loader .dino-track { animation: dino-walk 5s ease-in-out infinite; }
+    #boot-loader .dino { display: inline-block; font-size: 54px; line-height: 1;
+      animation: dino-bob .45s ease-in-out infinite; filter: drop-shadow(0 8px 6px rgba(0,0,0,.45)); }
     #boot-loader .blabel { font-size: 14px; letter-spacing: .09em; opacity: .85; margin-top: 22px; }
     #boot-loader .blabel b { color: #a78bfa; font-weight: 700; }
     #boot-loader .blabel .dots::after { content: ""; animation: bdots 1.25s steps(1,end) infinite; }
-    @keyframes dino3d-walk {
-      0%   { transform: translateX(-86px) rotateY(0deg); }     /* walking right (side profile) */
-      44%  { transform: translateX( 86px) rotateY(0deg); }     /* reached right */
-      56%  { transform: translateX( 86px) rotateY(180deg); }   /* PIVOT 180° in 3D — see its depth */
-      94%  { transform: translateX(-86px) rotateY(180deg); }   /* walking left */
-      100% { transform: translateX(-86px) rotateY(360deg); }   /* pivot back (loop) */
+    @keyframes dino-walk {
+      0%   { transform: translateX(-95px) scaleX(-1); }   /* at left, heading right */
+      46%  { transform: translateX( 95px) scaleX(-1); }   /* reached the right edge */
+      50%  { transform: translateX( 95px) scaleX( 1); }   /* turn around (2D flip) */
+      96%  { transform: translateX(-95px) scaleX( 1); }   /* back at the left edge */
+      100% { transform: translateX(-95px) scaleX(-1); }   /* flip to loop seamlessly */
     }
-    @keyframes dino3d-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes dino-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
     @keyframes bdots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
-    @media (prefers-reduced-motion: reduce) { #boot-loader .dino3d-walk, #boot-loader .dino3d-bob { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { #boot-loader .dino-track, #boot-loader .dino { animation: none; } }
     /* Alerts live on the Inkling orb (its red count badge) + the Alerts nav tab.
        Hide the redundant standalone alerts bells: the top-chrome 🔔 and the
        floating notification bell beside the orb. (2026-06-18) */
@@ -124,70 +118,13 @@
 </head>
 <body>
   <div id="boot-loader" role="status" aria-label="Loading Inkling">
-    <div class="dino-stage">
-      <div class="dino-floor"></div>
-      <div class="dino3d-walk"><div class="dino3d-bob" id="dino3d"></div></div>
-    </div>
+    <div class="dino-track"><div class="dino">🦕</div></div>
     <div class="blabel">Loading <b>Inkling</b><span class="dots"></span></div>
   </div>
   <script>
     (function () {
-      // ── low-poly 3D dino, built from shaded cuboids (real CSS 3D, no engine) ──
-      var root = document.getElementById("dino3d");
-      if (root) {
-        function shade(hex, f) { var n = parseInt(hex.slice(1), 16),
-          r = Math.min(255, (((n >> 16) & 255) * f) | 0), g = Math.min(255, (((n >> 8) & 255) * f) | 0), b = Math.min(255, ((n & 255) * f) | 0);
-          return "rgb(" + r + "," + g + "," + b + ")"; }
-        function box(o) {
-          var c = document.createElement("div");
-          c.style.cssText = "position:absolute;left:50%;top:50%;transform-style:preserve-3d;transform:translate3d(" + o.x + "px," + o.y + "px," + (o.z || 0) + "px)" + (o.rz ? " rotateZ(" + o.rz + "deg)" : "");
-          var w = o.w, h = o.h, d = o.d, col = o.color,
-            F = [["translateZ(" + (d / 2) + "px)", w, h, 1], ["rotateY(180deg) translateZ(" + (d / 2) + "px)", w, h, .72],
-                 ["rotateY(90deg) translateZ(" + (w / 2) + "px)", d, h, .86], ["rotateY(-90deg) translateZ(" + (w / 2) + "px)", d, h, .86],
-                 ["rotateX(90deg) translateZ(" + (h / 2) + "px)", w, d, 1.15], ["rotateX(-90deg) translateZ(" + (h / 2) + "px)", w, d, .48]];
-          for (var i = 0; i < F.length; i++) { var f = F[i], el = document.createElement("div");
-            el.style.cssText = "position:absolute;left:50%;top:50%;width:" + f[1] + "px;height:" + f[2] + "px;margin-left:" + (-f[1] / 2) + "px;margin-top:" + (-f[2] / 2) + "px;background:" + shade(col, f[3]) + ";transform:" + f[0] + ";box-shadow:inset 0 0 0 .5px rgba(0,0,0,.18)";
-            c.appendChild(el); }
-          root.appendChild(c);
-        }
-        var TEAL = "#5cb8a8", DARK = "#43948a", LEG = "#327a6f";
-        box({ w: 58, h: 28, d: 28, x: 0, y: 0, color: TEAL });            // body
-        box({ w: 34, h: 12, d: 12, x: -38, y: 3, color: DARK });          // tail
-        box({ w: 13, h: 32, d: 13, x: 22, y: -24, rz: -10, color: TEAL });// neck
-        box({ w: 21, h: 14, d: 15, x: 30, y: -44, color: TEAL });         // head
-        box({ w: 5, h: 5, d: 4, x: 39, y: -46, z: 8.5, color: "#ff5b5b" });// eye
-        box({ w: 11, h: 19, d: 11, x: -11, y: 19, z: 8, color: LEG });    // near legs
-        box({ w: 11, h: 19, d: 11, x: 13, y: 19, z: 8, color: LEG });
-        box({ w: 11, h: 19, d: 11, x: -11, y: 19, z: -8, color: shade(LEG, .82) }); // far legs
-        box({ w: 11, h: 19, d: 11, x: 13, y: 19, z: -8, color: shade(LEG, .82) });
-      }
-
-      // ── Cached upgrade to the real 3D raptor (Meshy "official pose" export).
-      // CSS cuboid dino is the instant first paint; once the model is cached the
-      // loader fades in the textured raptor (slow turn-around + idle bob). Textures
-      // are fully awaited before reveal, so no splotchy flash. Flip to false for the
-      // pure CSS dino. v2 = clean standing pose (replaced the splotchy walking FBX). ──
-      var DINO3D_ENABLED = true;
-      var DINO_MODEL = "dino2.fbx", DINO_CACHE_KEY = "inkling-dino-v2";
-      var DINO_FILES = [DINO_MODEL, "dino2-basecolor.png", "dino2-normal.png", "dino2-orm.png", "dino2-emit.png"];
-      try {
-        if (DINO3D_ENABLED && window.caches && window.WebGLRenderingContext) {
-          caches.open(DINO_CACHE_KEY).then(function (cache) {
-            cache.match("/models/dino/" + DINO_MODEL).then(function (hit) {
-              if (hit) {
-                var stage = document.querySelector("#boot-loader .dino-stage");
-                if (stage) import("/dino-loader.js").then(function (m) { m.mountDinoLoader(stage); }).catch(function () {});
-              } else {
-                DINO_FILES.forEach(function (f) {
-                  var u = "/models/dino/" + f;
-                  fetch(u).then(function (r) { if (r && r.ok) cache.put(u, r.clone()); }).catch(function () {});
-                });
-              }
-            });
-          }).catch(function () {});
-        }
-      } catch (e) { /* keep CSS dino */ }
-
+      // Simple 2D walking dino (CSS only) — the 3D raptor path is parked for now
+      // (dino-loader.js + /models/dino/* stay in place to re-enable later).
       var hidden = false;
       function hide() {
         if (hidden) return; hidden = true;
