@@ -217,8 +217,83 @@
   function w2s(wx, wy){ return [ (wx - cam.x)*cam.s + W/2, (wy - cam.y)*cam.s + H/2 ]; }
   function s2w(sx, sy){ return [ (sx - W/2)/cam.s + cam.x, (sy - H/2)/cam.s + cam.y ]; }
 
-  /* ── Starfield backdrop (cosmos vibe) ── */
-  var STARS = []; for(var i=0;i<160;i++) STARS.push({ x:Math.random(), y:Math.random(), r:Math.random()*1.3+.2, a:Math.random()*.5+.15 });
+  /* ─────────────────────────────────────────────────────────────────────────
+     COSMIC BACKDROP — randomly ALTERNATING galaxy scenes (crossfade), a shooting-
+     star layer, and gyroscope / pointer TILT-PARALLAX (move your phone to look
+     around the sky). To use your own uploaded galaxy photo, set BG_IMAGE_SRC to
+     its path — it joins the rotation as another scene automatically.
+  ───────────────────────────────────────────────────────────────────────── */
+  var BG_IMAGE_SRC = null;   // ← e.g. "assets/wordweaver/galaxy.jpg" once the file is in place
+  function clamp(v,a,b){ return v<a?a:v>b?b:v; }
+  var PARA = { x:0, y:0, tx:0, ty:0 };                 // eased tilt parallax, −1..1
+  function tilt(gx, gy){ PARA.tx = clamp(gx,-1,1); PARA.ty = clamp(gy,-1,1); }
+
+  // parallax star layers (different depths drift by different amounts)
+  var LAYERS = []; (function(){ var depths=[0.25,0.55,0.95], counts=[72,58,44];
+    depths.forEach(function(d,i){ var a=[]; for(var k=0;k<counts[i];k++) a.push({x:Math.random(),y:Math.random(),r:Math.random()*(0.5+d)+0.2,a:Math.random()*0.5+0.18,tw:Math.random()*6}); LAYERS.push({d:d,stars:a}); });
+  })();
+  // shooting stars
+  var SHOOT=[], shootT=0;
+  function spawnShoot(){ var L=Math.random()<0.5, y0=Math.random()*H*0.5; SHOOT.push({x:L?-40:W+40,y:y0,vx:(L?1:-1)*(6+Math.random()*5),vy:2.2+Math.random()*2.4,life:1,len:90+Math.random()*70}); }
+
+  // procedural galaxy "scenes", each painted once to an offscreen canvas then blitted
+  function nebula(c,x,y,r,col){ var g=c.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,col); g.addColorStop(1,"rgba(0,0,0,0)"); c.fillStyle=g; c.beginPath(); c.arc(x,y,r,0,7); c.fill(); }
+  function scatter(c,Wd,Hd,n,col){ for(var i=0;i<n;i++){ c.globalAlpha=Math.random()*0.6+0.12; c.fillStyle=col; c.beginPath(); c.arc(Math.random()*Wd,Math.random()*Hd,Math.random()*1.2+0.2,0,7); c.fill(); } c.globalAlpha=1; }
+  function paintCosmos(c,Wd,Hd){
+    var g=c.createRadialGradient(Wd*0.5,Hd*0.42,0,Wd*0.5,Hd*0.42,Wd*0.72); g.addColorStop(0,"#0e1430"); g.addColorStop(0.6,"#080a1a"); g.addColorStop(1,"#04050d");
+    c.fillStyle=g; c.fillRect(0,0,Wd,Hd);
+    nebula(c,Wd*0.32,Hd*0.34,Wd*0.42,"rgba(78,92,220,0.16)"); nebula(c,Wd*0.72,Hd*0.66,Wd*0.36,"rgba(40,150,180,0.13)");
+    scatter(c,Wd,Hd,560,"#cdd6ff");
+  }
+  function paintGalaxy(c,Wd,Hd){
+    var g=c.createRadialGradient(Wd*0.5,Hd*0.5,0,Wd*0.5,Hd*0.5,Wd*0.72); g.addColorStop(0,"#1b1234"); g.addColorStop(0.6,"#0a0816"); g.addColorStop(1,"#040309");
+    c.fillStyle=g; c.fillRect(0,0,Wd,Hd);
+    nebula(c,Wd*0.5,Hd*0.5,Wd*0.52,"rgba(150,80,230,0.15)");
+    var cx=Wd*0.5, cy=Hd*0.5; c.save(); c.translate(cx,cy); c.rotate(-0.5); c.scale(1,0.6);
+    for(var arm=0;arm<2;arm++){ for(var t=0;t<700;t++){ var th=t*0.05, rr=10*Math.exp(0.2*th); if(rr>Wd*0.52) break;
+      var ang=th+arm*Math.PI, jx=(Math.random()-0.5)*rr*0.12, jy=(Math.random()-0.5)*rr*0.12;
+      var x=Math.cos(ang)*rr+jx, y=Math.sin(ang)*rr+jy, a=Math.max(0,0.55-rr/(Wd*0.55));
+      c.globalAlpha=a*(0.4+Math.random()*0.6); c.fillStyle=Math.random()<0.3?"#ffe6a8":"#dcd0ff";
+      c.beginPath(); c.arc(x,y,Math.random()*1.4+0.3,0,7); c.fill(); } }
+    c.restore();
+    var cg=c.createRadialGradient(cx,cy,0,cx,cy,Wd*0.17); cg.addColorStop(0,"rgba(255,240,210,0.9)"); cg.addColorStop(0.4,"rgba(255,208,150,0.32)"); cg.addColorStop(1,"rgba(255,200,140,0)");
+    c.globalAlpha=1; c.fillStyle=cg; c.beginPath(); c.arc(cx,cy,Wd*0.17,0,7); c.fill();
+    scatter(c,Wd,Hd,340,"#e8ddff");
+  }
+  function paintPhoto(c,Wd,Hd,def){ var im=def.img; if(!im||!im.complete||!im.width) return paintCosmos(c,Wd,Hd); var s=Math.max(Wd/im.width,Hd/im.height),w=im.width*s,h=im.height*s; c.drawImage(im,(Wd-w)/2,(Hd-h)/2,w,h); c.fillStyle="rgba(5,6,14,0.26)"; c.fillRect(0,0,Wd,Hd); }
+  var BG_DEFS=[ {name:"cosmos",paint:paintCosmos}, {name:"violet galaxy",paint:paintGalaxy} ];
+  if (BG_IMAGE_SRC){ var _im=new Image(); _im.crossOrigin="anonymous"; var _d={name:"photo",img:_im,paint:paintPhoto}; _im.onload=function(){ SCENES.length=0; }; _im.src=BG_IMAGE_SRC; BG_DEFS.push(_d); }
+  var SCENES=[], sceneCur=Math.floor(Math.random()*BG_DEFS.length), sceneNext=-1, sceneFade=0, sceneClock=0, SCN_W=0, SCN_H=0;
+  function makeScenes(){ SCN_W=Math.max(64,Math.ceil(Math.max(W,H)*1.35)); SCN_H=SCN_W; SCENES=BG_DEFS.map(function(def){ var o=document.createElement("canvas"); o.width=SCN_W; o.height=SCN_H; def.paint(o.getContext("2d"),SCN_W,SCN_H,def); return {canvas:o}; }); if(sceneCur>=SCENES.length) sceneCur=0; }
+  function drawCosmos(dt){
+    if (W<2 || H<2) return;
+    PARA.x += (PARA.tx-PARA.x)*0.06; PARA.y += (PARA.ty-PARA.y)*0.06;
+    if (!SCENES.length || SCN_W < Math.max(W,H)) makeScenes();
+    sceneClock += dt;
+    if (sceneNext<0 && sceneClock>22000 && SCENES.length>1){ sceneClock=0; sceneNext=(sceneCur+1+Math.floor(Math.random()*(SCENES.length-1)))%SCENES.length; sceneFade=0; }
+    if (sceneNext>=0){ sceneFade+=dt/1800; if(sceneFade>=1){ sceneCur=sceneNext; sceneNext=-1; sceneFade=0; } }
+    ctx.fillStyle="#04050d"; ctx.fillRect(0,0,W,H);
+    var dx=(SCN_W-W)/2, dy=(SCN_H-H)/2, ox=PARA.x*46, oy=PARA.y*46;
+    function blit(i,al){ if(!SCENES[i])return; ctx.globalAlpha=al; ctx.drawImage(SCENES[i].canvas, -dx-ox, -dy-oy); }
+    blit(sceneCur, sceneNext>=0?(1-sceneFade):1); if(sceneNext>=0) blit(sceneNext, sceneFade); ctx.globalAlpha=1;
+    var now=performance.now();
+    LAYERS.forEach(function(Lr){ var lx=PARA.x*64*Lr.d, ly=PARA.y*64*Lr.d; Lr.stars.forEach(function(st){
+      var x=(((st.x*W+lx)%(W+40))+(W+40))%(W+40)-20, y=(((st.y*H+ly)%(H+40))+(H+40))%(H+40)-20;
+      ctx.globalAlpha=st.a*(0.6+0.4*Math.sin(now*0.001+st.tw)); ctx.fillStyle="#cdd6ff"; ctx.beginPath(); ctx.arc(x,y,st.r,0,7); ctx.fill();
+    }); }); ctx.globalAlpha=1;
+    shootT+=dt; if(shootT>1600+Math.random()*2800){ shootT=0; spawnShoot(); }
+    for(var i=SHOOT.length-1;i>=0;i--){ var s=SHOOT[i]; s.x+=s.vx; s.y+=s.vy; s.life-=0.012;
+      if(s.life<=0||s.x<-90||s.x>W+90||s.y>H+90){ SHOOT.splice(i,1); continue; }
+      var sp=Math.hypot(s.vx,s.vy), tx=s.x-s.vx/sp*s.len, ty=s.y-s.vy/sp*s.len;
+      var gr=ctx.createLinearGradient(s.x,s.y,tx,ty); gr.addColorStop(0,"rgba(255,255,255,"+(0.9*s.life)+")"); gr.addColorStop(1,"rgba(160,180,255,0)");
+      ctx.strokeStyle=gr; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(s.x,s.y); ctx.lineTo(tx,ty); ctx.stroke();
+      ctx.globalAlpha=s.life; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(s.x,s.y,1.6,0,7); ctx.fill(); ctx.globalAlpha=1;
+    }
+  }
+  // gyroscope (mobile) + pointer (desktop) parallax
+  var gyroOn=false;
+  function startGyro(){ if(gyroOn)return; gyroOn=true; window.addEventListener("deviceorientation",function(e){ if(e.gamma==null&&e.beta==null)return; tilt((e.gamma||0)/30, ((e.beta||0)-40)/30); }); }
+  function maybeRequestGyro(){ try{ if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission==="function"){ DeviceOrientationEvent.requestPermission().then(function(s){ if(s==="granted") startGyro(); }).catch(function(){}); } else startGyro(); }catch(_){} }
 
   var focusId = ROOT.id, hoverId = null;
 
@@ -233,20 +308,16 @@
     return Math.max(0, Math.min(1, (ss - 1.2) / 7));
   }
 
+  var _lastT = 0;
   function draw(){
+    var nowT = performance.now(), dt = _lastT ? Math.min(60, nowT-_lastT) : 16; _lastT = nowT;
     // ease camera
     cam.x += (camT.x - cam.x) * 0.16;
     cam.y += (camT.y - cam.y) * 0.16;
     cam.s += (camT.s - cam.s) * 0.16;
 
     ctx.clearRect(0,0,W,H);
-    // background gradient
-    var g = ctx.createRadialGradient(W/2,H*0.42,0, W/2,H*0.42, Math.max(W,H)*0.75);
-    g.addColorStop(0,"#0d1226"); g.addColorStop(1,"#05060d");
-    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    ctx.save();
-    STARS.forEach(function(st){ ctx.globalAlpha=st.a; ctx.fillStyle="#aab6ff"; ctx.beginPath(); ctx.arc(st.x*W, st.y*H, st.r, 0, 7); ctx.fill(); });
-    ctx.restore();
+    drawCosmos(dt);   // alternating galaxy scenes + shooting stars + tilt parallax
 
     // edges first
     ctx.lineWidth = 1;
@@ -304,13 +375,12 @@
       ctx.globalAlpha = 1;
     }
 
-    // keep the node card glued to nothing — it's a fixed panel; just update crumb live
-    requestAnimationFrame(draw);
   }
   function offscreen(s, m){ m=m||0; return s[0]< -m || s[0]>W+m || s[1]< -m || s[1]>H+m; }
   function hexA(hex, a){ var n=parseInt(hex.slice(1),16); return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"; }
   function fit(t, maxw, fs){ if (ctx.measureText(t).width<=maxw) return t; while(t.length>1 && ctx.measureText(t+"…").width>maxw) t=t.slice(0,-1); return t+"…"; }
-  requestAnimationFrame(draw);
+  // resilient render loop — one thrown frame (e.g. a transient 0-size viewport) must not kill the animation
+  (function frame(){ try { if (W>1 && H>1) draw(); } catch(e){} requestAnimationFrame(frame); })();
 
   /* ── Focus a node: smoothly center it and zoom so its children are readable ── */
   function targetScaleFor(n){
@@ -423,9 +493,11 @@
 
   /* ── Pointer: drag to pan, click to focus, wheel/pinch to zoom ── */
   var down=false, moved=false, lastX=0, lastY=0, downX=0, downY=0;
-  cv.addEventListener("pointerdown", function(e){ down=true; moved=false; lastX=downX=e.clientX; lastY=downY=e.clientY; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); });
+  cv.addEventListener("pointerdown", function(e){ down=true; moved=false; lastX=downX=e.clientX; lastY=downY=e.clientY; cv.setPointerCapture(e.pointerId); cv.classList.add("drag"); maybeRequestGyro(); });
   cv.addEventListener("pointermove", function(e){
-    if (!down){ var h=hit(e.clientX,e.clientY); hoverId = h?h.id:null; cv.style.cursor = h?"pointer":"grab"; return; }
+    if (!down){ var h=hit(e.clientX,e.clientY); hoverId = h?h.id:null; cv.style.cursor = h?"pointer":"grab";
+      if (!gyroOn) tilt(e.clientX/W*2-1, e.clientY/H*2-1);   // desktop: cursor drives the sky parallax
+      return; }
     var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
     if (Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY) > 4) moved=true;
     cam.x -= dx/cam.s; cam.y -= dy/cam.s; camT.x=cam.x; camT.y=cam.y;
