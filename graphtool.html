@@ -14,8 +14,9 @@
   /* toolbar */
   #bar{display:flex;flex-wrap:wrap;gap:6px}
   .tool{display:flex;align-items:center;gap:6px;border:.5px solid var(--line);background:var(--panel);color:var(--text);
-        border-radius:10px;padding:8px 11px;font-size:13px;font-weight:600;cursor:pointer}
-  .tool .gly{font-size:15px;line-height:1}
+        border-radius:10px;padding:7px 11px;font-size:13px;font-weight:600;cursor:pointer}
+  .tool .ic{width:24px;height:18px;flex:0 0 auto;display:block}
+  .tool[data-tool="closed"] .ic,.tool[data-tool="open"] .ic{width:18px}
   .tool.on{border-color:var(--accent);background:rgba(124,92,255,.20);color:#cdbcff}
   .tool.act{margin-left:auto}            /* undo / clear pushed right */
   .tool.act.clear{color:#ff7a7a;border-color:rgba(255,90,90,.45)}
@@ -38,13 +39,20 @@
 <div id="wrap">
   <h1>📈 Graphing Tool <small>— plot points & connect them</small></h1>
   <div id="bar">
-    <button class="tool" data-tool="closed"><span class="gly">●</span>Closed dot</button>
-    <button class="tool" data-tool="open"><span class="gly">○</span>Open dot</button>
-    <button class="tool" data-tool="segment"><span class="gly">／</span>Segment</button>
-    <button class="tool" data-tool="ray"><span class="gly">➝</span>Ray</button>
-    <button class="tool" data-tool="line"><span class="gly">↔</span>Line</button>
-    <button class="tool act" data-act="undo"><span class="gly">⌫</span>Undo</button>
-    <button class="tool act clear" data-act="clear"><span class="gly">🗑</span>Clear</button>
+    <button class="tool" data-tool="line" title="Line — extends both ways">
+      <svg class="ic" viewBox="0 0 30 20"><polygon points="2,18 9,13 7,17" fill="currentColor"/><polygon points="28,2 21,7 23,3" fill="currentColor"/><line x1="4" y1="16" x2="26" y2="4" stroke="currentColor" stroke-width="2"/></svg>Line</button>
+    <button class="tool" data-tool="ray" title="Ray — extends past the 2nd point">
+      <svg class="ic" viewBox="0 0 30 20"><line x1="4" y1="16" x2="26" y2="4" stroke="currentColor" stroke-width="2"/><polygon points="28,2 21,7 23,3" fill="currentColor"/><circle cx="5" cy="16" r="2.6" fill="currentColor"/></svg>Ray</button>
+    <button class="tool" data-tool="segment" title="Segment — between two points">
+      <svg class="ic" viewBox="0 0 30 20"><line x1="5" y1="16" x2="25" y2="4" stroke="currentColor" stroke-width="2"/><circle cx="5" cy="16" r="2.6" fill="currentColor"/><circle cx="25" cy="4" r="2.6" fill="currentColor"/></svg>Segment</button>
+    <button class="tool" data-tool="closed" title="Closed dot — point is included">
+      <svg class="ic" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.5" fill="currentColor"/></svg>Closed</button>
+    <button class="tool" data-tool="open" title="Open dot — point is NOT included">
+      <svg class="ic" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>Open</button>
+    <button class="tool act" data-act="undo" title="Undo last">
+      <svg class="ic" viewBox="0 0 20 20"><path d="M7 6 H13 a4 4 0 0 1 0 8 H6 M7 6 L4 3 M7 6 L4 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Undo</button>
+    <button class="tool act clear" data-act="clear" title="Clear all">
+      <svg class="ic" viewBox="0 0 20 20"><path d="M5 6 H15 M8 6 V4 H12 V6 M6 6 L7 16 H13 L14 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Clear</button>
   </div>
   <div id="planewrap">
     <svg id="plane" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
