@@ -68,7 +68,8 @@
   <div id="hint">
     <b>Closed / Open dot</b> — tap the grid to drop a point (● included · ○ not included).<br>
     <b>Segment · Ray · Line</b> — tap two grid points. A ray extends past the 2nd point; a line extends both ways.<br>
-    Drop an <b>open dot</b> on a line's endpoint to mark "doesn't touch."<span class="count" id="count"></span>
+    Drop an <b>open dot</b> on a line's endpoint to mark "doesn't touch."<br>
+    <b>Drag</b> any dot or line to move it — drag it <b>off the grid</b> to delete it.<span class="count" id="count"></span>
   </div>
 </div>
 
@@ -125,26 +126,60 @@
     return [px + dx*t, py + dy*t];
   }
 
-  /* ── pointer → snapped lattice point ── */
-  function locate(evt){
+  /* ── pointer → world coords (raw, and snapped to the lattice) ── */
+  function rawLocate(evt){
     var r = svg.getBoundingClientRect();
     var px = (evt.clientX - r.left) / r.width * BOX, py = (evt.clientY - r.top) / r.height * BOX;
-    var wx = (px - PAD)/U - R, wy = R - (py - PAD)/U;
-    wx = Math.max(-R, Math.min(R, Math.round(wx)));
-    wy = Math.max(-R, Math.min(R, Math.round(wy)));
-    return { x:wx, y:wy };
+    return { x:(px - PAD)/U - R, y:R - (py - PAD)/U };
   }
+  function locate(evt){ var p=rawLocate(evt); return { x:Math.max(-R,Math.min(R,Math.round(p.x))), y:Math.max(-R,Math.min(R,Math.round(p.y))) }; }
+  // distance (world units) from a point to a shape, respecting segment/ray/line extent
+  function distToShape(s, px, py){
+    if (s.t === "point") return Math.hypot(s.x-px, s.y-py);
+    var dx=s.x2-s.x1, dy=s.y2-s.y1, L2=dx*dx+dy*dy;
+    if (L2 < 1e-9) return Math.hypot(px-s.x1, py-s.y1);
+    var t=((px-s.x1)*dx+(py-s.y1)*dy)/L2;
+    if (s.t === "segment") t=Math.max(0,Math.min(1,t)); else if (s.t === "ray") t=Math.max(0,t);
+    return Math.hypot(px-(s.x1+t*dx), py-(s.y1+t*dy));
+  }
+  // topmost shape near (px,py): dots sit on top, then lines
+  function hitShape(px, py){
+    var i;
+    for (i=shapes.length-1;i>=0;i--) if (shapes[i].t==="point" && distToShape(shapes[i],px,py)<0.6) return i;
+    for (i=shapes.length-1;i>=0;i--) if (shapes[i].t!=="point" && distToShape(shapes[i],px,py)<0.45) return i;
+    return -1;
+  }
+  function moveShape(s,o,dx,dy){ if (s.t==="point"){ s.x=o.x+dx; s.y=o.y+dy; } else { s.x1=o.x1+dx; s.y1=o.y1+dy; s.x2=o.x2+dx; s.y2=o.y2+dy; } }
+  function snapShape(s){ if (s.t==="point"){ s.x=Math.round(s.x); s.y=Math.round(s.y); } else { s.x1=Math.round(s.x1); s.y1=Math.round(s.y1); s.x2=Math.round(s.x2); s.y2=Math.round(s.y2); } }
+
+  var grab = null;   // when set, the user is dragging an existing shape (to move or trash it)
   svg.addEventListener("pointerdown", function(evt){
     evt.preventDefault();
-    var p = locate(evt);
+    var raw = rawLocate(evt), hi = hitShape(raw.x, raw.y);
+    if (hi >= 0){ grab = { idx:hi, x0:raw.x, y0:raw.y, moved:false, orig:JSON.parse(JSON.stringify(shapes[hi])) }; try{ svg.setPointerCapture(evt.pointerId); }catch(_){} }
+    else grab = null;
+  });
+  svg.addEventListener("pointermove", function(evt){
+    if (!grab) return;
+    var raw = rawLocate(evt), dx=raw.x-grab.x0, dy=raw.y-grab.y0;
+    if (Math.abs(dx)+Math.abs(dy) > 0.25) grab.moved = true;
+    if (grab.moved){ grab.off = (raw.x<-R||raw.x>R||raw.y<-R||raw.y>R); moveShape(shapes[grab.idx], grab.orig, dx, dy); render(); }
+  });
+  svg.addEventListener("pointerup", function(evt){
+    evt.preventDefault();
+    var raw = rawLocate(evt);
+    if (grab && grab.moved){
+      if (raw.x < -R || raw.x > R || raw.y < -R || raw.y > R) shapes.splice(grab.idx, 1);  // dragged off the plane → delete
+      else snapShape(shapes[grab.idx]);                                                     // dropped inside → reposition
+      grab = null; render(); return;
+    }
+    grab = null;
+    var p = locate(evt);   // a tap → place per the current tool
     if (TOOL === "closed" || TOOL === "open"){
       shapes.push({ t:"point", x:p.x, y:p.y, open: TOOL === "open" });
-    } else { // segment / ray / line
+    } else {
       if (!pending){ pending = p; }
-      else {
-        if (!(pending.x === p.x && pending.y === p.y)) shapes.push({ t:TOOL, x1:pending.x, y1:pending.y, x2:p.x, y2:p.y });
-        pending = null;
-      }
+      else { if (!(pending.x === p.x && pending.y === p.y)) shapes.push({ t:TOOL, x1:pending.x, y1:pending.y, x2:p.x, y2:p.y }); pending = null; }
     }
     render();
   });
@@ -155,8 +190,10 @@
   }
   function render(){
     while (gDraw.firstChild) gDraw.removeChild(gDraw.firstChild);
-    shapes.forEach(function(s){
-      if (s.t === "point"){ gDraw.appendChild(dot(s.x, s.y, s.open)); return; }
+    shapes.forEach(function(s, i){
+      var del = !!(grab && grab.moved && grab.off && i === grab.idx);   // dragged off → about to delete
+      var add = function(node){ if (del) node.setAttribute("opacity", "0.3"); gDraw.appendChild(node); };
+      if (s.t === "point"){ add(dot(s.x, s.y, s.open)); return; }
       var a, b, attrs = { class:"shape" };
       if (s.t === "segment"){ a = [s.x1, s.y1]; b = [s.x2, s.y2]; }
       else if (s.t === "ray"){ a = [s.x1, s.y1]; b = exit(s.x2, s.y2, s.x2 - s.x1, s.y2 - s.y1); attrs["marker-end"] = "url(#arrow)"; }
@@ -166,10 +203,10 @@
         attrs["marker-start"] = "url(#arrow)"; attrs["marker-end"] = "url(#arrow)";
       }
       attrs.x1 = sx(a[0]); attrs.y1 = sy(a[1]); attrs.x2 = sx(b[0]); attrs.y2 = sy(b[1]);
-      gDraw.appendChild(el("line", attrs));
+      add(el("line", attrs));
       // the two defining lattice points get closed dots (overlay an open dot to change them)
-      gDraw.appendChild(dot(s.x1, s.y1, false));
-      if (s.t === "segment" || s.t === "ray") gDraw.appendChild(dot(s.x2, s.y2, false));
+      add(dot(s.x1, s.y1, false));
+      if (s.t === "segment" || s.t === "ray") add(dot(s.x2, s.y2, false));
     });
     if (pending) gDraw.appendChild(el("circle", { class:"pending", cx:sx(pending.x), cy:sy(pending.y), r:8 }));
     count.textContent = shapes.length ? "  ·  " + shapes.length + " object" + (shapes.length>1?"s":"") : "";

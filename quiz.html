@@ -1113,7 +1113,7 @@
       var svg='<div class="skwrap"><svg class="skplane" viewBox="0 0 '+BOX+' '+BOX+'" xmlns="http://www.w3.org/2000/svg">'
             +'<defs><marker id="skar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--curve)"/></marker></defs>'
             +'<g class="skgrid"></g><g class="skdraw"></g></svg></div>';
-      optsEl.innerHTML = bar + svg + '<div class="skhint">Pick a tool, then tap two lattice points. Ray extends past the 2nd point; line goes both ways. Drop an open dot at a break.</div>';
+      optsEl.innerHTML = bar + svg + '<div class="skhint">Pick a tool, then tap two lattice points. Ray extends past the 2nd point; line goes both ways. Drop an open dot at a break. <b>Drag a dot or line off the grid to delete it.</b></div>';
       var svgEl=optsEl.querySelector(".skplane"), gGrid=svgEl.querySelector(".skgrid"), gDraw=svgEl.querySelector(".skdraw"), gg="", i;
       for(i=Math.ceil(R0);i<=R1;i++){ gg+='<line x1="'+sx(i)+'" y1="'+sy(R0)+'" x2="'+sx(i)+'" y2="'+sy(R1)+'" stroke="var(--grid)" stroke-width="1"/>'; gg+='<line x1="'+sx(R0)+'" y1="'+sy(i)+'" x2="'+sx(R1)+'" y2="'+sy(i)+'" stroke="var(--grid)" stroke-width="1"/>'; }
       gg+='<line x1="'+sx(R0)+'" y1="'+sy(0)+'" x2="'+sx(R1)+'" y2="'+sy(0)+'" stroke="var(--axis)" stroke-width="1.4"/><line x1="'+sx(0)+'" y1="'+sy(R0)+'" x2="'+sx(0)+'" y2="'+sy(R1)+'" stroke="var(--axis)" stroke-width="1.4"/>';
@@ -1124,22 +1124,37 @@
       function dotSvg(x,y,open){ return '<circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="'+(open?5:5.5)+'" '+(open?'fill="var(--surface)" stroke="var(--curve)" stroke-width="2.4"':'fill="var(--curve)"')+'/>'; }
       function draw(){
         var d="";
-        SKETCH.shapes.forEach(function(s){
-          if(s.t==="point"){ d+=dotSvg(s.x,s.y,s.open); return; }
-          var a,b,extra="";
-          if(s.t==="segment"){ a=[s.x1,s.y1]; b=[s.x2,s.y2]; }
-          else if(s.t==="ray"){ a=[s.x1,s.y1]; b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-end="url(#skar)"'; }
-          else { a=exitPt(s.x1,s.y1,s.x1-s.x2,s.y1-s.y2); b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-start="url(#skar)" marker-end="url(#skar)"'; }
-          d+='<line x1="'+sx(a[0])+'" y1="'+sy(a[1])+'" x2="'+sx(b[0])+'" y2="'+sy(b[1])+'" stroke="var(--curve)" stroke-width="2.5" stroke-linecap="round"'+extra+'/>';
-          d+=dotSvg(s.x1,s.y1,false);
-          if(s.t==="segment"||s.t==="ray") d+=dotSvg(s.x2,s.y2,false);
+        SKETCH.shapes.forEach(function(s, idx){
+          var del = !!(SKETCH.grab && SKETCH.grab.moved && SKETCH.grab.off && idx===SKETCH.grab.idx), sd="";
+          if(s.t==="point"){ sd=dotSvg(s.x,s.y,s.open); }
+          else {
+            var a,b,extra="";
+            if(s.t==="segment"){ a=[s.x1,s.y1]; b=[s.x2,s.y2]; }
+            else if(s.t==="ray"){ a=[s.x1,s.y1]; b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-end="url(#skar)"'; }
+            else { a=exitPt(s.x1,s.y1,s.x1-s.x2,s.y1-s.y2); b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-start="url(#skar)" marker-end="url(#skar)"'; }
+            sd='<line x1="'+sx(a[0])+'" y1="'+sy(a[1])+'" x2="'+sx(b[0])+'" y2="'+sy(b[1])+'" stroke="var(--curve)" stroke-width="2.5" stroke-linecap="round"'+extra+'/>'+dotSvg(s.x1,s.y1,false);
+            if(s.t==="segment"||s.t==="ray") sd+=dotSvg(s.x2,s.y2,false);
+          }
+          d += del ? '<g opacity="0.3">'+sd+'</g>' : sd;
         });
         if(SKETCH.pending) d+='<circle cx="'+sx(SKETCH.pending.x)+'" cy="'+sy(SKETCH.pending.y)+'" r="6" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 3"/>';
         gDraw.innerHTML=d;
       }
       function setTool(t){ SKETCH.tool=t; SKETCH.pending=null; [].forEach.call(optsEl.querySelectorAll(".sktool"),function(b){ b.classList.toggle("on", b.dataset.tool===t); }); draw(); }
-      function locate(e){ var r=svgEl.getBoundingClientRect(); var px=(e.clientX-r.left)/r.width*BOX, py=(e.clientY-r.top)/r.height*BOX; var wx=Math.round((px-PAD)/U+R0), wy=Math.round(R1-(py-PAD)/U); return {x:Math.max(R0,Math.min(R1,wx)), y:Math.max(R0,Math.min(R1,wy))}; }
-      svgEl.addEventListener("pointerdown", function(e){ e.preventDefault(); var p=locate(e), T=SKETCH.tool;
+      function worldOf(e){ var r=svgEl.getBoundingClientRect(), px=(e.clientX-r.left)/r.width*BOX, py=(e.clientY-r.top)/r.height*BOX; return {x:(px-PAD)/U+R0, y:R1-(py-PAD)/U}; }   // raw world (unsnapped)
+      function locate(e){ var w=worldOf(e); return {x:Math.max(R0,Math.min(R1,Math.round(w.x))), y:Math.max(R0,Math.min(R1,Math.round(w.y)))}; }
+      function distSh(s,px,py){ if(s.t==="point") return Math.hypot(s.x-px,s.y-py); var dx=s.x2-s.x1,dy=s.y2-s.y1,L2=dx*dx+dy*dy; if(L2<1e-9) return Math.hypot(px-s.x1,py-s.y1); var t=((px-s.x1)*dx+(py-s.y1)*dy)/L2; if(s.t==="segment")t=Math.max(0,Math.min(1,t)); else if(s.t==="ray")t=Math.max(0,t); return Math.hypot(px-(s.x1+t*dx),py-(s.y1+t*dy)); }
+      function hitSh(px,py){ var i; for(i=SKETCH.shapes.length-1;i>=0;i--) if(SKETCH.shapes[i].t==="point"&&distSh(SKETCH.shapes[i],px,py)<0.6) return i; for(i=SKETCH.shapes.length-1;i>=0;i--) if(SKETCH.shapes[i].t!=="point"&&distSh(SKETCH.shapes[i],px,py)<0.45) return i; return -1; }
+      function moveSh(s,o,dx,dy){ if(s.t==="point"){ s.x=o.x+dx; s.y=o.y+dy; } else { s.x1=o.x1+dx; s.y1=o.y1+dy; s.x2=o.x2+dx; s.y2=o.y2+dy; } }
+      function snapSh(s){ if(s.t==="point"){ s.x=Math.round(s.x); s.y=Math.round(s.y); } else { s.x1=Math.round(s.x1); s.y1=Math.round(s.y1); s.x2=Math.round(s.x2); s.y2=Math.round(s.y2); } }
+      svgEl.addEventListener("pointerdown", function(e){ e.preventDefault(); var w=worldOf(e), hi=hitSh(w.x,w.y);
+        if(hi>=0){ SKETCH.grab={idx:hi,x0:w.x,y0:w.y,moved:false,off:false,orig:JSON.parse(JSON.stringify(SKETCH.shapes[hi]))}; try{ svgEl.setPointerCapture(e.pointerId); }catch(_){} } else SKETCH.grab=null;
+      });
+      svgEl.addEventListener("pointermove", function(e){ if(!SKETCH.grab) return; var w=worldOf(e), dx=w.x-SKETCH.grab.x0, dy=w.y-SKETCH.grab.y0; if(Math.abs(dx)+Math.abs(dy)>0.25) SKETCH.grab.moved=true; if(SKETCH.grab.moved){ SKETCH.grab.off=(w.x<R0||w.x>R1||w.y<R0||w.y>R1); moveSh(SKETCH.shapes[SKETCH.grab.idx],SKETCH.grab.orig,dx,dy); draw(); } });
+      svgEl.addEventListener("pointerup", function(e){ e.preventDefault(); var w=worldOf(e);
+        if(SKETCH.grab && SKETCH.grab.moved){ if(w.x<R0||w.x>R1||w.y<R0||w.y>R1) SKETCH.shapes.splice(SKETCH.grab.idx,1); else snapSh(SKETCH.shapes[SKETCH.grab.idx]); SKETCH.grab=null; draw(); return; }
+        SKETCH.grab=null;
+        var p=locate(e), T=SKETCH.tool;
         if(T==="closed"||T==="open"){ SKETCH.shapes.push({t:"point",x:p.x,y:p.y,open:T==="open"}); }
         else if(!SKETCH.pending){ SKETCH.pending=p; }
         else { if(!(SKETCH.pending.x===p.x&&SKETCH.pending.y===p.y)) SKETCH.shapes.push({t:T,x1:SKETCH.pending.x,y1:SKETCH.pending.y,x2:p.x,y2:p.y}); SKETCH.pending=null; }
