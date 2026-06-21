@@ -531,6 +531,9 @@ export class InklingPanel {
       const f = ov.querySelector("iframe");
       if (f && f.getAttribute("src") !== src) f.setAttribute("src", src);  // re-point (e.g. jump to a question)
       ov.style.display = "block";
+      // The iframe stays loaded between opens, so nudge it to re-read quiz progress
+      // (green/done orbs, right/wrong badges) every time it's shown.
+      try { f && f.contentWindow && f.contentWindow.postMessage({ type: "inkling-refresh-progress" }, "*"); } catch { /* ignore */ }
       return;
     }
     ov = document.createElement("div");

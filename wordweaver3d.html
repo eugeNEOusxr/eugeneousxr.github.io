@@ -295,6 +295,8 @@ function updateLabelLOD(){
 window.addEventListener("storage", e => { if (!e.key || /inkling-quiz-(progress|stats)/.test(e.key)){ refreshBadges(); updateLabelLOD(); } });
 window.addEventListener("focus", () => { refreshBadges(); updateLabelLOD(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden){ refreshBadges(); updateLabelLOD(); } });
+window.addEventListener("pageshow", () => { refreshBadges(); updateLabelLOD(); });
+window.addEventListener("message", e => { if (e.data && e.data.type === "inkling-refresh-progress"){ refreshBadges(); updateLabelLOD(); } });
 
 /* ── question panel ── */
 const qpanel = document.getElementById("qpanel");
