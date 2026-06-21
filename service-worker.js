@@ -1,5 +1,5 @@
 /* Phase 1 PWA baseline: minimal offline support with safe caching strategy. */
-const CACHE_VERSION = "eugeneousxr-1782027612357";
+const CACHE_VERSION = "eugeneousxr-1782028545619";
 const CACHE_NAME = `${CACHE_VERSION}-core`;
 const CORE_ASSETS = [
   "/",
@@ -50,30 +50,26 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
-
-  // Let cross-origin requests (CDN modules, fonts, images) pass straight through.
   if (url.origin !== self.location.origin) return;
 
-  // NETWORK-FIRST for everything same-origin (HTML shell, CSS, icons, /src/, /api/)
-  // so a new deploy always shows fresh — no stale UI / old icons stuck in cache.
-  // The cache is only a fallback for offline use.
+  // IMPORTANT: only intercept top-level PAGE NAVIGATIONS (to serve an offline
+  // shell). Every other same-origin request — JS modules, CSS, images, /api —
+  // is left ALONE so the browser fetches it directly from the network. The
+  // worker can therefore never turn a transient hiccup into a hard "Failed to
+  // fetch" that strands the app (the bug that left a dead screen). Network-first
+  // is the browser's default, so deploys still show fresh.
+  if (event.request.mode !== "navigate") return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response && response.status === 200 && response.type === "basic") {
+        if (response && response.status === 200) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", clone)).catch(() => {});
         }
         return response;
       })
-      .catch(() =>
-        caches.match(event.request).then((cached) => {
-          if (cached) return cached;
-          // Offline navigation fallback to the cached shell.
-          if (event.request.mode === "navigate") return caches.match("/index.html");
-          return undefined;
-        })
-      )
+      .catch(() => caches.match("/index.html").then((shell) => shell || fetch(event.request)))
   );
 });
 
