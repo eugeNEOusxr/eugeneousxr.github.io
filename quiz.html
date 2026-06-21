@@ -47,6 +47,10 @@
     .badges{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:0 0 auto}
     .pts{background:var(--pill);color:var(--pilltx);border-radius:999px;padding:6px 13px;font-size:13px;font-weight:500;white-space:nowrap}
     .earned{background:var(--earn);color:var(--earntx);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:500;white-space:nowrap}
+    .hdr-actions{display:flex;gap:6px;align-items:center}
+    .ic.sm{width:30px;height:30px;font-size:14px;border-radius:8px}
+    .ic.xbtn{border-color:rgba(255,90,90,.55);color:#ff7a7a;font-weight:700}
+    .ic.xbtn:active{background:#ff5a5a;color:#fff}
     .sub{margin-top:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .setrow{margin-top:9px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
     .setrow .slbl{font-size:12px;opacity:.6;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
@@ -218,12 +222,14 @@
       <button class="ic" id="homeBtn" aria-label="All study sets" title="All study sets">📚</button>
       <span class="title" id="deckTitle">1.1 · Functions and Function Notation</span>
       <span class="badges">
+        <span class="hdr-actions">
+          <button class="ic sm" id="graph2d" title="Knowledge map (2D)" aria-label="Knowledge map 2D">🗺</button>
+          <button class="ic sm" id="graph3d" title="Knowledge spiral (3D)" aria-label="Knowledge spiral 3D">🌀</button>
+          <button class="ic sm xbtn" id="graphClose" title="Exit flashcards" aria-label="Exit flashcards">✕</button>
+        </span>
         <span class="pts">200 pts</span>
         <span class="earned" id="earned">🏆 Earned 0 / 200</span>
       </span>
-      <button class="ic" id="graph2d" title="Knowledge map (2D)" aria-label="Knowledge map 2D">🗺</button>
-      <button class="ic" id="graph3d" title="Knowledge spiral (3D)" aria-label="Knowledge spiral 3D">🌀</button>
-      <button class="ic" id="graphClose" title="Back to the knowledge graph" aria-label="Close flashcards">✕</button>
     </div>
     <div class="sub">
       <select id="deckPick" class="sel" aria-label="Section" style="min-width:64px;cursor:pointer"></select>

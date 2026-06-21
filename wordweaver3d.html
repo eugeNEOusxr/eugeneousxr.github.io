@@ -196,9 +196,10 @@ function buildTower(){
       const ch = hueLerp(hue, nextHue, Math.max(0, (frac - 0.66) / 0.34) * 0.6);
       const base = new THREE.Color().setHSL(ch/360, 0.72, s.done ? 0.55 : 0.45);
       const baseE = s.done ? 0.32 : 0.09;
-      // dark walls + glowing neon edges = a cool, inviting block
+      // translucent glassy walls + glowing neon edges = a cool, inviting block
       const cube = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({
-        color: base.clone().multiplyScalar(0.30), emissive: base, emissiveIntensity: baseE, metalness:0.55, roughness:0.4 }));
+        color: base.clone().multiplyScalar(0.55), emissive: base, emissiveIntensity: baseE,
+        metalness:0.3, roughness:0.25, transparent:true, opacity:0.4, depthWrite:false }));
       cube.position.set(x, y, z); cube.userData = { q, sec, gi, baseE };
       const edges = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({
         color: new THREE.Color().setHSL(ch/360, 0.9, 0.62), transparent:true, opacity:0.95 }));
