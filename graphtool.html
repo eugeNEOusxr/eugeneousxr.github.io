@@ -206,7 +206,7 @@
       add(el("line", attrs));
       // the two defining lattice points get closed dots (overlay an open dot to change them)
       add(dot(s.x1, s.y1, false));
-      if (s.t === "segment" || s.t === "ray") add(dot(s.x2, s.y2, false));
+      if (s.t === "segment") add(dot(s.x2, s.y2, false));   // ray's 2nd point is only a direction → no dot there
     });
     if (pending) gDraw.appendChild(el("circle", { class:"pending", cx:sx(pending.x), cy:sy(pending.y), r:8 }));
     count.textContent = shapes.length ? "  ·  " + shapes.length + " object" + (shapes.length>1?"s":"") : "";

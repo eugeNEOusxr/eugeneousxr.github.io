@@ -1159,7 +1159,7 @@
             else if(s.t==="ray"){ a=[s.x1,s.y1]; b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-end="url(#skar)"'; }
             else { a=exitPt(s.x1,s.y1,s.x1-s.x2,s.y1-s.y2); b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-start="url(#skar)" marker-end="url(#skar)"'; }
             sd='<line x1="'+sx(a[0])+'" y1="'+sy(a[1])+'" x2="'+sx(b[0])+'" y2="'+sy(b[1])+'" stroke="var(--curve)" stroke-width="2.5" stroke-linecap="round"'+extra+'/>'+dotSvg(s.x1,s.y1,false);
-            if(s.t==="segment"||s.t==="ray") sd+=dotSvg(s.x2,s.y2,false);
+            if(s.t==="segment") sd+=dotSvg(s.x2,s.y2,false);   // ray's 2nd point is only a direction → no dot there
           }
           d += del ? '<g opacity="0.3">'+sd+'</g>' : sd;
         });
@@ -1190,16 +1190,15 @@
       // "Show answer" → draw the correct piecewise graph: each piece as a ray (if it runs to a
       // grid edge) or segment, plus the closed/open dots at the breaks (q.answerDots).
       SKETCH.reveal = function(){
-        var d="";
+        var shapes=[];
         (q.pieces||[]).forEach(function(p){
-          var y0=p.m*p.x0+p.b, y1=p.m*p.x1+p.b, a, b, extra="";
-          if(p.x0<=R0+1e-9){ a=[p.x1,y1]; b=exitPt(p.x1,y1, p.x0-p.x1, y0-y1); extra=' marker-end="url(#skar)"'; }
-          else if(p.x1>=R1-1e-9){ a=[p.x0,y0]; b=exitPt(p.x0,y0, p.x1-p.x0, y1-y0); extra=' marker-end="url(#skar)"'; }
-          else { a=[p.x0,y0]; b=[p.x1,y1]; }
-          d+='<line x1="'+sx(a[0])+'" y1="'+sy(a[1])+'" x2="'+sx(b[0])+'" y2="'+sy(b[1])+'" stroke="var(--curve)" stroke-width="2.5" stroke-linecap="round"'+extra+'/>';
+          var y0=p.m*p.x0+p.b, y1=p.m*p.x1+p.b;
+          if(p.x0<=R0+1e-9) shapes.push({t:"ray", x1:p.x1, y1:y1, x2:p.x0, y2:y0});        // endpoint at the break, ray off the left edge
+          else if(p.x1>=R1-1e-9) shapes.push({t:"ray", x1:p.x0, y1:y0, x2:p.x1, y2:y1});   // endpoint at the break, ray off the right edge
+          else shapes.push({t:"segment", x1:p.x0, y1:y0, x2:p.x1, y2:y1});
         });
-        (q.answerDots||[]).forEach(function(dt){ d+=dotSvg(dt.x, dt.y, !!dt.open); });
-        gDraw.innerHTML=d;
+        (q.answerDots||[]).forEach(function(dt){ shapes.push({t:"point", x:dt.x, y:dt.y, open:!!dt.open}); });
+        SKETCH.shapes=shapes; SKETCH.pending=null; draw();   // draw the answer ONTO the graph (and it submits to 10/10)
       };
       setTool("closed");
     }
