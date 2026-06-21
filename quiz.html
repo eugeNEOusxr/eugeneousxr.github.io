@@ -1053,8 +1053,8 @@
       { type:"multiinput", prompt:"Given <em>f</em>(<em>x</em>) = { 9<em>x</em> + 6 if <em>x</em> &lt; 0;  9<em>x</em> + 12 if <em>x</em> ≥ 0 }, calculate each value.", blanks:[{label:"<em>f</em>(−1) =", answer:-3, answerText:"-3"},{label:"<em>f</em>(0) =", answer:12},{label:"<em>f</em>(2) =", answer:30}], points:10 },
       { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Use interval notation for each interval.", graph:"pw1210", blanks:[{ask:"Where <em>f</em>(<em>x</em>) = −5:", label:"<em>x</em> ∈", answer:"[-6, -2]"},{ask:"Where <em>f</em>(<em>x</em>) = 4:", label:"<em>x</em> ∈", answer:"(-2, 1]"},{ask:"Where <em>f</em>(<em>x</em>) = 1:", label:"<em>x</em> ∈", answer:"(1, 4]"}], points:10 },
       { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Write each piece's formula.", graph:"pw1211", blanks:[{ask:"For −6 ≤ <em>x</em> ≤ −2:", label:"<em>f</em>(<em>x</em>) =", answer:"3/2 x + 6", answerText:"(3/2)x + 6"},{ask:"For −2 &lt; <em>x</em> ≤ 1:", label:"<em>f</em>(<em>x</em>) =", answer:2},{ask:"For 1 &lt; <em>x</em> ≤ 6:", label:"<em>f</em>(<em>x</em>) =", answer:"-2x + 3", answerText:"−2x + 3"}], points:10 },
-      { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { −0.5<em>x</em> − 4 if <em>x</em> ≤ −4;  −1 if −4 &lt; <em>x</em> ≤ 2;  1.5<em>x</em> − 4 if <em>x</em> &gt; 2 }.<br>Use rays for the ends and a closed/open dot at any break.", domain:[-8,8], pieces:[{m:-0.5,b:-4,x0:-8,x1:-4},{m:0,b:-1,x0:-4,x1:2},{m:1.5,b:-4,x0:2,x1:8}], points:10 },
-      { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { 0 if <em>x</em> ≤ −1;  −<em>x</em> − 1 if −1 &lt; <em>x</em> ≤ 1;  0 if <em>x</em> &gt; 1 }.", domain:[-6,6], pieces:[{m:0,b:0,x0:-6,x1:-1},{m:-1,b:-1,x0:-1,x1:1},{m:0,b:0,x0:1,x1:6}], points:10 }
+      { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { −0.5<em>x</em> − 4 if <em>x</em> ≤ −4;  −1 if −4 &lt; <em>x</em> ≤ 2;  1.5<em>x</em> − 4 if <em>x</em> &gt; 2 }.<br>Use rays for the ends and a closed/open dot at any break.", domain:[-8,8], pieces:[{m:-0.5,b:-4,x0:-8,x1:-4},{m:0,b:-1,x0:-4,x1:2},{m:1.5,b:-4,x0:2,x1:8}], answerDots:[{x:-4,y:-2,open:false},{x:-4,y:-1,open:true}], points:10 },
+      { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { 0 if <em>x</em> ≤ −1;  −<em>x</em> − 1 if −1 &lt; <em>x</em> ≤ 1;  0 if <em>x</em> &gt; 1 }.", domain:[-6,6], pieces:[{m:0,b:0,x0:-6,x1:-1},{m:-1,b:-1,x0:-1,x1:1},{m:0,b:0,x0:1,x1:6}], answerDots:[{x:1,y:-2,open:false},{x:1,y:0,open:true}], points:10 }
     ] }
     ];
     // One hand-built "My set" per section: merge any non-generated decks that
@@ -1187,6 +1187,20 @@
         draw();
       });
       optsEl.querySelector(".skbar").addEventListener("click", function(e){ var b=e.target.closest(".sktool"); if(!b) return; if(b.dataset.act==="undo"){ SKETCH.shapes.pop(); SKETCH.pending=null; draw(); } else if(b.dataset.act==="clear"){ SKETCH.shapes=[]; SKETCH.pending=null; draw(); } else if(b.dataset.tool){ setTool(b.dataset.tool); } });
+      // "Show answer" → draw the correct piecewise graph: each piece as a ray (if it runs to a
+      // grid edge) or segment, plus the closed/open dots at the breaks (q.answerDots).
+      SKETCH.reveal = function(){
+        var d="";
+        (q.pieces||[]).forEach(function(p){
+          var y0=p.m*p.x0+p.b, y1=p.m*p.x1+p.b, a, b, extra="";
+          if(p.x0<=R0+1e-9){ a=[p.x1,y1]; b=exitPt(p.x1,y1, p.x0-p.x1, y0-y1); extra=' marker-end="url(#skar)"'; }
+          else if(p.x1>=R1-1e-9){ a=[p.x0,y0]; b=exitPt(p.x0,y0, p.x1-p.x0, y1-y0); extra=' marker-end="url(#skar)"'; }
+          else { a=[p.x0,y0]; b=[p.x1,y1]; }
+          d+='<line x1="'+sx(a[0])+'" y1="'+sy(a[1])+'" x2="'+sx(b[0])+'" y2="'+sy(b[1])+'" stroke="var(--curve)" stroke-width="2.5" stroke-linecap="round"'+extra+'/>';
+        });
+        (q.answerDots||[]).forEach(function(dt){ d+=dotSvg(dt.x, dt.y, !!dt.open); });
+        gDraw.innerHTML=d;
+      };
       setTool("closed");
     }
     // sample the drawing against f(x) defined by q.pieces ({m,b,x0,x1}); fraction covered → score
@@ -1431,6 +1445,7 @@
     }
     function revealAnswer(){
       var q=DECK[idx]; if(q.type==="placeholder") return;
+      if (q.type==="graphsketch") { if(SKETCH&&SKETCH.reveal) SKETCH.reveal(); scoreEl.textContent="Answer key"; scoreEl.style.color="var(--ok)"; return; }
       if (q.type==="input") {
         var inp=optsEl.querySelector(".ansin"), mk=optsEl.querySelector(".mark");
         inp.classList.remove("bad"); inp.classList.add("ok");
