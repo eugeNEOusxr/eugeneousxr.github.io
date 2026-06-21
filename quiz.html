@@ -221,6 +221,9 @@
         <span class="pts">200 pts</span>
         <span class="earned" id="earned">🏆 Earned 0 / 200</span>
       </span>
+      <button class="ic" id="graph2d" title="Knowledge map (2D)" aria-label="Knowledge map 2D">🗺</button>
+      <button class="ic" id="graph3d" title="Knowledge spiral (3D)" aria-label="Knowledge spiral 3D">🌀</button>
+      <button class="ic" id="graphClose" title="Back to the knowledge graph" aria-label="Close flashcards">✕</button>
     </div>
     <div class="sub">
       <select id="deckPick" class="sel" aria-label="Section" style="min-width:64px;cursor:pointer"></select>
@@ -1614,6 +1617,20 @@
       showHomeAt(bootLoc && bootLoc.view === "home" ? bootLoc.homeView : null);
     }
     document.getElementById("homeBtn").addEventListener("click", showHome);
+    // Jump back to the knowledge graph (2D map / 3D spiral). In-app → ask the parent to
+    // swap the surface; standalone → navigate directly.
+    function goGraph(mode){
+      var inApp = window.parent && window.parent !== window;
+      if (inApp){ try {
+        if (mode === "close") window.parent.postMessage({ type:"inkling-close-flashcard" }, "*");
+        else window.parent.postMessage({ type:"inkling-open-graph", mode: mode }, "*");
+        return;
+      } catch(_){} }
+      location.href = (mode === "3d") ? "wordweaver3d.html" : "wordweaver.html";
+    }
+    document.getElementById("graph2d").addEventListener("click", function(){ goGraph("2d"); });
+    document.getElementById("graph3d").addEventListener("click", function(){ goGraph("3d"); });
+    document.getElementById("graphClose").addEventListener("click", function(){ goGraph("close"); });
     // Deep link: ?q=1.2.11 opens that section's question directly (used by WordWeaver node links).
     function gotoDeepLink(){
       var qp; try { qp = new URLSearchParams(location.search).get("q"); } catch(_){ qp = null; }

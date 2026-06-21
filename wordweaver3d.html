@@ -109,7 +109,7 @@ const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 400)
 camera.position.set(0, 10, 26);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 9, 0);
-controls.minDistance = 8; controls.maxDistance = 90;
+controls.minDistance = 8; controls.maxDistance = 140;
 
 scene.add(new THREE.AmbientLight(0x8899ff, 0.6));
 const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(8, 24, 12); scene.add(key);
@@ -155,7 +155,7 @@ function mkLabel(text, cls, y){ const d=document.createElement("div"); d.classNa
 
 /* ── ONE continuous stacked tower: every section's questions climb together,
    so you feel the cumulative height as you ascend the whole chapter. ── */
-const R = 6.5, ANG = (Math.PI*2)/6.5, YST = 3.0;
+const R = 13, ANG = (Math.PI*2)/5.2, YST = 2.3;   // wide, gradual spiral — steps spread out & readable from above
 let nodes = [];            // flat tower: { mesh, q, sec, gi, pos }
 let towerTop = 0;
 const strugglers = [];     // cubes you keep missing (pulse red)
@@ -215,14 +215,14 @@ function camFor(gi){
   _v.set(n.pos.x, 0, n.pos.z); if (_v.lengthSq() < 0.001) _v.set(1,0,0); _v.normalize();
   let camPos, look;
   if (viewMode === "platform"){          // stand ON this floor, arena-level, looking across it
-    camPos = n.pos.clone().add(_v.clone().multiplyScalar(6)).add(new THREE.Vector3(0, 2.2, 0));
+    camPos = n.pos.clone().add(_v.clone().multiplyScalar(8)).add(new THREE.Vector3(0, 2.4, 0));
     look   = n.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
-  } else if (viewMode === "survey"){     // gaze DOWN the spiral you've climbed
-    camPos = n.pos.clone().add(_v.clone().multiplyScalar(5)).add(new THREE.Vector3(0, 16, 0));
-    look   = n.pos.clone().add(new THREE.Vector3(0, -16, 0));
+  } else if (viewMode === "survey"){     // rise high and gaze DOWN the wide spiral you've climbed
+    camPos = n.pos.clone().add(_v.clone().multiplyScalar(7)).add(new THREE.Vector3(0, 24, 0));
+    look   = n.pos.clone().add(new THREE.Vector3(0, -18, 0));
   } else {                                // climb: beside the step, gazing UP the tower
-    camPos = n.pos.clone().add(_v.clone().multiplyScalar(12)).add(new THREE.Vector3(0, 3.5, 0));
-    look   = n.pos.clone().add(new THREE.Vector3(0, 7.5, 0));
+    camPos = n.pos.clone().add(_v.clone().multiplyScalar(17)).add(new THREE.Vector3(0, 4, 0));
+    look   = n.pos.clone().add(new THREE.Vector3(0, 8, 0));
   }
   return { camPos, look };
 }

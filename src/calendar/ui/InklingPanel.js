@@ -108,10 +108,16 @@ export class InklingPanel {
       this.minimize();
       this.showFlashcards(e.detail?.setId);
     });
-    // The Mind canvas (wordweaver.html, in an iframe) asks the app to open a question.
+    // Cross-surface messages from the embedded canvases (wordweaver / quiz iframes).
     window.addEventListener("message", (e) => {
       const m = e && e.data;
-      if (m && m.type === "inkling-open-flashcard" && m.q) this.showFlashcards(String(m.q));
+      if (!m) return;
+      if (m.type === "inkling-open-flashcard" && m.q) this.showFlashcards(String(m.q));
+      else if (m.type === "inkling-close-flashcard") { if (this._quizOverlay) this._quizOverlay.style.display = "none"; }
+      else if (m.type === "inkling-open-graph") {
+        if (this._quizOverlay) this._quizOverlay.style.display = "none";   // leave the flashcards
+        this._openCanvasOverlay(m.mode === "3d" ? "/wordweaver3d.html" : "/wordweaver.html", "Mind — knowledge graph", "_mindOverlay", true);
+      }
     });
     this._startCron();
 
