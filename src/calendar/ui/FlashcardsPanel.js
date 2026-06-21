@@ -3,7 +3,7 @@
  * topic/section). Tap a card to flip; mark "Got it" or "Review". Decks can be
  * made standalone here or jumped to from a Study Map section.
  */
-import { loadFlashcardSets, getFlashcardSet, generateFlashcards, deleteFlashcardSet, setCardStatus, setProgress } from "../../inkling/study/flashcardsModel.js";
+import { loadFlashcardSets, getFlashcardSet, generateFlashcards, deleteFlashcardSet, setCardStatus, setProgress, ensureSeedDecks } from "../../inkling/study/flashcardsModel.js";
 
 function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
@@ -38,6 +38,7 @@ export class FlashcardsPanel {
 
   _renderList() {
     this._openId = null;
+    ensureSeedDecks();
     this._body.innerHTML = "";
     const gen = document.createElement("div");
     gen.style.cssText = "display:flex;gap:7px;margin-bottom:14px";
@@ -78,8 +79,9 @@ export class FlashcardsPanel {
       const card = document.createElement("button");
       card.type = "button";
       card.style.cssText = "display:block;width:100%;text-align:left;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:11px;padding:12px 13px;margin-bottom:10px;cursor:pointer;color:#e6edf3";
+      const badge = s.builtIn ? ` <span style="font:700 9px system-ui;color:#0b0f1a;background:#f0abfc;border-radius:5px;padding:1px 5px;vertical-align:middle">READY-MADE</span>` : "";
       card.innerHTML =
-        `<div style="font:800 14px system-ui">${esc(s.section || s.topic)}</div>` +
+        `<div style="font:800 14px system-ui">${esc(s.section || s.topic)}${badge}</div>` +
         (s.section ? `<div style="font-size:11px;color:#8b949e">${esc(s.topic)}</div>` : "") +
         `<div style="height:6px;border-radius:99px;background:rgba(255,255,255,0.1);margin:8px 0 5px;overflow:hidden"><div style="height:100%;width:${p.pct}%;background:#f0abfc"></div></div>` +
         `<div style="font-size:11px;color:#8b949e">${p.known}/${p.total} known</div>`;
@@ -157,7 +159,24 @@ export class FlashcardsPanel {
     const card = set.cards[this._idx];
     const kind = card.type === "problem" ? " · 🧮 Problem" : " · 💡 Concept";
     this._counter.textContent = `Card ${this._idx + 1} of ${set.cards.length}${kind}`;
-    this._cardEl.textContent = this._flipped ? card.a : card.q;
+    const text = this._flipped ? card.a : card.q;
+    const figHtml = this._flipped ? (card.figA || card.fig) : card.fig;
+    if (figHtml) {
+      this._cardEl.innerHTML =
+        `<div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%">` +
+          `<div>${esc(text)}</div>` +
+          `<div style="position:relative;width:175px;max-width:64%">` +
+            figHtml +
+            `<span class="fc-zoom" role="button" aria-label="Zoom in" title="Zoom in" ` +
+              `style="position:absolute;top:5px;right:5px;width:27px;height:27px;display:flex;align-items:center;justify-content:center;` +
+              `background:rgba(15,23,42,0.82);border:1px solid rgba(255,255,255,0.25);border-radius:7px;font-size:13px;cursor:pointer">🔍</span>` +
+          `</div>` +
+        `</div>`;
+      const z = this._cardEl.querySelector(".fc-zoom");
+      if (z) z.addEventListener("click", (e) => { e.stopPropagation(); this._openFig(figHtml); });
+    } else {
+      this._cardEl.textContent = text;
+    }
     this._cardEl.style.background = this._flipped ? "rgba(57,217,138,0.08)" : "rgba(240,171,252,0.07)";
   }
 
@@ -168,6 +187,44 @@ export class FlashcardsPanel {
     if (card) setCardStatus(this._openId, card.id, status);
     this._idx += 1; this._flipped = false;
     this._paintCard();
+  }
+
+  /** Full-screen zoomable view of a graph (pinch, wheel, or +/− buttons). */
+  _openFig(figHtml) {
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;z-index:11099;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:18px;box-sizing:border-box;background:rgba(3,6,12,0.97);backdrop-filter:blur(6px)";
+    const stage = document.createElement("div");
+    stage.style.cssText = "width:min(88vw,520px);transform-origin:center center;transition:transform .08s ease;touch-action:none";
+    stage.innerHTML = figHtml;
+    let scale = 1.4;
+    const apply = () => { stage.style.transform = `scale(${scale})`; };
+    const clamp = (s) => Math.min(6, Math.max(0.6, +s.toFixed(2)));
+    const bar = document.createElement("div");
+    bar.style.cssText = "display:flex;gap:12px;align-items:center";
+    const mk = (t, f) => {
+      const b = document.createElement("button");
+      b.textContent = t;
+      b.style.cssText = "background:#1e293b;color:#e6edf3;border:1px solid rgba(255,255,255,0.25);border-radius:12px;min-width:52px;height:52px;font:800 18px system-ui;cursor:pointer";
+      b.addEventListener("click", (e) => { e.stopPropagation(); f(); });
+      return b;
+    };
+    bar.append(
+      mk("−", () => { scale = clamp(scale - 0.3); apply(); }),
+      mk("Reset", () => { scale = 1.4; apply(); }),
+      mk("+", () => { scale = clamp(scale + 0.3); apply(); })
+    );
+    const hint = document.createElement("div");
+    hint.textContent = "Pinch or use + / − · tap outside to close";
+    hint.style.cssText = "color:#8b949e;font:600 12px system-ui;text-align:center";
+    ov.append(stage, bar, hint);
+    ov.addEventListener("wheel", (e) => { e.preventDefault(); scale = clamp(scale - Math.sign(e.deltaY) * 0.25); apply(); }, { passive: false });
+    let pinch = 0, base = scale;
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    ov.addEventListener("touchstart", (e) => { if (e.touches.length === 2) { pinch = dist(e.touches); base = scale; } }, { passive: true });
+    ov.addEventListener("touchmove", (e) => { if (e.touches.length === 2 && pinch) { scale = clamp(base * (dist(e.touches) / pinch)); apply(); e.preventDefault(); } }, { passive: false });
+    ov.addEventListener("click", () => ov.remove());
+    apply();
+    document.body.appendChild(ov);
   }
 
   show(setId) { this._build(); this._panel.style.display = "flex"; if (setId) this._renderSet(setId); else if (this._openId) this._renderSet(this._openId); else this._renderList(); }

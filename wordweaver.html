@@ -693,7 +693,10 @@
   function openFlashcard(n){
     if (!n.q) return;
     hidePeek();
-    try { localStorage.setItem("inkling-quiz-incoming-from", "wordweaver"); } catch(_){}
+    // Embedded in the Inkling app → ask the app to open the flashcard overlay (stay in-app).
+    if (window.parent && window.parent !== window){
+      try { window.parent.postMessage({ type:"inkling-open-flashcard", q:n.q }, "*"); return; } catch(_){}
+    }
     var url = "quiz.html?q=" + encodeURIComponent(n.q);
     try { (window.top || window).location.href = url; } catch(_){ window.location.href = url; }
   }

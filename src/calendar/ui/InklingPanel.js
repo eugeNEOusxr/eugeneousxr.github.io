@@ -108,6 +108,11 @@ export class InklingPanel {
       this.minimize();
       this.showFlashcards(e.detail?.setId);
     });
+    // The Mind canvas (wordweaver.html, in an iframe) asks the app to open a question.
+    window.addEventListener("message", (e) => {
+      const m = e && e.data;
+      if (m && m.type === "inkling-open-flashcard" && m.q) this.showFlashcards(String(m.q));
+    });
     this._startCron();
 
     // Gentle in-app check-in: if the user's been away a while, Inkling asks what
@@ -495,10 +500,9 @@ export class InklingPanel {
     this._goals.show(opts);
   }
 
-  /** Open the Mind surface — the live knowledge graph WordWeaver has built. */
-  showMind(opts = {}) {
-    if (!this._mindPanel) this._mindPanel = new InklingMindPanel();
-    this._mindPanel.show(opts);
+  /** Open the Mind surface — the WordWeaver knowledge canvas (zoomable node graph). */
+  showMind(/* opts */) {
+    this._openCanvasOverlay("/wordweaver.html", "Mind — knowledge canvas", "_mindOverlay", true);
   }
 
   /** Open the Study Maps surface — Haiku-built study paths with mastery tracking. */
@@ -507,23 +511,36 @@ export class InklingPanel {
     this._studyPanel.show(opts);
   }
 
-  /** Open the new quiz deck (full-screen overlay; replaces the old flip-card flashcards). */
-  showFlashcards() {
-    if (this._quizOverlay) { this._quizOverlay.style.display = "block"; return; }
-    const ov = document.createElement("div");
-    ov.style.cssText = "position:fixed;inset:0;z-index:12000;background:#0b0f1a";
+  /** Open the quiz deck (full-screen overlay). Pass a question id ("1.2.11") to deep-link. */
+  showFlashcards(q) {
+    const src = "/quiz.html" + (q ? "?q=" + encodeURIComponent(q) : "");
+    this._openCanvasOverlay(src, "Flashcards", "_quizOverlay", false);
+  }
+
+  /** Shared full-screen iframe overlay used by the Mind canvas and the flashcards. */
+  _openCanvasOverlay(src, title, key, gyro) {
+    let ov = this[key];
+    if (ov) {
+      const f = ov.querySelector("iframe");
+      if (f && f.getAttribute("src") !== src) f.setAttribute("src", src);  // re-point (e.g. jump to a question)
+      ov.style.display = "block";
+      return;
+    }
+    ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;z-index:12000;background:#05060d";
     const frame = document.createElement("iframe");
-    frame.src = "/quiz.html";
-    frame.title = "Flashcards";
+    frame.setAttribute("src", src);
+    frame.title = title;
     frame.style.cssText = "border:0;width:100%;height:100%;display:block";
+    if (gyro) frame.allow = "accelerometer; gyroscope; magnetometer";   // device-tilt parallax inside the iframe
     const close = document.createElement("button");
     close.textContent = "✕";
-    close.setAttribute("aria-label", "Close flashcards");
+    close.setAttribute("aria-label", "Close " + title);
     close.style.cssText = "position:absolute;top:calc(10px + env(safe-area-inset-top));right:12px;width:34px;height:34px;border-radius:9px;border:0;background:rgba(8,12,22,0.7);color:#e6edf3;font-size:15px;cursor:pointer;z-index:2";
     close.addEventListener("click", () => { ov.style.display = "none"; });
     ov.append(frame, close);
     document.body.appendChild(ov);
-    this._quizOverlay = ov;
+    this[key] = ov;
   }
 
   /**
