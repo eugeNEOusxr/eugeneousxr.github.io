@@ -297,6 +297,7 @@ window.addEventListener("focus", () => { refreshBadges(); updateLabelLOD(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden){ refreshBadges(); updateLabelLOD(); } });
 window.addEventListener("pageshow", () => { refreshBadges(); updateLabelLOD(); });
 window.addEventListener("message", e => { if (e.data && e.data.type === "inkling-refresh-progress"){ refreshBadges(); updateLabelLOD(); } });
+setInterval(() => { if (!document.hidden){ refreshBadges(); updateLabelLOD(); } }, 1500);   // hard fallback so counts never stick stale
 
 /* ── question panel ── */
 const qpanel = document.getElementById("qpanel");

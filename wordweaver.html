@@ -404,6 +404,9 @@
   window.addEventListener("pageshow", refreshDone);   // reload / back-forward cache restore
   // the app pings this every time it (re)shows the Mind overlay (iframe stays loaded between opens)
   window.addEventListener("message", function(e){ if (e.data && e.data.type === "inkling-refresh-progress") refreshDone(); });
+  // hard fallback: re-read progress on a timer while visible, so a green orb can never get stuck
+  // stale regardless of whether the storage/focus/message events fired (the draw loop repaints it).
+  setInterval(function(){ if (!document.hidden) refreshDone(); }, 1500);
 
   var COLOR = { domain:"#ffcf5c", chapter:"#b48bff", section:"#5aa9ff", subsection:"#3fe0d0", problem:"#ff8a4c", step:"#7be08a", answer:"#ffd66b" };
   var KINDLABEL = { domain:"Domain", chapter:"Chapter", section:"Section", subsection:"Subsection", problem:"Problem", step:"Solution step", answer:"Final answer" };
