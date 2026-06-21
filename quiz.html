@@ -1060,6 +1060,28 @@
       { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Write each piece's formula.", graph:"pw1211", blanks:[{ask:"For −6 ≤ <em>x</em> ≤ −2:", label:"<em>f</em>(<em>x</em>) =", answer:"3/2 x + 6", answerText:"(3/2)x + 6"},{ask:"For −2 &lt; <em>x</em> ≤ 1:", label:"<em>f</em>(<em>x</em>) =", answer:2},{ask:"For 1 &lt; <em>x</em> ≤ 6:", label:"<em>f</em>(<em>x</em>) =", answer:"-2x + 3", answerText:"−2x + 3"}], points:10 },
       { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { −0.5<em>x</em> − 4 if <em>x</em> ≤ −4;  −1 if −4 &lt; <em>x</em> ≤ 2;  1.5<em>x</em> − 4 if <em>x</em> &gt; 2 }.<br>Use rays for the ends and a closed/open dot at any break.", domain:[-8,8], pieces:[{m:-0.5,b:-4,x0:-8,x1:-4},{m:0,b:-1,x0:-4,x1:2},{m:1.5,b:-4,x0:2,x1:8}], answerDots:[{x:-4,y:-2,open:false},{x:-4,y:-1,open:true}], points:10 },
       { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { 0 if <em>x</em> ≤ −1;  −<em>x</em> − 1 if −1 &lt; <em>x</em> ≤ 1;  0 if <em>x</em> &gt; 1 }.", domain:[-6,6], pieces:[{m:0,b:0,x0:-6,x1:-1},{m:-1,b:-1,x0:-1,x1:1},{m:0,b:0,x0:1,x1:6}], answerDots:[{x:1,y:-2,open:false},{x:1,y:0,open:true}], points:10 }
+    ] },
+    { id:"2.1", title:"2.1 · Linear Functions", graded:{}, questions: [
+      { type:"mc", prompt:"A linear function can be written in the form:", options:["<em>f</em>(<em>x</em>) = <em>mx</em> + <em>b</em>","<em>f</em>(<em>x</em>) = <em>ax</em>² + <em>bx</em> + <em>c</em>","<em>f</em>(<em>x</em>) = <em>a</em>/<em>x</em>","<em>f</em>(<em>x</em>) = √<em>x</em>"], correct:0, points:10 },
+      { type:"mc", prompt:"In <em>f</em>(<em>x</em>) = <em>mx</em> + <em>b</em>, the value <em>m</em> is the:", options:["slope (rate of change)","<em>y</em>-intercept","<em>x</em>-intercept","vertex"], correct:0, points:10 },
+      { type:"mc", prompt:"In <em>f</em>(<em>x</em>) = <em>mx</em> + <em>b</em>, the value <em>b</em> is the:", options:["<em>y</em>-intercept","slope","<em>x</em>-intercept","rate of change"], correct:0, points:10 },
+      { type:"multiinput", prompt:"Find the slope of the line through (2, 3) and (6, 11).", blanks:[{label:"<em>m</em> =", answer:2}], points:10 },
+      { type:"multiinput", prompt:"Find the slope of the line through (−1, 4) and (3, −4).", blanks:[{label:"<em>m</em> =", answer:-2, answerText:"-2"}], points:10 },
+      { type:"multiinput", prompt:"Find the slope of the line through (0, 5) and (4, 5).", blanks:[{label:"<em>m</em> =", answer:0}], points:10 },
+      { type:"mc", prompt:"A line with slope <em>m</em> = 0 is:", options:["horizontal","vertical","increasing","decreasing"], correct:0, points:10 },
+      { type:"mc", prompt:"The slope of a vertical line is:", options:["undefined","0","1","−1"], correct:0, points:10 },
+      { type:"mc", prompt:"If the slope of a linear function is negative, the function is:", options:["decreasing","increasing","constant","always positive"], correct:0, points:10 },
+      { type:"multiinput", prompt:"For <em>f</em>(<em>x</em>) = 3<em>x</em> − 7, find <em>f</em>(4).", blanks:[{label:"<em>f</em>(4) =", answer:5}], points:10 },
+      { type:"multiinput", prompt:"For <em>f</em>(<em>x</em>) = −2<em>x</em> + 9, find <em>f</em>(5).", blanks:[{label:"<em>f</em>(5) =", answer:-1, answerText:"-1"}], points:10 },
+      { type:"multiinput", prompt:"A line has slope 4 and <em>y</em>-intercept −2. Write it in slope-intercept form.", blanks:[{label:"<em>f</em>(<em>x</em>) =", answer:"4x-2", answerText:"4x − 2"}], points:10 },
+      { type:"multiinput", prompt:"Write the equation of the line with slope −3 and <em>y</em>-intercept 6.", blanks:[{label:"<em>f</em>(<em>x</em>) =", answer:"-3x+6", answerText:"−3x + 6"}], points:10 },
+      { type:"multiinput", prompt:"Write the slope-intercept equation of the line through (0, 1) with slope 5.", blanks:[{label:"<em>f</em>(<em>x</em>) =", answer:"5x+1", answerText:"5x + 1"}], points:10 },
+      { type:"multiinput", prompt:"Write the equation of the line through (2, 5) with slope 3, in slope-intercept form.", blanks:[{label:"<em>f</em>(<em>x</em>) =", answer:"3x-1", answerText:"3x − 1"}], points:10 },
+      { type:"multiinput", prompt:"Find the slope-intercept equation of the line through (−2, 1) and (2, 9).", blanks:[{label:"<em>f</em>(<em>x</em>) =", answer:"2x+5", answerText:"2x + 5"}], points:10 },
+      { type:"mc", prompt:"The point-slope form of a line is:", options:["<em>y</em> − <em>y</em>₁ = <em>m</em>(<em>x</em> − <em>x</em>₁)","<em>y</em> = <em>mx</em> + <em>b</em>","<em>ax</em> + <em>by</em> = <em>c</em>","<em>y</em> = <em>a</em>(<em>x</em> − <em>h</em>)² + <em>k</em>"], correct:0, points:10 },
+      { type:"multiinput", prompt:"A gym charges a $30 sign-up fee plus $20 per month. Write the cost <em>C</em>(<em>m</em>) for <em>m</em> months.", blanks:[{label:"<em>C</em>(<em>m</em>) =", answer:"20m+30", answerText:"20m + 30"}], points:10 },
+      { type:"multiinput", prompt:"Using <em>C</em>(<em>m</em>) = 20<em>m</em> + 30, find the cost for 6 months.", blanks:[{label:"<em>C</em>(6) = $", answer:150}], points:10 },
+      { type:"multiinput", prompt:"Find the <em>x</em>-intercept of <em>f</em>(<em>x</em>) = 2<em>x</em> − 8. (Set <em>f</em>(<em>x</em>) = 0.)", blanks:[{label:"<em>x</em> =", answer:4}], points:10 }
     ] }
     ];
     // One hand-built "My set" per section: merge any non-generated decks that
