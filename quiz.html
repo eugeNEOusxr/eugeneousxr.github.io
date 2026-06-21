@@ -503,6 +503,9 @@
     var MP_KEYS = {
       // 7-col calculator layout (matches the school Basic tab); {arrows} = a ←→ pair in one cell.
       Basic: [
+        // Variables row first — the letters these questions need (a, h, x, n, …) used
+        // to be ABC-tab-only; surfaced here so they're visible the instant the pad opens.
+        {l:"x",b:"x",j:"x"},{l:"a",b:"a",j:"a"},{l:"h",b:"h",j:"h"},{l:"n",b:"n",j:"n"},{l:"t",b:"t",j:"t"},{l:"y",b:"y",j:"y"},{l:"m",b:"m",j:"m"},
         {l:"( )",b:"(",a:")",j:"(#@)"},{l:"x<sup>□</sup>",b:"^",j:"^{#?}"},{l:"7",b:"7"},{l:"8",b:"8"},{l:"9",b:"9"},{l:"□/□",b:"/",j:"\\frac{#@}{#?}"},{l:"↑",k:"up"},
         {l:"π",b:"π",j:"\\pi"},{l:"√",b:"√(",a:")",j:"\\sqrt{#@}"},{l:"4",b:"4"},{l:"5",b:"5"},{l:"6",b:"6"},{l:"×",b:"*",j:"\\cdot"},{arrows:true},
         {l:"x<sub>□</sub>",b:"_",j:"_{#?}"},{l:"<sup>3</sup>√",b:"∛(",a:")",j:"\\sqrt[3]{#@}"},{l:"1",b:"1"},{l:"2",b:"2"},{l:"3",b:"3"},{l:"−",b:"-",j:"-"},{l:"↓",k:"down"},
