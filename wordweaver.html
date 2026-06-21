@@ -223,7 +223,7 @@
      around the sky). To use your own uploaded galaxy photo, set BG_IMAGE_SRC to
      its path — it joins the rotation as another scene automatically.
   ───────────────────────────────────────────────────────────────────────── */
-  var BG_IMAGE_SRC = null;   // ← e.g. "assets/wordweaver/galaxy.jpg" once the file is in place
+  var BG_IMAGE_SRC = "assets/wordweaver/galaxy.png";   // user's Earth-horizon / Milky Way photo — joins the scene rotation
   function clamp(v,a,b){ return v<a?a:v>b?b:v; }
   var PARA = { x:0, y:0, tx:0, ty:0 };                 // eased tilt parallax, −1..1
   function tilt(gx, gy){ PARA.tx = clamp(gx,-1,1); PARA.ty = clamp(gy,-1,1); }
