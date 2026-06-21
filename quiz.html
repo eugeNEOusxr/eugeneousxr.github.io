@@ -57,6 +57,8 @@
     .setbtn{background:var(--surface);border:.5px solid var(--line);border-radius:8px;padding:6px 13px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer}
     .setbtn.active{background:var(--accent,#6ea8fe);border-color:var(--accent,#6ea8fe);color:#0b1220}
     .setbtn.newq{margin-left:auto;opacity:.85}
+    .setbtn.tier{padding:5px 11px;font-size:12px;border-radius:7px}
+    .tiergrp{display:inline-flex;gap:5px;flex-wrap:nowrap;align-items:center}
     .arrow{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);font:500 20px system-ui;cursor:pointer;flex:0 0 auto}
     .arrow[disabled]{opacity:.38;cursor:default}
     .seldrop{position:relative;display:inline-block}
@@ -1464,13 +1466,15 @@
       if (isPrecalc(DECKS[curDeck].id)){
         show = true;
         var tl = document.createElement("span"); tl.className = "slbl"; tl.textContent = aiDeck ? "↻ AI tier:" : "✨ Make AI set:"; setRow.appendChild(tl);
+        var tg = document.createElement("span"); tg.className = "tiergrp";
         [["easy","Easy"],["medium","Medium"],["hard","Hard"]].forEach(function(t){
           var tb = document.createElement("button");
-          tb.className = "setbtn" + (aiDeck && aiDeck.tier === t[0] ? " active" : "");
+          tb.className = "setbtn tier" + (aiDeck && aiDeck.tier === t[0] ? " active" : "");
           tb.textContent = t[1];
           tb.addEventListener("click", function(){ makeSectionAiSet(tb, t[0]); });
-          setRow.appendChild(tb);
+          tg.appendChild(tb);
         });
+        setRow.appendChild(tg);
       }
       setRow.style.display = show ? "flex" : "none";
     }
