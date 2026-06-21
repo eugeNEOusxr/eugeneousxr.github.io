@@ -392,7 +392,11 @@
   ───────────────────────────────────────────────────────────────────────── */
   var SIZE  = [120, 52, 30, 18, 12, 8, 6];          // node radius per depth
   var RSTEP = [0, 0, 540, 360, 230, 165, 130];      // radius a child sits beyond its parent, by child depth
-  var SPIRAL = { r0:540, grow:225, start:-Math.PI/2 - 0.25, apw:0.108, minSpan:0.12, maxSpan:2.6, gap:0.06 };
+  // Concentric rings first, spiral later: chapters share ONE radius (so every chapter's
+  // sections line up on the blue ring and questions line up on the outer ring) for the whole
+  // first turn; only as the arc nears a full circle back to 1.1.1 does the radius ease outward,
+  // gracefully clearing 1.1.1 and opening into a spiral for the next loop.
+  var SPIRAL = { r0:540, grow:170, start:-Math.PI/2 - 0.25, apw:0.108, minSpan:0.12, maxSpan:2.6, gap:0.06, ramp:1.15 };
   function sizeAt(d){ return SIZE[Math.min(d, SIZE.length-1)]; }
   function stepAt(d){ return RSTEP[Math.min(d, RSTEP.length-1)]; }
   function countLeaves(n){ if(!n.children.length){ n._leaves=1; return 1; } var s=0; n.children.forEach(function(c){ s+=countLeaves(c); }); n._leaves=s; return s; }
@@ -424,7 +428,9 @@
       var w = Math.pow(Math.max(ch._leaves, 1), 0.6);
       var span = Math.max(SPIRAL.minSpan, Math.min(SPIRAL.maxSpan, w * SPIRAL.apw));
       var a0 = cursor, a1 = cursor + span, mid = (a0 + a1) / 2;
-      var radius = SPIRAL.r0 + SPIRAL.grow * (mid - SPIRAL.start);   // grows with running angle → the spiral
+      var theta = mid - SPIRAL.start;                                  // angle travelled from the 1.1.1 spoke
+      var over  = Math.max(0, theta - (2*Math.PI - SPIRAL.ramp));      // 0 for the first full turn, then climbs
+      var radius = SPIRAL.r0 + SPIRAL.grow * over;                     // concentric rings, easing into a spiral near 1.1.1
       place(ch, mid, radius);
       fanChildren(ch, a0, a1);
       cursor = a1 + SPIRAL.gap;
@@ -636,9 +642,9 @@
 
   /* ── Focus a node: smoothly center it and zoom so its children are readable ── */
   function targetScaleFor(n){
-    // the core frames itself + the inner chapters at a readable zoom (pan / zoom out
-    // to follow the spiral arm outward); deeper nodes frame their own ring of children
-    var childR = n.depthLevel===0 ? (SPIRAL.r0 + 380)
+    // the core frames the whole set of concentric rings out to the question ring; deeper
+    // nodes frame their own ring of children (pan / zoom to roam the rings)
+    var childR = n.depthLevel===0 ? (SPIRAL.r0 + stepAt(2) + stepAt(3) + 140)
                : n.children.length ? stepAt(n.depthLevel+1) : 320;
     var want = Math.min(W,H) * 0.42 / Math.max(childR, 120);
     return Math.max(0.03, Math.min(4.5, want));
