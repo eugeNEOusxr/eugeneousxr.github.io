@@ -210,8 +210,9 @@ function buildTower(){
       plat.position.set(x, y - 1.2, z); plat.userData = { q, sec, gi }; helix.add(plat); pickables.push(plat);
       if (miss){ cube.material.emissive.setHex(0xff3b3b); strugglers.add(cube); }   // red once; loop just pulses intensity
       let badges=""; if(s.p) badges+=`<span class="badge bp">${s.p>99?"99":s.p}</span>`; if(s.f) badges+=`<span class="badge bf">${s.f>99?"99":s.f}</span>`;
-      const lab = mkLabel(`${q.n} ${q.t}${badges}`, "nlabel", 1.6); cube.add(lab);
-      nodes.push({ mesh:cube, q, sec, gi, pos:cube.position.clone(), labEl:lab.element }); pathPts.push(cube.position.clone());
+      const labBase = `${q.n} ${q.t}`;
+      const lab = mkLabel(labBase + badges, "nlabel", 1.6); cube.add(lab);
+      nodes.push({ mesh:cube, q, sec, gi, pos:cube.position.clone(), labEl:lab.element, labBase }); pathPts.push(cube.position.clone());
       if (i===0) cube.add(mkLabel(`◆ ${sec} ${DATA[sec].title}`, "summit", 2.9));   // section band marker
       gi++;
     });
@@ -237,6 +238,7 @@ function buildTower(){
     const m=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,0), new THREE.MeshStandardMaterial({color:0x2ec27e,emissive:0x2ec27e,emissiveIntensity:0.7}));
     m.position.set(Math.cos(a)*rr, ry, Math.sin(a)*rr); helix.add(m);
   });
+  refreshBadges();   // set each label's right/wrong badge + _attempted flag before LOD runs
 }
 
 /* ── Camera. PLATFORM mode auto-frames the step looking AHEAD at the next
@@ -266,15 +268,33 @@ function flyTo(gi, andShow){
   updateLabelLOD();
 }
 // only the steps near where you're standing show their words — no wall of text (wider window when free-floating)
+// Re-read the quiz stats and rewrite each cube's right/wrong badge (green = correct count,
+// red = wrong count) — runs on build and whenever the quiz writes progress.
+function refreshBadges(){
+  const stats = loadJSON("inkling-quiz-stats");
+  for (const n of nodes){
+    if (!n.labEl) continue;
+    const m = /^(\d+\.\d+)\.(\d+)$/.exec(n.q.n);
+    const st = m ? ((stats[m[1]]||{})[+m[2]-1]||{}) : {}, p = st.p||0, f = st.f||0;
+    let b=""; if(p) b+=`<span class="badge bp">${p>99?"99":p}</span>`; if(f) b+=`<span class="badge bf">${f>99?"99":f}</span>`;
+    n.labEl.innerHTML = (n.labBase||"") + b;
+    n.labEl._attempted = (p>0 || f>0);
+  }
+}
 function updateLabelLOD(){
   const win = mode === "free" ? 16 : 8;
   for (const n of nodes){
     if (!n.labEl) continue;
+    if (n.labEl._attempted){ n.labEl.style.opacity = 1; n.labEl.style.display = ""; continue; }   // your right/wrong count always stays up
     const d = Math.abs(n.gi - focusGi);
     const o = d > win ? 0 : (d <= win*0.55 ? 1 : 1 - (d - win*0.55)/(win*0.45));
     n.labEl.style.opacity = o; n.labEl.style.display = o <= 0.03 ? "none" : "";
   }
 }
+// keep the 3D counts live with the flashcards (same-origin localStorage)
+window.addEventListener("storage", e => { if (!e.key || /inkling-quiz-(progress|stats)/.test(e.key)){ refreshBadges(); updateLabelLOD(); } });
+window.addEventListener("focus", () => { refreshBadges(); updateLabelLOD(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden){ refreshBadges(); updateLabelLOD(); } });
 
 /* ── question panel ── */
 const qpanel = document.getElementById("qpanel");
