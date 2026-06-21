@@ -1362,9 +1362,10 @@
       }
       if (!ph) {
         var textFields = (q.fields||[]).filter(function(f){ return f.kind!=="select"; });
-        var hasTextInput = (q.blanks && q.blanks.length) || textFields.length;
+        var hasTextInput = (q.blanks && q.blanks.length) || textFields.length || q.type==="input";   // single-input questions need the keyboard too
         if (hasTextInput) {
           var allAns = (q.blanks||[]).map(function(b){ return b.answer; }).concat(textFields.map(function(f){ return f.answer; }));
+          if (q.type==="input") allAns.push(q.answer);
           optsEl.insertAdjacentHTML("beforeend", buildMathPad(allAns.some(isIntervalStr) ? "Interval" : "Basic"));
         }
       }
