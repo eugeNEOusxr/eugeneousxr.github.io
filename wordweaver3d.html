@@ -92,7 +92,6 @@ const HUE = { "1.1":28, "1.2":210, "1.3":170, "1.4":265, "1.5":320, "1.6":140, "
 const PRECALC_CHAPTERS = ["1 Functions","2 Linear Functions","3 Polynomial & Rational","4 Exponential & Log",
   "5 Trig Functions","6 Periodic Functions","7 Trig Identities","8 Applied Trig","9 Systems","10 Analytic Geometry",
   "11 Sequences & Probability","12 Intro to Calculus"];
-let cur = "1.1";
 
 /* ── stats / progress (shared with the flashcards) ── */
 function loadJSON(k){ try{ return JSON.parse(localStorage.getItem(k)||"{}")||{}; }catch(_){ return {}; } }
@@ -180,11 +179,11 @@ function mkLabel(text, cls, y){ const d=document.createElement("div"); d.classNa
 const R = 13, ANG = (Math.PI*2)/5.2, YST = 2.3;   // wide, gradual spiral — steps spread out & readable from above
 let nodes = [];            // flat tower: { mesh, q, sec, gi, pos }
 let towerTop = 0;
-const strugglers = [];     // cubes you keep missing (pulse red)
-let pathCurve = null, energy = [];   // flowing energy up the climb path
+const strugglers = new Set();   // cubes you keep missing (pulse red)
+let pathCurve = null, energy = [], lastFc = null;   // flowing energy + focus-highlight tracker
 
 function buildTower(){
-  disposeHelix(); nodes = []; strugglers.length = 0; energy = [];
+  disposeHelix(); nodes = []; strugglers.clear(); energy = []; lastFc = null;
   let gi = 0; const pathPts = [];
   SECTIONS.forEach((sec, si) => {
     const list = DATA[sec].q, hue = HUE[sec], nextHue = HUE[SECTIONS[si+1]] || hue;
@@ -208,7 +207,7 @@ function buildTower(){
       const plat = new THREE.Mesh(platGeo, new THREE.MeshStandardMaterial({
         color: base.clone().multiplyScalar(0.28), emissive: base, emissiveIntensity: 0.1, metalness:0.7, roughness:0.45 }));
       plat.position.set(x, y - 1.2, z); plat.userData = { q, sec, gi }; helix.add(plat); pickables.push(plat);
-      if (miss) strugglers.push(cube);
+      if (miss){ cube.material.emissive.setHex(0xff3b3b); strugglers.add(cube); }   // red once; loop just pulses intensity
       let badges=""; if(s.p) badges+=`<span class="badge bp">${s.p>99?"99":s.p}</span>`; if(s.f) badges+=`<span class="badge bf">${s.f>99?"99":s.f}</span>`;
       const lab = mkLabel(`${q.n} ${q.t}${badges}`, "nlabel", 1.6); cube.add(lab);
       nodes.push({ mesh:cube, q, sec, gi, pos:cube.position.clone(), labEl:lab.element }); pathPts.push(cube.position.clone());
@@ -400,20 +399,21 @@ const _mv = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.
   // the scene breathes: a slow global glow swell
   bloom.strength = 0.62 + 0.13*Math.sin(T*0.5);
   key.intensity  = 1.0 + 0.12*Math.sin(T*0.6);
-  // pulse the ones you keep missing
+  // pulse the ones you keep missing (red emissive)
   const pulse = 0.3 + 0.35*Math.abs(Math.sin(T*2.2));
-  strugglers.forEach(c => { c.material.emissive.setHex(0xff3b3b); c.material.emissiveIntensity = pulse; });
-  // highlight the step you're on: a facing halo + gentle size/glow; others ease back to normal
+  strugglers.forEach(c => { c.material.emissiveIntensity = pulse; });
+  // highlight the step you're on — only touch the focused cube (and ease the previous one back)
   const fc = nodes[focusGi] && nodes[focusGi].mesh;
-  nodes.forEach(n => {
-    const target = n.mesh===fc ? 1.28 : 1; n.mesh.scale.x += (target - n.mesh.scale.x)*0.18; n.mesh.scale.y = n.mesh.scale.z = n.mesh.scale.x;
-    if (n.mesh !== fc && !strugglers.includes(n.mesh)) n.mesh.material.emissiveIntensity = n.mesh.userData.baseE;
-  });
+  if (fc !== lastFc){
+    if (lastFc){ lastFc.scale.setScalar(1); if (!strugglers.has(lastFc)) lastFc.material.emissiveIntensity = lastFc.userData.baseE; }
+    lastFc = fc;
+  }
   if (fc){
+    fc.scale.setScalar(fc.scale.x + (1.28 - fc.scale.x)*0.18);
     focusRing.visible = true; focusRing.position.copy(fc.position); focusRing.lookAt(camera.position);
     focusRing.scale.setScalar(1 + 0.06*Math.sin(T*3.5));
     focusRing.material.opacity = 0.45 + 0.3*Math.abs(Math.sin(T*2.5));
-    if (!strugglers.includes(fc)) fc.material.emissiveIntensity = 0.4 + 0.25*Math.abs(Math.sin(T*3));
+    if (!strugglers.has(fc)) fc.material.emissiveIntensity = 0.4 + 0.25*Math.abs(Math.sin(T*3));
   }
   composer.render(); labelRenderer.render(scene, camera);
 })();
