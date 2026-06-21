@@ -1,5 +1,5 @@
 /* Phase 1 PWA baseline: minimal offline support with safe caching strategy. */
-const CACHE_VERSION = "eugeneousxr-1782075373401";
+const CACHE_VERSION = "eugeneousxr-1782075630286";
 const CACHE_NAME = `${CACHE_VERSION}-core`;
 const CORE_ASSETS = [
   "/",
