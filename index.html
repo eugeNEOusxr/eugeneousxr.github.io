@@ -162,15 +162,17 @@
         box({ w: 11, h: 19, d: 11, x: 13, y: 19, z: -8, color: shade(LEG, .82) });
       }
 
-      // ── Cached upgrade: if the real 3D raptor is already cached, fade it in over
-      // the CSS dino. First-ever visit: not cached → CSS dino only, and we warm the
-      // (deploy-persistent) cache in the background so every visit after is the real
-      // walking raptor, served instantly from cache. Any failure → CSS dino stays. ──
+      // ── Cached upgrade to the real 3D raptor. Currently OFF: the walking-FBX
+      // texture rendered splotchy on-device, so we show the lightweight CSS dino
+      // (which walks back and forth) while the model is reworked from the clean
+      // "official pose" export. Flip DINO3D_ENABLED to true to re-enable. ──
+      var DINO3D_ENABLED = false;
+      var DINO_MODEL = "dino-walk.fbx", DINO_CACHE_KEY = "inkling-dino-v1";
+      var DINO_FILES = [DINO_MODEL, "dino-basecolor.png", "dino-normal.png", "dino-roughness.png", "dino-metallic.png"];
       try {
-        if (window.caches && window.WebGLRenderingContext) {
-          var DINO_FILES = ["dino-walk.fbx", "dino-basecolor.png", "dino-normal.png", "dino-roughness.png", "dino-metallic.png"];
-          caches.open("inkling-dino-v1").then(function (cache) {
-            cache.match("/models/dino/dino-walk.fbx").then(function (hit) {
+        if (DINO3D_ENABLED && window.caches && window.WebGLRenderingContext) {
+          caches.open(DINO_CACHE_KEY).then(function (cache) {
+            cache.match("/models/dino/" + DINO_MODEL).then(function (hit) {
               if (hit) {
                 var stage = document.querySelector("#boot-loader .dino-stage");
                 if (stage) import("/dino-loader.js").then(function (m) { m.mountDinoLoader(stage); }).catch(function () {});
