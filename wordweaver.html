@@ -306,6 +306,7 @@
       q: raw.q || null,              // deep link into the flashcards (e.g. "1.2.11")
       prev: raw.prev || null,        // hover preview = the flashcard question itself
       done: false,                   // completed in the quiz (learning trajectory)
+      pass: 0, fail: 0,              // correct vs incorrect guess counts (from the quiz)
       _expanded: false, _aiKids: false,
       appear: parent ? 0 : 1            // grow-in animation progress
     };
@@ -316,14 +317,23 @@
   }
   var ROOT = build(RAW, null, 0);
 
-  // Learning trajectory: read flashcard progress (same-origin localStorage) → mark which question-nodes are done.
-  function loadProgressMap(){ try { return JSON.parse(localStorage.getItem("inkling-quiz-progress") || "{}") || {}; } catch(_){ return {}; } }
-  function refreshDone(){ var prog = loadProgressMap(); NODES.forEach(function(n){
-    if (!n.q) return; var m=/^(\d+\.\d+)\.(\d+)$/.exec(n.q); if(!m) return;
-    var sec=prog[m[1]]; n.done = !!(sec && sec[(parseInt(m[2],10)-1)] != null);
-  }); }
+  // Learning trajectory: read flashcard progress + per-question guess counts (same-origin localStorage).
+  function loadJSON(k){ try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch(_){ return {}; } }
+  function refreshDone(){
+    var prog = loadJSON("inkling-quiz-progress"), stats = loadJSON("inkling-quiz-stats");
+    NODES.forEach(function(n){
+      if (!n.q) return; var m=/^(\d+\.\d+)\.(\d+)$/.exec(n.q); if(!m) return;
+      var i = parseInt(m[2],10)-1, sec = prog[m[1]], st = stats[m[1]];
+      n.done = !!(sec && sec[i] != null);
+      n.pass = (st && st[i] && st[i].p) || 0;
+      n.fail = (st && st[i] && st[i].f) || 0;
+    });
+  }
   refreshDone();
-  document.addEventListener("visibilitychange", function(){ if(!document.hidden) refreshDone(); });  // re-check after returning from the quiz
+  // Re-check live: the quiz writes localStorage from its own iframe → a "storage" event fires here.
+  window.addEventListener("storage", function(e){ if (!e.key || /inkling-quiz-(progress|stats)/.test(e.key)) refreshDone(); });
+  window.addEventListener("focus", refreshDone);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) refreshDone(); });
 
   var COLOR = { domain:"#ffcf5c", chapter:"#b48bff", section:"#5aa9ff", subsection:"#3fe0d0", problem:"#ff8a4c", step:"#7be08a", answer:"#ffd66b" };
   var KINDLABEL = { domain:"Domain", chapter:"Chapter", section:"Section", subsection:"Subsection", problem:"Problem", step:"Solution step", answer:"Final answer" };
@@ -517,7 +527,22 @@
       if (qNode && rad > 4){
         ctx.lineWidth=1.5; ctx.strokeStyle=hexA(nd.done?"#7be08a":"#ff8a4c", isHover?0.95:0.7);
         ctx.beginPath(); ctx.arc(sc[0],sc[1], rad+3.5, 0, 7); ctx.stroke();
-        if (nd.done && rad > 9){ ctx.globalAlpha=va2; ctx.fillStyle="#0c1422"; ctx.font="700 "+Math.min(rad*0.9,15)+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("✓", sc[0], sc[1]+0.5); }
+        if (nd.done && rad > 9 && !nd.pass){ ctx.globalAlpha=va2; ctx.fillStyle="#0c1422"; ctx.font="700 "+Math.min(rad*0.9,15)+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("✓", sc[0], sc[1]+0.5); }
+        // guess counts: green badge (correct) top-right, red badge (incorrect) top-left
+        if (rad > 9 && (nd.pass || nd.fail)){
+          var br = Math.max(7, Math.min(rad*0.66, 14));
+          function cbadge(bx, by, fill, num){
+            ctx.globalAlpha = va2; ctx.fillStyle = fill;
+            ctx.beginPath(); ctx.arc(bx, by, br, 0, 7); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "700 " + Math.round(br*1.05) + "px system-ui";
+            ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillText(num > 99 ? "99" : String(num), bx, by + 0.5);
+          }
+          var off = rad + br*0.15;
+          if (nd.pass) cbadge(sc[0] + off*0.72, sc[1] - off*0.72, "#2ec27e", nd.pass);  // green = correct
+          if (nd.fail) cbadge(sc[0] - off*0.72, sc[1] - off*0.72, "#ff5a5a", nd.fail);  // red = incorrect
+          ctx.globalAlpha = va2;
+        }
       }
       // child-count ring when a collapsed cluster is small
       if (!qNode && nd.children.length && rad < 13 && rad > 3){
@@ -570,7 +595,8 @@
       crumb=document.getElementById("crumb");
   var cardOpen = document.getElementById("cardOpen");
   function updateCard(n){
-    cardKind.textContent = (KINDLABEL[n.contentType] || n.contentType) + (n.q ? (n.done ? " · ✓ done" : "") : "");
+    var tally = (n.q && (n.pass || n.fail)) ? ("  ·  🟢 " + n.pass + " correct  🔴 " + n.fail + " wrong") : "";
+    cardKind.textContent = (KINDLABEL[n.contentType] || n.contentType) + (n.q ? (n.done ? " · ✓ done" : "") : "") + tally;
     cardKind.style.color = n.done ? "var(--step)" : COLOR[n.contentType];
     cardTitle.textContent = n.title;
     cardDesc.textContent = (n.q && n.prev) ? n.prev : (n.description || "—");

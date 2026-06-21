@@ -1134,8 +1134,22 @@
     }
 
     function clearMarks(){ [].forEach.call(optsEl.querySelectorAll("[data-i]"),function(r){ r.classList.remove("ok","bad"); r.querySelector(".mark").textContent=""; }); }
+    // Per-question attempt counts (correct vs incorrect guesses) → relayed to the knowledge canvas.
+    var STATS_KEY = "inkling-quiz-stats";
+    function bumpStats(correct){
+      try {
+        if (DECKS[curDeck].generated) return;          // don't track AI/generated sets
+        var sec = DECKS[curDeck].id;
+        var s = JSON.parse(localStorage.getItem(STATS_KEY) || "{}") || {};
+        if (!s[sec]) s[sec] = {};
+        var c = s[sec][idx] || { p:0, f:0 };
+        if (correct) c.p = Math.min(100, c.p + 1); else c.f = Math.min(100, c.f + 1);
+        s[sec][idx] = c;
+        localStorage.setItem(STATS_KEY, JSON.stringify(s));
+      } catch(_){}
+    }
     function finishGrade(pts,max){
-      DECKS[curDeck].graded[idx]=pts; setEarned(); persistProgress();
+      DECKS[curDeck].graded[idx]=pts; setEarned(); persistProgress(); bumpStats(pts===max);
       scoreEl.textContent = pts+" / "+max+" ("+Math.round((pts/max)*100)+"%)";
       scoreEl.style.color = (pts===max)?"var(--ok)":"var(--text)";
     }
