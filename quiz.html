@@ -1044,12 +1044,17 @@
     ] },
     /* School WebWork — Assignment 1.2: Domain & Range (Q9–Q13). These merge into the
        1.2 "My set". Q12–Q13 (sketch the piecewise graph) come with the drawing tool. */
-    { id:"1.2", title:"1.2 · Domain and Range", graded:{}, questions: [
+    /* School WebWork — Assignment 1.2 (problems 1-13, in order). `front:true` puts these
+       at 1.2.1-1.2.13; the OpenStax practice 20 follow at 1.2.14+. */
+    { id:"1.2", title:"1.2 · Domain and Range", graded:{}, front:true, questions: [
+      { type:"multiinput", prompt:"Enter the interval equivalent to 2 &lt; <em>x</em> ≤ 5 or <em>x</em> &gt; 7.", blanks:[{label:"Interval =", answer:"(2, 5] ∪ (7, ∞)"}], points:10 },
+      { type:"mc", prompt:"Find the domain of <em>f</em>(<em>x</em>) = 2/(<em>x</em> − 3).", options:["{<em>x</em> | <em>x</em> &lt; 3}","{<em>x</em> | <em>x</em> &gt; 3}","{<em>x</em> | <em>x</em> ≠ 3}"], correct:2, points:10 },
+      { type:"mc", prompt:"What is the domain of <em>f</em>(<em>x</em>) = √(<em>x</em> + 6)/(<em>x</em> − 1)?", options:["(1, ∞)","<em>x</em> ≠ 1","[−6, 1) ∪ (1, ∞)","[−6, ∞)","All real numbers"], correct:2, points:10 },
+      { type:"mc", prompt:"Find the domain of <em>f</em>(<em>x</em>) = (<em>x</em> − 4)/(<em>x</em>² + 5<em>x</em> − 50).", options:["{<em>x</em> | <em>x</em> ≠ 50 and <em>x</em> ≠ 4}","{<em>x</em> | <em>x</em> ≠ 50}","{<em>x</em> | <em>x</em> ≠ −4}","{<em>x</em> | <em>x</em> ≠ −10 and <em>x</em> ≠ 5}","{<em>x</em> | <em>x</em> ≠ −50}"], correct:3, points:10 },
+      { type:"graphinput", prompt:"Write the domain of the function graphed below in interval notation.", graph:"arcDom", blanks:[{label:"Domain =", answer:"[-2, 6]"}], points:10 },
       { type:"graphinput", prompt:"You hold a toy submarine underwater, then release it and it ascends. The graph models its depth <em>d</em> as a function of time <em>t</em>. Give the domain and range.", graph:"pwSub", blanks:[{label:"Domain: smallest <em>t</em> =", answer:0},{label:"Domain: largest <em>t</em> =", answer:7},{label:"Range: smallest <em>d</em> =", answer:-4, answerText:"-4"},{label:"Range: largest <em>d</em> =", answer:0}], points:10 },
       { type:"graphinput", prompt:"Find the domain and range of the function graphed below. Use interval notation.", graph:"parabDR", blanks:[{label:"Domain =", answer:"[-2, 3)"},{label:"Range =", answer:"(-5, 4]"}], points:10 },
       { type:"mc", prompt:"A function's graph is the line segment from (1, 15) to (8, 8), where <em>d</em> is the horizontal axis and <em>g</em> is the vertical axis. What is the domain?", options:["8 ≤ <em>d</em> ≤ 15","1 ≤ <em>g</em> ≤ 8","1 ≤ <em>d</em> ≤ 8","8 ≤ <em>g</em> ≤ 15"], correct:2, points:10 },
-      { type:"mc", prompt:"Find the domain of <em>f</em>(<em>x</em>) = (<em>x</em> − 4)/(<em>x</em>² + 5<em>x</em> − 50).", options:["{<em>x</em> | <em>x</em> ≠ 50 and <em>x</em> ≠ 4}","{<em>x</em> | <em>x</em> ≠ 50}","{<em>x</em> | <em>x</em> ≠ −4}","{<em>x</em> | <em>x</em> ≠ −10 and <em>x</em> ≠ 5}","{<em>x</em> | <em>x</em> ≠ −50}"], correct:3, points:10 },
-      { type:"graphinput", prompt:"Write the domain of the function graphed below in interval notation.", graph:"arcDom", blanks:[{label:"Domain =", answer:"[-2, 6]"}], points:10 },
       { type:"multiinput", prompt:"Given <em>f</em>(<em>x</em>) = { 9<em>x</em> + 6 if <em>x</em> &lt; 0;  9<em>x</em> + 12 if <em>x</em> ≥ 0 }, calculate each value.", blanks:[{label:"<em>f</em>(−1) =", answer:-3, answerText:"-3"},{label:"<em>f</em>(0) =", answer:12},{label:"<em>f</em>(2) =", answer:30}], points:10 },
       { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Use interval notation for each interval.", graph:"pw1210", blanks:[{ask:"Where <em>f</em>(<em>x</em>) = −5:", label:"<em>x</em> ∈", answer:"[-6, -2]"},{ask:"Where <em>f</em>(<em>x</em>) = 4:", label:"<em>x</em> ∈", answer:"(-2, 1]"},{ask:"Where <em>f</em>(<em>x</em>) = 1:", label:"<em>x</em> ∈", answer:"(1, 4]"}], points:10 },
       { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Write each piece's formula.", graph:"pw1211", blanks:[{ask:"For −6 ≤ <em>x</em> ≤ −2:", label:"<em>f</em>(<em>x</em>) =", answer:"3/2 x + 6", answerText:"(3/2)x + 6"},{ask:"For −2 &lt; <em>x</em> ≤ 1:", label:"<em>f</em>(<em>x</em>) =", answer:2},{ask:"For 1 &lt; <em>x</em> ≤ 6:", label:"<em>f</em>(<em>x</em>) =", answer:"-2x + 3", answerText:"−2x + 3"}], points:10 },
@@ -1063,7 +1068,11 @@
     (function mergeMySets(){
       var first = {}, out = [];
       DECKS.forEach(function(d){
-        if (!d.generated && first[d.id]) { first[d.id].questions = first[d.id].questions.concat(d.questions); return; }
+        if (!d.generated && first[d.id]) {
+          // a deck flagged `front` (your WebWork set) goes to the FRONT so its questions are 1.x.1, 1.x.2, …
+          first[d.id].questions = d.front ? d.questions.concat(first[d.id].questions) : first[d.id].questions.concat(d.questions);
+          return;
+        }
         if (!d.generated) first[d.id] = d;
         out.push(d);
       });
