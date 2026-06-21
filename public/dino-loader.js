@@ -1,9 +1,12 @@
 /**
- * Boot-loader 3D dino — renders the Meshy raptor (walk animation) into the
- * boot loader, fading in over the lightweight CSS cuboid dino. Only imported
- * when the model is already cached (see index.html boot loader), so it never
- * adds startup latency. Uses the app's importmap (`three`) — the same engine
- * the app loads, so it's warm in the browser cache by the time this runs.
+ * Boot-loader 3D dino — renders the Meshy raptor ("official pose" static export)
+ * into the boot loader, fading in over the lightweight CSS cuboid dino. Only
+ * imported when the model is already cached (see index.html boot loader), so it
+ * never adds startup latency. Uses the app's importmap (`three`).
+ *
+ * Splotch fix: ALL textures are awaited before the dino is revealed (the earlier
+ * version revealed on FBX-ready, so on a phone the dino flashed in with half-loaded
+ * maps). Material uses base + normal + combined metallic-roughness (ORM) + emissive.
  *
  * Any failure here is swallowed by the caller; the CSS dino stays as fallback.
  */
@@ -13,7 +16,7 @@ import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 const DINO = "/models/dino/";
 let started = false;
 
-export function mountDinoLoader(stage) {
+export async function mountDinoLoader(stage) {
   if (started || !stage) return;
   started = true;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -44,58 +47,62 @@ export function mountDinoLoader(stage) {
   const fill = new THREE.DirectionalLight(0xffffff, 1.3); fill.position.set(0, 1.5, 6); scene.add(fill); // camera-side fill
 
   const tl = new THREE.TextureLoader().setPath(DINO);
-  const base = tl.load("dino-basecolor.png"); base.colorSpace = THREE.SRGBColorSpace; base.flipY = false;
-  const nrm = tl.load("dino-normal.png"); nrm.flipY = false;
-  const rgh = tl.load("dino-roughness.png"); rgh.flipY = false;
-  const met = tl.load("dino-metallic.png"); met.flipY = false;
+  const loadTex = (f, srgb) => tl.loadAsync(f).then((t) => {
+    t.flipY = false; if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t;
+  });
 
-  let mixer = null;
-  const clock = new THREE.Clock();
-  let revealed = false;
-
-  new FBXLoader().load(DINO + "dino-walk.fbx", (fbx) => {
-    const box0 = new THREE.Box3().setFromObject(fbx);
-    const size0 = box0.getSize(new THREE.Vector3());
-    const s = 2.4 / (Math.max(size0.x, size0.y, size0.z) || 1);
-    fbx.scale.setScalar(s);
-    let b = new THREE.Box3().setFromObject(fbx);
-    let c = b.getCenter(new THREE.Vector3());
-    fbx.position.x -= c.x; fbx.position.z -= c.z; fbx.position.y -= b.min.y;
+  let model = null;
+  try {
+    // Wait for the FBX AND every texture before showing anything (no half-painted flash).
+    const [fbx, base, nrm, orm, emit] = await Promise.all([
+      new FBXLoader().loadAsync(DINO + "dino2.fbx"),
+      loadTex("dino2-basecolor.png", true),
+      loadTex("dino2-normal.png", false),
+      loadTex("dino2-orm.png", false),
+      loadTex("dino2-emit.png", true)
+    ]);
+    if (!canvas.isConnected) { renderer.dispose(); return; }
 
     const mat = new THREE.MeshStandardMaterial({
-      map: base, normalMap: nrm, roughnessMap: rgh, metalnessMap: met, metalness: 1, roughness: 1
+      map: base, normalMap: nrm,
+      roughnessMap: orm, metalnessMap: orm, roughness: 1, metalness: 1, // glTF ORM: G=rough, B=metal
+      emissiveMap: emit, emissive: 0xffffff, emissiveIntensity: 1
     });
     fbx.traverse((o) => { if (o.isMesh) o.material = mat; });
-    rig.add(fbx);
 
-    if (fbx.animations.length) {
-      mixer = new THREE.AnimationMixer(fbx);
-      mixer.clipAction(fbx.animations[0]).play();
-    }
+    // auto-fit: longest dimension ~2.4 units, dropped onto y=0
+    const s = 2.4 / (Math.max(...new THREE.Box3().setFromObject(fbx).getSize(new THREE.Vector3()).toArray()) || 1);
+    fbx.scale.setScalar(s);
+    const b = new THREE.Box3().setFromObject(fbx);
+    const c = b.getCenter(new THREE.Vector3());
+    fbx.position.x -= c.x; fbx.position.z -= c.z; fbx.position.y -= b.min.y;
+    rig.add(fbx);
+    model = fbx;
 
     const sph = new THREE.Box3().setFromObject(fbx).getBoundingSphere(new THREE.Sphere());
     const dist = (sph.radius / Math.sin((camera.fov * Math.PI / 180) / 2)) * 1.12;
     camera.position.set(dist * 0.42, sph.center.y + sph.radius * 0.35, dist * 0.92);
     camera.lookAt(0, sph.center.y, 0);
-  }, undefined, () => { /* missing-texture warnings are harmless; ignore */ });
 
+    // reveal: textures are fully loaded now, so no splotchy flash
+    canvas.style.opacity = "1";
+    const css = stage.querySelector(".dino3d-walk");
+    if (css) { css.style.transition = "opacity .5s ease"; css.style.opacity = "0"; }
+  } catch (e) {
+    renderer.dispose();
+    if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    return; // caller keeps the CSS dino
+  }
+
+  const clock = new THREE.Clock();
   (function loop() {
-    if (!canvas.isConnected) {            // boot loader removed → tear down
-      renderer.dispose();
-      return;
-    }
+    if (!canvas.isConnected) { renderer.dispose(); return; }
     requestAnimationFrame(loop);
     const dt = clock.getDelta();
-    if (mixer) {
-      mixer.update(reduce ? 0 : dt);
-      if (!revealed) {                    // first textured frame → swap CSS dino for 3D
-        revealed = true;
-        canvas.style.opacity = "1";
-        const css = stage.querySelector(".dino3d-walk");
-        if (css) { css.style.transition = "opacity .5s ease"; css.style.opacity = "0"; }
-      }
+    if (!reduce && model) {
+      rig.rotation.y += dt * 0.55;                 // slow turn-around so all sides show
+      rig.position.y = Math.sin(clock.elapsedTime * 2.2) * 0.04; // gentle idle bob
     }
-    if (!reduce) rig.rotation.y += dt * 0.55;   // slow turn-around so all sides show
     renderer.render(scene, camera);
   })();
 }

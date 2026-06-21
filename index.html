@@ -162,13 +162,14 @@
         box({ w: 11, h: 19, d: 11, x: 13, y: 19, z: -8, color: shade(LEG, .82) });
       }
 
-      // ── Cached upgrade to the real 3D raptor. Currently OFF: the walking-FBX
-      // texture rendered splotchy on-device, so we show the lightweight CSS dino
-      // (which walks back and forth) while the model is reworked from the clean
-      // "official pose" export. Flip DINO3D_ENABLED to true to re-enable. ──
-      var DINO3D_ENABLED = false;
-      var DINO_MODEL = "dino-walk.fbx", DINO_CACHE_KEY = "inkling-dino-v1";
-      var DINO_FILES = [DINO_MODEL, "dino-basecolor.png", "dino-normal.png", "dino-roughness.png", "dino-metallic.png"];
+      // ── Cached upgrade to the real 3D raptor (Meshy "official pose" export).
+      // CSS cuboid dino is the instant first paint; once the model is cached the
+      // loader fades in the textured raptor (slow turn-around + idle bob). Textures
+      // are fully awaited before reveal, so no splotchy flash. Flip to false for the
+      // pure CSS dino. v2 = clean standing pose (replaced the splotchy walking FBX). ──
+      var DINO3D_ENABLED = true;
+      var DINO_MODEL = "dino2.fbx", DINO_CACHE_KEY = "inkling-dino-v2";
+      var DINO_FILES = [DINO_MODEL, "dino2-basecolor.png", "dino2-normal.png", "dino2-orm.png", "dino2-emit.png"];
       try {
         if (DINO3D_ENABLED && window.caches && window.WebGLRenderingContext) {
           caches.open(DINO_CACHE_KEY).then(function (cache) {
