@@ -1,6 +1,10 @@
 /* Phase 1 PWA baseline: minimal offline support with safe caching strategy. */
-const CACHE_VERSION = "eugeneousxr-1782077471665";
+const CACHE_VERSION = "eugeneousxr-1782080418312";
 const CACHE_NAME = `${CACHE_VERSION}-core`;
+// Persistent, version-INDEPENDENT cache for the heavy 3D boot-loader dino
+// (~8 MB). Kept out of the per-deploy cache so it's downloaded once, not on
+// every release, and survives the activate cleanup below.
+const DINO_CACHE = "inkling-dino-v1";
 const CORE_ASSETS = [
   "/",
   "/index.html",
@@ -41,7 +45,9 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+        Promise.all(
+          keys.filter((key) => key !== CACHE_NAME && key !== DINO_CACHE).map((key) => caches.delete(key))
+        )
       )
       .then(() => self.clients.claim())
   );
@@ -51,6 +57,24 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Boot-loader 3D dino assets: cache-first from the persistent DINO_CACHE so
+  // that, once warmed, the real raptor renders instantly on every load (and
+  // offline). Scoped to /models/dino/* only — never touches app assets/api.
+  if (url.pathname.startsWith("/models/dino/")) {
+    event.respondWith(
+      caches.open(DINO_CACHE).then((cache) =>
+        cache.match(event.request).then((hit) =>
+          hit ||
+          fetch(event.request).then((resp) => {
+            if (resp && resp.status === 200) cache.put(event.request, resp.clone());
+            return resp;
+          })
+        )
+      )
+    );
+    return;
+  }
 
   // IMPORTANT: only intercept top-level PAGE NAVIGATIONS (to serve an offline
   // shell). Every other same-origin request — JS modules, CSS, images, /api —

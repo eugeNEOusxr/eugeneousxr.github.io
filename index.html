@@ -161,6 +161,30 @@
         box({ w: 11, h: 19, d: 11, x: -11, y: 19, z: -8, color: shade(LEG, .82) }); // far legs
         box({ w: 11, h: 19, d: 11, x: 13, y: 19, z: -8, color: shade(LEG, .82) });
       }
+
+      // ── Cached upgrade: if the real 3D raptor is already cached, fade it in over
+      // the CSS dino. First-ever visit: not cached → CSS dino only, and we warm the
+      // (deploy-persistent) cache in the background so every visit after is the real
+      // walking raptor, served instantly from cache. Any failure → CSS dino stays. ──
+      try {
+        if (window.caches && window.WebGLRenderingContext) {
+          var DINO_FILES = ["dino-walk.fbx", "dino-basecolor.png", "dino-normal.png", "dino-roughness.png", "dino-metallic.png"];
+          caches.open("inkling-dino-v1").then(function (cache) {
+            cache.match("/models/dino/dino-walk.fbx").then(function (hit) {
+              if (hit) {
+                var stage = document.querySelector("#boot-loader .dino-stage");
+                if (stage) import("/dino-loader.js").then(function (m) { m.mountDinoLoader(stage); }).catch(function () {});
+              } else {
+                DINO_FILES.forEach(function (f) {
+                  var u = "/models/dino/" + f;
+                  fetch(u).then(function (r) { if (r && r.ok) cache.put(u, r.clone()); }).catch(function () {});
+                });
+              }
+            });
+          }).catch(function () {});
+        }
+      } catch (e) { /* keep CSS dino */ }
+
       var hidden = false;
       function hide() {
         if (hidden) return; hidden = true;
