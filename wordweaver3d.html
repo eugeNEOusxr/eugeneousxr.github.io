@@ -27,6 +27,9 @@
   #hint{left:50%;bottom:12px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:rgba(12,17,30,.6);padding:5px 12px;border-radius:999px;white-space:nowrap}
   #ew{bottom:54px;left:0;right:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none}
   #ew button{pointer-events:auto;width:46px;height:46px;border-radius:50%;border:.5px solid var(--line);background:rgba(12,17,30,.85);color:var(--text);font-size:20px;cursor:pointer}
+  #climb{right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
+  #climb button{pointer-events:auto;width:50px;height:50px;border-radius:14px;border:.5px solid var(--accent);background:rgba(12,17,30,.9);color:#cdbcff;font-size:20px;font-weight:800;cursor:pointer}
+  #climb button:active{background:var(--accent);color:#fff}
   /* question panel */
   #qpanel{position:fixed;left:12px;right:12px;bottom:12px;z-index:6;max-width:420px;margin:0 auto;background:var(--panel);backdrop-filter:blur(10px);border:.5px solid var(--line);border-radius:16px;padding:14px 15px;box-shadow:0 18px 50px rgba(0,0,0,.5);transform:translateY(150%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
   #qpanel.show{transform:translateY(0)}
@@ -48,10 +51,12 @@
   <div id="secTabs"></div>
   <select id="chapSel" title="Jump to a chapter"></select>
   <div id="title">Knowledge <span style="color:var(--accent)">Spiral</span> <small id="secName"></small></div>
-  <a href="wordweaver.html" class="tab" id="to2d" style="pointer-events:auto;text-decoration:none">🗺 2D map</a>
+  <button class="tab" id="miss" style="pointer-events:auto;border-color:#ff5a5a;color:#ff8a8a" title="Fly through what you keep missing">🔴 What I'm missing</button>
+  <a href="wordweaver.html" class="tab" id="to2d" style="pointer-events:auto;text-decoration:none">🗺 2D</a>
 </div>
 <div id="ew" class="hud"><button id="west" title="Previous section">‹</button><button id="east" title="Next section">›</button></div>
-<div id="hint" class="hud">Drag to look · scroll/pinch to climb · tap a step to see its question</div>
+<div id="climb" class="hud"><button id="up" title="Climb to next question">▲</button><button id="down" title="Back down a step">▼</button></div>
+<div id="hint" class="hud">Drag to look · ▲ climb step-by-step · ‹ › jump sections · tap a step for its question</div>
 <div id="qpanel">
   <button id="qclose" aria-label="Close">✕</button>
   <div class="qk" id="qk"></div>
@@ -146,62 +151,74 @@ function disposeHelix(){
 }
 function mkLabel(text, cls, y){ const d=document.createElement("div"); d.className=cls; d.innerHTML=text; const o=new CSS2DObject(d); o.position.y=y; return o; }
 
-const R = 6.5, ANG = (Math.PI*2)/6.5, YST = 2.5;
-function topY(count){ return count*YST + 4; }
+/* ── ONE continuous stacked tower: every section's questions climb together,
+   so you feel the cumulative height as you ascend the whole chapter. ── */
+const R = 6.5, ANG = (Math.PI*2)/6.5, YST = 3.0;
+let nodes = [];            // flat tower: { mesh, q, sec, gi, pos }
+let towerTop = 0;
+const strugglers = [];     // cubes you keep missing (pulse red)
 
-function buildSection(sec){
-  disposeHelix();
-  cur = sec;
-  const list = DATA[sec].q, hue = HUE[sec];
-  document.getElementById("secName").textContent = "· " + sec + " " + DATA[sec].title;
-  [...document.querySelectorAll(".tab")].forEach(t => t.classList.toggle("on", t.dataset.sec===sec));
-  [...document.querySelectorAll(".tab")].forEach(t => { if(t.dataset.sec===sec){ t.style.background = `hsl(${hue} 70% 55%)`; t.style.color="#fff"; } else { t.style.background=""; t.style.color=""; } });
-
-  const pts = [];
-  list.forEach((q, i) => {
-    const ang = i*ANG, y = i*YST + 3, x = R*Math.cos(ang), z = R*Math.sin(ang);
-    const s = statOf(q.n);
-    const base = new THREE.Color().setHSL(hue/360, 0.7, s.done ? 0.55 : 0.5);
-    const cube = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({
-      color: base, emissive: base, emissiveIntensity: s.done ? 0.55 : 0.18, metalness:0.4, roughness:0.35 }));
-    cube.position.set(x, y, z); cube.userData = { q, sec };
-    helix.add(cube); pickables.push(cube);
-    pts.push(new THREE.Vector3(x, y, z));
-    // billboard label: number + tag + pass/fail badges
-    let badges = "";
-    if (s.p) badges += `<span class="badge bp">${s.p>99?"99":s.p}</span>`;
-    if (s.f) badges += `<span class="badge bf">${s.f>99?"99":s.f}</span>`;
-    const lab = mkLabel(`${q.n} ${q.t}${badges}`, "nlabel", 1.7); cube.add(lab);
+function buildTower(){
+  disposeHelix(); nodes = []; strugglers.length = 0;
+  let gi = 0; const pathPts = [];
+  SECTIONS.forEach(sec => {
+    const list = DATA[sec].q, hue = HUE[sec];
+    list.forEach((q, i) => {
+      const ang = gi*ANG, y = gi*YST + 4, x = R*Math.cos(ang), z = R*Math.sin(ang);
+      const s = statOf(q.n), miss = s.f > 0 && s.f >= Math.max(1, s.p);
+      const base = new THREE.Color().setHSL(hue/360, 0.7, s.done ? 0.56 : 0.46);
+      const cube = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({
+        color: base, emissive: base, emissiveIntensity: s.done ? 0.55 : 0.15, metalness:0.45, roughness:0.35 }));
+      cube.position.set(x, y, z); cube.userData = { q, sec, gi };
+      helix.add(cube); pickables.push(cube);
+      nodes.push({ mesh:cube, q, sec, gi, pos:cube.position.clone() }); pathPts.push(cube.position.clone());
+      if (miss) strugglers.push(cube);
+      let badges=""; if(s.p) badges+=`<span class="badge bp">${s.p>99?"99":s.p}</span>`; if(s.f) badges+=`<span class="badge bf">${s.f>99?"99":s.f}</span>`;
+      cube.add(mkLabel(`${q.n} ${q.t}${badges}`, "nlabel", 1.7));
+      if (i===0) cube.add(mkLabel(`◆ ${sec} ${DATA[sec].title}`, "summit", 3.0));   // section band marker
+      gi++;
+    });
   });
-
-  // glowing path up the spiral (arrows = the climb route)
-  if (pts.length > 1){
-    const curve = new THREE.CatmullRomCurve3(pts);
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, pts.length*8, 0.10, 8, false),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue/360,0.8,0.7), transparent:true, opacity:0.5 }));
-    helix.add(tube);
+  towerTop = gi*YST + 4;
+  if (pathPts.length>1){
+    const curve = new THREE.CatmullRomCurve3(pathPts);
+    helix.add(new THREE.Mesh(new THREE.TubeGeometry(curve, pathPts.length*6, 0.09, 6, false),
+      new THREE.MeshBasicMaterial({ color:0x9fb0ff, transparent:true, opacity:0.4 })));
   }
-
-  // ── SUMMIT: a peak above the last step holding every CORRECT answer ──
-  const top = topY(list.length);
-  const passed = list.filter(q => statOf(q.n).p > 0);
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(2.2, 3, 6),
+  // ── SUMMIT of the whole chapter: every CORRECT answer spirals to the tip ──
+  const passed = nodes.filter(n => statOf(n.q.n).p > 0);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(2.4, 3.2, 6),
     new THREE.MeshStandardMaterial({ color:0xffe6a8, emissive:0xffcf5c, emissiveIntensity:0.6, metalness:0.6, roughness:0.3 }));
-  cap.position.set(0, top + 2, 0); helix.add(cap);
-  helix.add(Object.assign(mkLabel(`▲ Summit — ${passed.length}/${list.length} correct`, "summit", top + 5)));
-  // correct answers spiral up to the tip
-  passed.forEach((q, i) => {
-    const ang = i*0.8, ry = top + 4 + i*1.1, rr = 3.2 * (1 - i/(passed.length+2));
-    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 0),
-      new THREE.MeshStandardMaterial({ color:0x2ec27e, emissive:0x2ec27e, emissiveIntensity:0.7 }));
-    m.position.set(Math.cos(ang)*rr, ry, Math.sin(ang)*rr); helix.add(m);
+  cap.position.set(0, towerTop + 2, 0); helix.add(cap);
+  helix.add(mkLabel(`▲ Chapter 1 Summit — ${passed.length}/${nodes.length} correct`, "summit", towerTop + 5));
+  passed.forEach((n, i) => {
+    const a=i*0.7, ry=towerTop+5+i*0.8, rr=3*(1 - i/(passed.length+3));
+    const m=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,0), new THREE.MeshStandardMaterial({color:0x2ec27e,emissive:0x2ec27e,emissiveIntensity:0.7}));
+    m.position.set(Math.cos(a)*rr, ry, Math.sin(a)*rr); helix.add(m);
   });
-
-  controls.target.set(0, Math.min(top*0.5, 14), 0);
-  camera.position.set(0, 9, 27);
 }
 
-/* ── interaction: pick a cube → question panel ── */
+/* ── Climbing camera: smoothly FLIES from one step up to the next so you feel
+   the height. The view sits beside a step looking UP at the blocks above. ── */
+let tween = null, focusGi = 0;
+const _v = new THREE.Vector3();
+function easeInOut(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+function camFor(gi){
+  const n = nodes[Math.max(0, Math.min(nodes.length-1, gi))];
+  _v.set(n.pos.x, 0, n.pos.z); if (_v.lengthSq() < 0.001) _v.set(1,0,0); _v.normalize();
+  const camPos = n.pos.clone().add(_v.clone().multiplyScalar(12)).add(new THREE.Vector3(0, 3.5, 0));
+  const look = n.pos.clone().add(new THREE.Vector3(0, 7.5, 0));   // gaze up the tower
+  return { camPos, look };
+}
+function flyTo(gi, andShow){
+  focusGi = Math.max(0, Math.min(nodes.length-1, gi));
+  const { camPos, look } = camFor(focusGi);
+  tween = { t:0, dur:1100, fromP:camera.position.clone(), toP:camPos, fromT:controls.target.clone(), toT:look, show:andShow };
+  controls.enabled = false;
+  const n = nodes[focusGi]; document.getElementById("secName").textContent = "· " + n.q.n + " " + n.q.t;
+}
+
+/* ── question panel ── */
 const qpanel = document.getElementById("qpanel");
 let activeQ = null;
 function showQ(d){
@@ -231,31 +248,58 @@ renderer.domElement.addEventListener("pointerup", e => {
   pointer.x = (e.clientX/innerWidth)*2-1; pointer.y = -(e.clientY/innerHeight)*2+1;
   raycaster.setFromCamera(pointer, camera);
   const hit = raycaster.intersectObjects(pickables, false)[0];
-  if (hit) showQ(hit.object.userData);
+  if (hit){ flyTo(hit.object.userData.gi, true); }   // fly to it, then reveal the question
 });
 
-/* ── UI: section tabs, east/west, chapter dropdown ── */
+/* ── nav: ▲▼ climb step-by-step, ‹ › jump sections, tabs jump to a band ── */
+function sectionStart(sec){ return Math.max(0, nodes.findIndex(n => n.sec === sec)); }
+document.getElementById("up").onclick   = () => flyTo(focusGi + 1, true);
+document.getElementById("down").onclick = () => flyTo(focusGi - 1, true);
+document.getElementById("east").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
+document.getElementById("west").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+SECTIONS.length-1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
 const tabsEl = document.getElementById("secTabs");
-SECTIONS.forEach(sec => { const b=document.createElement("button"); b.className="tab"; b.dataset.sec=sec; b.textContent=sec; b.onclick=()=>buildSection(sec); tabsEl.appendChild(b); });
-document.getElementById("west").onclick = () => buildSection(SECTIONS[(SECTIONS.indexOf(cur)+SECTIONS.length-1)%SECTIONS.length]);
-document.getElementById("east").onclick = () => buildSection(SECTIONS[(SECTIONS.indexOf(cur)+1)%SECTIONS.length]);
+SECTIONS.forEach(sec => { const b=document.createElement("button"); b.className="tab"; b.dataset.sec=sec; b.textContent=sec; b.style.borderColor=`hsl(${HUE[sec]} 70% 55%)`; b.onclick=()=>flyTo(sectionStart(sec), false); tabsEl.appendChild(b); });
 const chap = document.getElementById("chapSel");
 PRECALC_CHAPTERS.forEach((name,i) => { const o=document.createElement("option"); o.value=String(i+1); o.textContent="Chapter "+name + (i===0?"":" — soon"); if(i>0) o.disabled=true; chap.appendChild(o); });
-chap.value="1"; chap.onchange = () => { if(chap.value==="1") buildSection("1.1"); };
+chap.value="1";
+
+/* ── "What I'm missing": fly through your most-missed questions, worst first ── */
+let missQueue = [], missPtr = 0;
+document.getElementById("miss").onclick = () => {
+  const ranked = nodes.map(n => ({ gi:n.gi, f:statOf(n.q.n).f })).filter(x => x.f>0).sort((a,b)=> b.f - a.f);
+  if (!ranked.length){ alert("Nothing missed yet — go answer some questions and your weak spots will show up here."); return; }
+  if (missQueue.length !== ranked.length){ missQueue = ranked; missPtr = 0; } else { missPtr = (missPtr+1) % missQueue.length; }
+  flyTo(missQueue[missPtr].gi, true);
+};
 
 /* re-read stats live (quiz writes localStorage from its own iframe) */
-window.addEventListener("storage", e => { if(!e.key || /inkling-quiz-(progress|stats)/.test(e.key)) buildSection(cur); });
-window.addEventListener("focus", () => buildSection(cur));
-
+function rebuild(){ const keep=focusGi; buildTower(); flyTo(Math.min(keep, nodes.length-1), false); }
+window.addEventListener("storage", e => { if(!e.key || /inkling-quiz-(progress|stats)/.test(e.key)) rebuild(); });
+window.addEventListener("focus", rebuild);
 addEventListener("resize", () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
 });
 
-buildSection("1.1");
+buildTower();
+flyTo(0, false);
 document.getElementById("loading").style.display = "none";
-(function loop(){ requestAnimationFrame(loop); controls.update(); helix.rotation.y += 0.0006;
-  renderer.render(scene, camera); labelRenderer.render(scene, camera); })();
+const clock = new THREE.Clock();
+(function loop(){
+  requestAnimationFrame(loop);
+  const dt = clock.getDelta() * 1000;
+  if (tween){
+    tween.t += dt; const k = Math.min(1, tween.t/tween.dur), e = easeInOut(k);
+    camera.position.lerpVectors(tween.fromP, tween.toP, e);
+    controls.target.lerpVectors(tween.fromT, tween.toT, e);
+    camera.lookAt(controls.target);
+    if (k >= 1){ if (tween.show && nodes[focusGi]) showQ(nodes[focusGi].mesh.userData); controls.enabled = true; tween = null; }
+  } else controls.update();
+  // pulse the ones you keep missing
+  const pulse = 0.3 + 0.35*Math.abs(Math.sin(clock.elapsedTime*2.2));
+  strugglers.forEach(c => { c.material.emissive.setHex(0xff3b3b); c.material.emissiveIntensity = pulse; });
+  renderer.render(scene, camera); labelRenderer.render(scene, camera);
+})();
 </script>
 </body>
 </html>
