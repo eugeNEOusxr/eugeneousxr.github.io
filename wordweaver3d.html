@@ -27,9 +27,12 @@
   #hint{left:50%;bottom:12px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:rgba(12,17,30,.6);padding:5px 12px;border-radius:999px;white-space:nowrap}
   #ew{bottom:54px;left:0;right:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none}
   #ew button{pointer-events:auto;width:46px;height:46px;border-radius:50%;border:.5px solid var(--line);background:rgba(12,17,30,.85);color:var(--text);font-size:20px;cursor:pointer}
-  #climb{right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
-  #climb button{pointer-events:auto;width:50px;height:50px;border-radius:14px;border:.5px solid var(--accent);background:rgba(12,17,30,.9);color:#cdbcff;font-size:20px;font-weight:800;cursor:pointer}
-  #climb button:active{background:var(--accent);color:#fff}
+  #climb,#fly{right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:6}
+  #climb button,#fly button{pointer-events:auto;width:50px;height:50px;border-radius:14px;border:.5px solid var(--accent);background:rgba(12,17,30,.9);color:#cdbcff;font-size:22px;font-weight:800;cursor:pointer}
+  #climb button:active,#fly button:active{background:var(--accent);color:#fff}
+  /* free-flight joystick (only shown in Free mode) */
+  #joy{left:18px;bottom:24px;width:118px;height:118px;border-radius:50%;border:.5px solid var(--line);background:rgba(12,17,30,.55);touch-action:none;pointer-events:auto;z-index:6}
+  #joyknob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:radial-gradient(circle at 40% 35%, #b6a4ff, #6e57d6);border:.5px solid rgba(255,255,255,.3);box-shadow:0 4px 14px rgba(0,0,0,.4)}
   /* question panel */
   #qpanel{position:fixed;left:12px;right:12px;bottom:12px;z-index:6;max-width:420px;margin:0 auto;background:var(--panel);backdrop-filter:blur(10px);border:.5px solid var(--line);border-radius:16px;padding:14px 15px;box-shadow:0 18px 50px rgba(0,0,0,.5);transform:translateY(150%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
   #qpanel.show{transform:translateY(0)}
@@ -51,11 +54,14 @@
   <div id="secTabs"></div>
   <select id="chapSel" title="Jump to a chapter"></select>
   <div id="title">Knowledge <span style="color:var(--accent)">Spiral</span> <small id="secName"></small></div>
-  <button class="tab" id="miss" style="pointer-events:auto;border-color:#ff5a5a;color:#ff8a8a" title="Fly through what you keep missing">🔴 What I'm missing</button>
+  <button class="tab" id="mode" style="pointer-events:auto" title="Switch between guided platform view and free-flight">🕹 Free fly</button>
+  <button class="tab" id="miss" style="pointer-events:auto;border-color:#ff5a5a;color:#ff8a8a" title="Fly through what you keep missing">🔴 Missing</button>
   <a href="wordweaver.html" class="tab" id="to2d" style="pointer-events:auto;text-decoration:none">🗺 2D</a>
 </div>
 <div id="ew" class="hud"><button id="west" title="Previous section">‹</button><button id="east" title="Next section">›</button></div>
-<div id="climb" class="hud"><button id="view" title="Switch view (climb / on the platform / survey down the spiral)" style="font-size:13px;height:auto;padding:7px 4px;line-height:1.2">⛰<br>Climb</button><button id="up" title="Climb to next question">▲</button><button id="down" title="Back down a step">▼</button></div>
+<div id="climb" class="hud"><button id="up" title="Climb to next question">▲</button><button id="down" title="Back down a step">▼</button></div>
+<div id="fly" class="hud" style="display:none"><button id="flyup" title="Fly up">⤒</button><button id="flydn" title="Descend">⤓</button></div>
+<div id="joy" class="hud" style="display:none"><div id="joyknob"></div></div>
 <div id="hint" class="hud">Drag to look · ▲ climb step-by-step · ‹ › jump sections · tap a step for its question</div>
 <div id="qpanel">
   <button id="qclose" aria-label="Close">✕</button>
@@ -148,8 +154,11 @@ const grid = new THREE.GridHelper(120, 60, 0x2a3560, 0x141c34); grid.position.y 
 /* the helix group (rebuilt per section) */
 const helix = new THREE.Group(); scene.add(helix);
 const boxGeo = new THREE.BoxGeometry(2.0, 1.5, 2.0);          // each step (a fighting block)
+const edgeGeo = new THREE.EdgesGeometry(boxGeo);              // glowing neon outline of each step
 const platGeo = new THREE.CylinderGeometry(3.0, 3.3, 0.45, 6); // the arena platform it stands on
-const SHARED = new Set([boxGeo, platGeo]);
+const pulseGeo = new THREE.SphereGeometry(0.22, 8, 8);        // energy that flows up the path
+const SHARED = new Set([boxGeo, edgeGeo, platGeo, pulseGeo]);
+function hueLerp(h1, h2, t){ const d = ((h2 - h1 + 540) % 360) - 180; return (h1 + d*t + 360) % 360; }   // shortest circular blend
 // halo that marks the step you're on (so you always know where you are)
 const focusRing = new THREE.Mesh(new THREE.TorusGeometry(2.9, 0.13, 8, 40),
   new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.0 }));
@@ -172,37 +181,49 @@ const R = 13, ANG = (Math.PI*2)/5.2, YST = 2.3;   // wide, gradual spiral — st
 let nodes = [];            // flat tower: { mesh, q, sec, gi, pos }
 let towerTop = 0;
 const strugglers = [];     // cubes you keep missing (pulse red)
+let pathCurve = null, energy = [];   // flowing energy up the climb path
 
 function buildTower(){
-  disposeHelix(); nodes = []; strugglers.length = 0;
+  disposeHelix(); nodes = []; strugglers.length = 0; energy = [];
   let gi = 0; const pathPts = [];
-  SECTIONS.forEach(sec => {
-    const list = DATA[sec].q, hue = HUE[sec];
+  SECTIONS.forEach((sec, si) => {
+    const list = DATA[sec].q, hue = HUE[sec], nextHue = HUE[SECTIONS[si+1]] || hue;
     list.forEach((q, i) => {
       const ang = gi*ANG, y = gi*YST + 4, x = R*Math.cos(ang), z = R*Math.sin(ang);
       const s = statOf(q.n), miss = s.f > 0 && s.f >= Math.max(1, s.p);
-      const base = new THREE.Color().setHSL(hue/360, 0.7, s.done ? 0.56 : 0.46);
+      // colour blends toward the next section near the top of each band (smooth transitions)
+      const frac = i / Math.max(1, list.length - 1);
+      const ch = hueLerp(hue, nextHue, Math.max(0, (frac - 0.66) / 0.34) * 0.6);
+      const base = new THREE.Color().setHSL(ch/360, 0.72, s.done ? 0.55 : 0.45);
+      const baseE = s.done ? 0.32 : 0.09;
+      // dark walls + glowing neon edges = a cool, inviting block
       const cube = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({
-        color: base, emissive: base, emissiveIntensity: s.done ? 0.55 : 0.15, metalness:0.45, roughness:0.35 }));
-      cube.position.set(x, y, z); cube.userData = { q, sec, gi, baseE: s.done ? 0.55 : 0.15 };
-      helix.add(cube); pickables.push(cube);
+        color: base.clone().multiplyScalar(0.30), emissive: base, emissiveIntensity: baseE, metalness:0.55, roughness:0.4 }));
+      cube.position.set(x, y, z); cube.userData = { q, sec, gi, baseE };
+      const edges = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({
+        color: new THREE.Color().setHSL(ch/360, 0.9, 0.62), transparent:true, opacity:0.95 }));
+      cube.add(edges); helix.add(cube); pickables.push(cube);
       // the arena platform this step stands on (the floor where fighters will face off)
       const plat = new THREE.Mesh(platGeo, new THREE.MeshStandardMaterial({
-        color: base.clone().multiplyScalar(0.45), emissive: base, emissiveIntensity: 0.12, metalness:0.7, roughness:0.4 }));
+        color: base.clone().multiplyScalar(0.28), emissive: base, emissiveIntensity: 0.1, metalness:0.7, roughness:0.45 }));
       plat.position.set(x, y - 1.2, z); plat.userData = { q, sec, gi }; helix.add(plat); pickables.push(plat);
       if (miss) strugglers.push(cube);
       let badges=""; if(s.p) badges+=`<span class="badge bp">${s.p>99?"99":s.p}</span>`; if(s.f) badges+=`<span class="badge bf">${s.f>99?"99":s.f}</span>`;
-      const lab = mkLabel(`${q.n} ${q.t}${badges}`, "nlabel", 1.7); cube.add(lab);
+      const lab = mkLabel(`${q.n} ${q.t}${badges}`, "nlabel", 1.6); cube.add(lab);
       nodes.push({ mesh:cube, q, sec, gi, pos:cube.position.clone(), labEl:lab.element }); pathPts.push(cube.position.clone());
-      if (i===0) cube.add(mkLabel(`◆ ${sec} ${DATA[sec].title}`, "summit", 3.0));   // section band marker
+      if (i===0) cube.add(mkLabel(`◆ ${sec} ${DATA[sec].title}`, "summit", 2.9));   // section band marker
       gi++;
     });
   });
   towerTop = gi*YST + 4;
   if (pathPts.length>1){
-    const curve = new THREE.CatmullRomCurve3(pathPts);
-    helix.add(new THREE.Mesh(new THREE.TubeGeometry(curve, pathPts.length*6, 0.09, 6, false),
-      new THREE.MeshBasicMaterial({ color:0x9fb0ff, transparent:true, opacity:0.4 })));
+    pathCurve = new THREE.CatmullRomCurve3(pathPts);
+    helix.add(new THREE.Mesh(new THREE.TubeGeometry(pathCurve, pathPts.length*6, 0.07, 6, false),
+      new THREE.MeshBasicMaterial({ color:0x9fb0ff, transparent:true, opacity:0.3 })));
+    for (let k=0; k<10; k++){   // glowing energy that streams up the path
+      const m = new THREE.Mesh(pulseGeo, new THREE.MeshBasicMaterial({ color:0xbfe0ff }));
+      helix.add(m); energy.push({ mesh:m, t:k/10 });
+    }
   }
   // ── SUMMIT of the whole chapter: every CORRECT answer spirals to the tip ──
   const passed = nodes.filter(n => statOf(n.q.n).p > 0);
@@ -217,40 +238,35 @@ function buildTower(){
   });
 }
 
-/* ── Climbing camera: smoothly FLIES from one step up to the next so you feel
-   the height. The view sits beside a step looking UP at the blocks above. ── */
-let tween = null, focusGi = 0, viewMode = "climb";   // climb | platform | survey
-const VIEW_LABEL = { climb:"⛰ Climb", platform:"🏟 Platform", survey:"🔭 Survey" };
-const _v = new THREE.Vector3();
+/* ── Camera. PLATFORM mode auto-frames the step looking AHEAD at the next
+   questions; FREE mode lets you fly/descend and look around yourself. ── */
+let tween = null, focusGi = 0, mode = "platform";   // platform | free
+const _v = new THREE.Vector3(), _up = new THREE.Vector3(0,1,0);
 function easeInOut(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
 function camFor(gi){
-  const n = nodes[Math.max(0, Math.min(nodes.length-1, gi))];
-  _v.set(n.pos.x, 0, n.pos.z); if (_v.lengthSq() < 0.001) _v.set(1,0,0); _v.normalize();
-  let camPos, look;
-  if (viewMode === "platform"){          // stand ON this floor, arena-level, looking across it
-    camPos = n.pos.clone().add(_v.clone().multiplyScalar(8)).add(new THREE.Vector3(0, 2.4, 0));
-    look   = n.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
-  } else if (viewMode === "survey"){     // rise high and gaze DOWN the wide spiral you've climbed
-    camPos = n.pos.clone().add(_v.clone().multiplyScalar(7)).add(new THREE.Vector3(0, 24, 0));
-    look   = n.pos.clone().add(new THREE.Vector3(0, -18, 0));
-  } else {                                // climb: beside the step, gazing UP the tower
-    camPos = n.pos.clone().add(_v.clone().multiplyScalar(17)).add(new THREE.Vector3(0, 4, 0));
-    look   = n.pos.clone().add(new THREE.Vector3(0, 8, 0));
-  }
+  const i = Math.max(0, Math.min(nodes.length-1, gi));
+  const n = nodes[i], nNext = nodes[Math.min(i+1, nodes.length-1)], nNext2 = nodes[Math.min(i+2, nodes.length-1)];
+  let fwd = nNext.pos.clone().sub(n.pos); if (fwd.lengthSq() < 0.01) fwd.set(0,1,0); fwd.normalize();
+  _v.set(n.pos.x, 0, n.pos.z); if (_v.lengthSq() < 0.001) _v.set(1,0,0); _v.normalize();  // outward
+  // a step behind & outside the current block, looking AHEAD to the next question
+  // (the look is biased toward the question after, so it sits barely in view)
+  const camPos = n.pos.clone().sub(fwd.clone().multiplyScalar(7)).add(_v.clone().multiplyScalar(4.5)).add(new THREE.Vector3(0, 4.5, 0));
+  const look = nNext.pos.clone().lerp(nNext2.pos, 0.35);
   return { camPos, look };
 }
 function flyTo(gi, andShow){
   focusGi = Math.max(0, Math.min(nodes.length-1, gi));
   const { camPos, look } = camFor(focusGi);
-  tween = { t:0, dur:1100, fromP:camera.position.clone(), toP:camPos, fromT:controls.target.clone(), toT:look, show:andShow };
+  const ctrl = camera.position.clone().add(camPos).multiplyScalar(0.5).add(new THREE.Vector3(0, 3.5, 0));  // arc up → a swoop, not a slide
+  tween = { t:0, dur:1100, fromP:camera.position.clone(), ctrl, toP:camPos, fromT:controls.target.clone(), toT:look, show:andShow };
   controls.enabled = false;
   const n = nodes[focusGi];
   document.getElementById("secName").textContent = "· " + n.q.n + " " + n.q.t + " · ↑" + Math.round(n.pos.y) + "m";
   updateLabelLOD();
 }
-// only the steps near where you're standing show their words — no wall of text (wider window when surveying)
+// only the steps near where you're standing show their words — no wall of text (wider window when free-floating)
 function updateLabelLOD(){
-  const win = viewMode === "survey" ? 24 : 7;
+  const win = mode === "free" ? 16 : 8;
   for (const n of nodes){
     if (!n.labEl) continue;
     const d = Math.abs(n.gi - focusGi);
@@ -296,12 +312,37 @@ renderer.domElement.addEventListener("pointerup", e => {
 function sectionStart(sec){ return Math.max(0, nodes.findIndex(n => n.sec === sec)); }
 document.getElementById("up").onclick   = () => flyTo(focusGi + 1, true);
 document.getElementById("down").onclick = () => flyTo(focusGi - 1, true);
-const VIEW_ORDER = ["climb","platform","survey"];
-document.getElementById("view").onclick = () => {
-  viewMode = VIEW_ORDER[(VIEW_ORDER.indexOf(viewMode)+1)%VIEW_ORDER.length];
-  document.getElementById("view").innerHTML = VIEW_LABEL[viewMode].replace(" ", "<br>");
-  flyTo(focusGi, false);
-};
+/* ── Platform ⇄ Free toggle. Free reveals the joystick + fly/descend. ── */
+const joyVec = { x:0, y:0 }; let flyV = 0;
+function setMode(m){
+  mode = m;
+  const free = m === "free";
+  document.getElementById("mode").innerHTML = free ? "🎯 Platform" : "🕹 Free fly";
+  document.getElementById("climb").style.display = free ? "none" : "flex";
+  document.getElementById("fly").style.display = free ? "flex" : "none";
+  document.getElementById("joy").style.display = free ? "block" : "none";
+  document.getElementById("hint").textContent = free
+    ? "Free flight · joystick to glide · ⤒⤓ rise & descend · drag to look around"
+    : "Platform view · ▲ climb step-by-step · ‹ › jump sections · tap a step";
+  if (free){ controls.enabled = true; tween = null; } else { flyTo(focusGi, false); }
+  updateLabelLOD();
+}
+document.getElementById("mode").onclick = () => setMode(mode === "free" ? "platform" : "free");
+// fly / descend (hold)
+function holdFly(id, v){ const b=document.getElementById(id);
+  const on=()=>{ flyV=v; }, off=()=>{ flyV=0; };
+  b.addEventListener("pointerdown", e=>{e.preventDefault(); on();}); b.addEventListener("pointerup", off); b.addEventListener("pointerleave", off);
+}
+holdFly("flyup", 1); holdFly("flydn", -1);
+// virtual joystick
+(function(){
+  const pad=document.getElementById("joy"), knob=document.getElementById("joyknob"); let active=false, cx=0, cy=0, rad=44;
+  function start(e){ active=true; const r=pad.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; move(e); }
+  function move(e){ if(!active) return; const p=e.touches?e.touches[0]:e; let dx=p.clientX-cx, dy=p.clientY-cy; const d=Math.hypot(dx,dy); if(d>rad){ dx=dx/d*rad; dy=dy/d*rad; } knob.style.transform=`translate(${dx}px,${dy}px)`; joyVec.x=dx/rad; joyVec.y=dy/rad; }
+  function end(){ active=false; joyVec.x=joyVec.y=0; knob.style.transform="translate(0,0)"; }
+  pad.addEventListener("pointerdown", e=>{e.preventDefault(); start(e);});
+  addEventListener("pointermove", move); addEventListener("pointerup", end);
+})();
 document.getElementById("east").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
 document.getElementById("west").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+SECTIONS.length-1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
 const tabsEl = document.getElementById("secTabs");
@@ -332,21 +373,36 @@ buildTower();
 flyTo(0, false);
 document.getElementById("loading").style.display = "none";
 const clock = new THREE.Clock();
+const _mv = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3();
 (function loop(){
   requestAnimationFrame(loop);
-  const dt = clock.getDelta() * 1000;
+  const dt = clock.getDelta() * 1000, T = clock.elapsedTime;
   if (tween){
-    tween.t += dt; const k = Math.min(1, tween.t/tween.dur), e = easeInOut(k);
-    camera.position.lerpVectors(tween.fromP, tween.toP, e);
+    tween.t += dt; const k = Math.min(1, tween.t/tween.dur), e = easeInOut(k), mt = 1 - e;
+    // quadratic bézier through the lifted control point → a swoop, not a slide
+    camera.position.set(0,0,0).addScaledVector(tween.fromP, mt*mt).addScaledVector(tween.ctrl, 2*mt*e).addScaledVector(tween.toP, e*e);
     controls.target.lerpVectors(tween.fromT, tween.toT, e);
     camera.lookAt(controls.target);
     if (k >= 1){ if (tween.show && nodes[focusGi]) showQ(nodes[focusGi].mesh.userData); controls.enabled = true; tween = null; }
-  } else controls.update();
-  const T = clock.elapsedTime;
+  } else {
+    controls.update();
+    if (mode === "free" && (joyVec.x || joyVec.y || flyV)){   // free flight: glide / rise / descend
+      const sp = 0.34 * dt;
+      camera.getWorldDirection(_fwd); _fwd.y = 0; if (_fwd.lengthSq() < 1e-4) _fwd.set(0,0,-1); _fwd.normalize();
+      _right.crossVectors(_fwd, _up).normalize();
+      _mv.set(0,0,0).addScaledVector(_fwd, -joyVec.y*sp).addScaledVector(_right, joyVec.x*sp); _mv.y += flyV*sp;
+      camera.position.add(_mv); controls.target.add(_mv);
+    }
+  }
+  // flowing energy streaming up the climb path
+  if (pathCurve){ for (const p of energy){ p.t += dt/16000; if (p.t > 1) p.t -= 1; pathCurve.getPoint(p.t, p.mesh.position); } }
+  // the scene breathes: a slow global glow swell
+  bloom.strength = 0.62 + 0.13*Math.sin(T*0.5);
+  key.intensity  = 1.0 + 0.12*Math.sin(T*0.6);
   // pulse the ones you keep missing
   const pulse = 0.3 + 0.35*Math.abs(Math.sin(T*2.2));
   strugglers.forEach(c => { c.material.emissive.setHex(0xff3b3b); c.material.emissiveIntensity = pulse; });
-  // highlight the step you're on: a facing halo + a gentle size/glow pulse; others ease back to normal
+  // highlight the step you're on: a facing halo + gentle size/glow; others ease back to normal
   const fc = nodes[focusGi] && nodes[focusGi].mesh;
   nodes.forEach(n => {
     const target = n.mesh===fc ? 1.28 : 1; n.mesh.scale.x += (target - n.mesh.scale.x)*0.18; n.mesh.scale.y = n.mesh.scale.z = n.mesh.scale.x;
