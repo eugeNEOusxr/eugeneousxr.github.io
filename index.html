@@ -92,9 +92,9 @@
       transition: opacity .5s ease;
     }
     #boot-loader.gone { opacity: 0; pointer-events: none; }
-    #boot-loader .dino { font-size: 64px; line-height: 1; animation: dino-hop 1s cubic-bezier(.3,.6,.4,1) infinite;
-      filter: drop-shadow(0 8px 9px rgba(0,0,0,.55)); }
-    #boot-loader .dino-shadow { width: 52px; height: 9px; border-radius: 50%; margin-top: -4px;
+    #boot-loader .dino { image-rendering: pixelated; animation: dino-hop 1.1s steps(2, jump-none) infinite;
+      filter: drop-shadow(0 6px 7px rgba(0,0,0,.5)); }
+    #boot-loader .dino-shadow { width: 56px; height: 9px; border-radius: 50%; margin-top: 2px;
       background: rgba(0,0,0,.5); filter: blur(1px); animation: dino-shadow 1s cubic-bezier(.3,.6,.4,1) infinite; }
     #boot-loader .blabel { font-size: 14px; letter-spacing: .09em; opacity: .85; margin-top: 6px; }
     #boot-loader .blabel b { color: #a78bfa; font-weight: 700; }
@@ -111,12 +111,52 @@
 </head>
 <body>
   <div id="boot-loader" role="status" aria-label="Loading Inkling">
-    <div class="dino">🦕</div>
+    <div class="dino" id="boot-dino"></div>
     <div class="dino-shadow"></div>
     <div class="blabel">Loading <b>Inkling</b><span class="dots"></span></div>
   </div>
   <script>
     (function () {
+      // ── pixel-art robotic dino (old-school sprite drawn from a tile map) ──
+      var host = document.getElementById("boot-dino");
+      if (host) {
+        var PAL = { X: "#1d2933", o: "#54b6a6", "*": "#c2efe4", E: "#ff5b5b", A: "#ffd15c", L: "#324c59", B: "#9fe7da" };
+        var MAP = [
+          "........A...",
+          "........X...",
+          ".......XXX..",
+          ".......XEoX.",
+          ".......XooX.",
+          "........Xo..",
+          "..XX....Xo..",
+          ".XoooooooBX.",
+          ".Xo*ooooooX.",
+          ".XooooooooX.",
+          "..XooooooX..",
+          "..Lo....oL..",
+          "..LL....LL.."
+        ];
+        var PX = 8, eyes = [];
+        host.style.position = "relative";
+        host.style.width = MAP[0].length * PX + "px";
+        host.style.height = MAP.length * PX + "px";
+        for (var y = 0; y < MAP.length; y++) {
+          for (var x = 0; x < MAP[y].length; x++) {
+            var c = MAP[y][x];
+            if (c === "." || c === " ") continue;
+            var d = document.createElement("div");
+            d.style.cssText = "position:absolute;width:" + PX + "px;height:" + PX + "px;left:" + (x * PX) + "px;top:" + (y * PX) + "px;background:" + (PAL[c] || "#888");
+            host.appendChild(d);
+            if (c === "E") eyes.push(d);
+          }
+        }
+        var on = true;
+        var eyeIv = setInterval(function () {
+          if (!document.body.contains(host)) { clearInterval(eyeIv); return; }
+          on = !on;
+          for (var i = 0; i < eyes.length; i++) eyes[i].style.background = on ? "#ff5b5b" : "#6e2230";
+        }, 560);
+      }
       var hidden = false;
       function hide() {
         if (hidden) return; hidden = true;
