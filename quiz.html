@@ -59,6 +59,16 @@
     .setbtn.newq{margin-left:auto;opacity:.85}
     .setbtn.tier{padding:5px 11px;font-size:12px;border-radius:7px}
     .tiergrp{display:inline-flex;gap:5px;flex-wrap:nowrap;align-items:center}
+    /* graph-sketch answer widget */
+    .skbar{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+    .sktool{display:flex;align-items:center;gap:5px;border:.5px solid var(--line);background:var(--surface);color:var(--text);border-radius:9px;padding:6px 9px;font-size:12px;font-weight:600;cursor:pointer}
+    .sktool svg{width:22px;height:16px;flex:0 0 auto}
+    .sktool[data-tool="closed"] svg,.sktool[data-tool="open"] svg{width:16px}
+    .sktool.on{border-color:var(--accent);background:var(--pill,rgba(91,155,240,.18));color:var(--accent)}
+    .sktool.skclear{color:#ef4444}
+    .skwrap{width:100%;max-width:340px;margin:0 auto;aspect-ratio:1/1;border:.5px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+    .skplane{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+    .skhint{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.4}
     .arrow{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;border:.5px solid var(--line);background:var(--surface);color:var(--text);font:500 20px system-ui;cursor:pointer;flex:0 0 auto}
     .arrow[disabled]{opacity:.38;cursor:default}
     .seldrop{position:relative;display:inline-block}
@@ -1016,7 +1026,9 @@
     { id:"1.2", title:"1.2 · Domain and Range", graded:{}, questions: [
       { type:"multiinput", prompt:"Given <em>f</em>(<em>x</em>) = { 9<em>x</em> + 6 if <em>x</em> &lt; 0;  9<em>x</em> + 12 if <em>x</em> ≥ 0 }, calculate each value.", blanks:[{label:"<em>f</em>(−1) =", answer:-3, answerText:"-3"},{label:"<em>f</em>(0) =", answer:12},{label:"<em>f</em>(2) =", answer:30}], points:10 },
       { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Use interval notation for each interval.", graph:"pw1210", blanks:[{ask:"Where <em>f</em>(<em>x</em>) = −5:", label:"<em>x</em> ∈", answer:"[-6, -2]"},{ask:"Where <em>f</em>(<em>x</em>) = 4:", label:"<em>x</em> ∈", answer:"(-2, 1]"},{ask:"Where <em>f</em>(<em>x</em>) = 1:", label:"<em>x</em> ∈", answer:"(1, 4]"}], points:10 },
-      { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Write each piece's formula.", graph:"pw1211", blanks:[{ask:"For −6 ≤ <em>x</em> ≤ −2:", label:"<em>f</em>(<em>x</em>) =", answer:"3/2 x + 6", answerText:"(3/2)x + 6"},{ask:"For −2 &lt; <em>x</em> ≤ 1:", label:"<em>f</em>(<em>x</em>) =", answer:2},{ask:"For 1 &lt; <em>x</em> ≤ 6:", label:"<em>f</em>(<em>x</em>) =", answer:"-2x + 3", answerText:"−2x + 3"}], points:10 }
+      { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Write each piece's formula.", graph:"pw1211", blanks:[{ask:"For −6 ≤ <em>x</em> ≤ −2:", label:"<em>f</em>(<em>x</em>) =", answer:"3/2 x + 6", answerText:"(3/2)x + 6"},{ask:"For −2 &lt; <em>x</em> ≤ 1:", label:"<em>f</em>(<em>x</em>) =", answer:2},{ask:"For 1 &lt; <em>x</em> ≤ 6:", label:"<em>f</em>(<em>x</em>) =", answer:"-2x + 3", answerText:"−2x + 3"}], points:10 },
+      { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { −0.5<em>x</em> − 4 if <em>x</em> ≤ −4;  −1 if −4 &lt; <em>x</em> ≤ 2;  1.5<em>x</em> − 4 if <em>x</em> &gt; 2 }.<br>Use rays for the ends and a closed/open dot at any break.", domain:[-8,8], pieces:[{m:-0.5,b:-4,x0:-8,x1:-4},{m:0,b:-1,x0:-4,x1:2},{m:1.5,b:-4,x0:2,x1:8}], points:10 },
+      { type:"graphsketch", prompt:"Sketch the graph of <em>f</em>(<em>x</em>) = { 0 if <em>x</em> ≤ −1;  −<em>x</em> − 1 if −1 &lt; <em>x</em> ≤ 1;  0 if <em>x</em> &gt; 1 }.", domain:[-6,6], pieces:[{m:0,b:0,x0:-6,x1:-1},{m:-1,b:-1,x0:-1,x1:1},{m:0,b:0,x0:1,x1:6}], points:10 }
     ] }
     ];
     // One hand-built "My set" per section: merge any non-generated decks that
@@ -1078,6 +1090,79 @@
     function openMenu(){ buildMenu(); menuEl.classList.add("open"); }
     function closeMenu(){ menuEl.classList.remove("open"); }
 
+    /* ── Interactive piecewise SKETCH widget (the graph-answer tool) ──
+       Renders a coordinate plane + draw tools into #opts; the student plots
+       lattice points and connects them (segment / ray / line, closed / open
+       dots). Graded by SAMPLING: does the drawing pass through (x, f(x)) across
+       the domain? Partial credit by the fraction of sample points covered. ── */
+    var SKETCH = null;
+    var SKICON = {
+      line:'<svg viewBox="0 0 30 20"><polygon points="2,18 9,13 7,17" fill="currentColor"/><polygon points="28,2 21,7 23,3" fill="currentColor"/><line x1="4" y1="16" x2="26" y2="4" stroke="currentColor" stroke-width="2"/></svg>',
+      ray:'<svg viewBox="0 0 30 20"><line x1="4" y1="16" x2="26" y2="4" stroke="currentColor" stroke-width="2"/><polygon points="28,2 21,7 23,3" fill="currentColor"/><circle cx="5" cy="16" r="2.6" fill="currentColor"/></svg>',
+      segment:'<svg viewBox="0 0 30 20"><line x1="5" y1="16" x2="25" y2="4" stroke="currentColor" stroke-width="2"/><circle cx="5" cy="16" r="2.6" fill="currentColor"/><circle cx="25" cy="4" r="2.6" fill="currentColor"/></svg>',
+      closed:'<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6.5" fill="currentColor"/></svg>',
+      open:'<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>'
+    };
+    function mountSketch(q){
+      var dom=q.domain||[-8,8], R0=dom[0], R1=dom[1], BOX=320, PAD=22, U=(BOX-2*PAD)/(R1-R0);
+      function sx(x){ return (PAD+(x-R0)*U).toFixed(1); }
+      function sy(y){ return (PAD+(R1-y)*U).toFixed(1); }
+      var tools=[["line","Line"],["ray","Ray"],["segment","Segment"],["closed","Closed"],["open","Open"]];
+      var bar='<div class="skbar">'+tools.map(function(t){ return '<button class="sktool" data-tool="'+t[0]+'">'+SKICON[t[0]]+'<span>'+t[1]+'</span></button>'; }).join('')
+            +'<button class="sktool skact" data-act="undo" title="Undo">⤺</button><button class="sktool skact skclear" data-act="clear" title="Clear">Clear</button></div>';
+      var svg='<div class="skwrap"><svg class="skplane" viewBox="0 0 '+BOX+' '+BOX+'" xmlns="http://www.w3.org/2000/svg">'
+            +'<defs><marker id="skar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--curve)"/></marker></defs>'
+            +'<g class="skgrid"></g><g class="skdraw"></g></svg></div>';
+      optsEl.innerHTML = bar + svg + '<div class="skhint">Pick a tool, then tap two lattice points. Ray extends past the 2nd point; line goes both ways. Drop an open dot at a break.</div>';
+      var svgEl=optsEl.querySelector(".skplane"), gGrid=svgEl.querySelector(".skgrid"), gDraw=svgEl.querySelector(".skdraw"), gg="", i;
+      for(i=Math.ceil(R0);i<=R1;i++){ gg+='<line x1="'+sx(i)+'" y1="'+sy(R0)+'" x2="'+sx(i)+'" y2="'+sy(R1)+'" stroke="var(--grid)" stroke-width="1"/>'; gg+='<line x1="'+sx(R0)+'" y1="'+sy(i)+'" x2="'+sx(R1)+'" y2="'+sy(i)+'" stroke="var(--grid)" stroke-width="1"/>'; }
+      gg+='<line x1="'+sx(R0)+'" y1="'+sy(0)+'" x2="'+sx(R1)+'" y2="'+sy(0)+'" stroke="var(--axis)" stroke-width="1.4"/><line x1="'+sx(0)+'" y1="'+sy(R0)+'" x2="'+sx(0)+'" y2="'+sy(R1)+'" stroke="var(--axis)" stroke-width="1.4"/>';
+      for(i=Math.ceil(R0);i<=R1;i+=2){ if(i===0)continue; gg+='<text x="'+sx(i)+'" y="'+(parseFloat(sy(0))+9)+'" text-anchor="middle" fill="var(--muted)" font-size="8">'+i+'</text>'; }
+      gGrid.innerHTML=gg;
+      SKETCH={shapes:[], tool:"closed", pending:null};
+      function exitPt(px,py,dx,dy){ var ts=[]; if(dx>0)ts.push((R1-px)/dx); else if(dx<0)ts.push((R0-px)/dx); if(dy>0)ts.push((R1-py)/dy); else if(dy<0)ts.push((R0-py)/dy); ts=ts.filter(function(t){return t>1e-9;}); var t=ts.length?Math.min.apply(null,ts):0; return [px+dx*t, py+dy*t]; }
+      function dotSvg(x,y,open){ return '<circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="'+(open?5:5.5)+'" '+(open?'fill="var(--surface)" stroke="var(--curve)" stroke-width="2.4"':'fill="var(--curve)"')+'/>'; }
+      function draw(){
+        var d="";
+        SKETCH.shapes.forEach(function(s){
+          if(s.t==="point"){ d+=dotSvg(s.x,s.y,s.open); return; }
+          var a,b,extra="";
+          if(s.t==="segment"){ a=[s.x1,s.y1]; b=[s.x2,s.y2]; }
+          else if(s.t==="ray"){ a=[s.x1,s.y1]; b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-end="url(#skar)"'; }
+          else { a=exitPt(s.x1,s.y1,s.x1-s.x2,s.y1-s.y2); b=exitPt(s.x2,s.y2,s.x2-s.x1,s.y2-s.y1); extra=' marker-start="url(#skar)" marker-end="url(#skar)"'; }
+          d+='<line x1="'+sx(a[0])+'" y1="'+sy(a[1])+'" x2="'+sx(b[0])+'" y2="'+sy(b[1])+'" stroke="var(--curve)" stroke-width="2.5" stroke-linecap="round"'+extra+'/>';
+          d+=dotSvg(s.x1,s.y1,false);
+          if(s.t==="segment"||s.t==="ray") d+=dotSvg(s.x2,s.y2,false);
+        });
+        if(SKETCH.pending) d+='<circle cx="'+sx(SKETCH.pending.x)+'" cy="'+sy(SKETCH.pending.y)+'" r="6" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="3 3"/>';
+        gDraw.innerHTML=d;
+      }
+      function setTool(t){ SKETCH.tool=t; SKETCH.pending=null; [].forEach.call(optsEl.querySelectorAll(".sktool"),function(b){ b.classList.toggle("on", b.dataset.tool===t); }); draw(); }
+      function locate(e){ var r=svgEl.getBoundingClientRect(); var px=(e.clientX-r.left)/r.width*BOX, py=(e.clientY-r.top)/r.height*BOX; var wx=Math.round((px-PAD)/U+R0), wy=Math.round(R1-(py-PAD)/U); return {x:Math.max(R0,Math.min(R1,wx)), y:Math.max(R0,Math.min(R1,wy))}; }
+      svgEl.addEventListener("pointerdown", function(e){ e.preventDefault(); var p=locate(e), T=SKETCH.tool;
+        if(T==="closed"||T==="open"){ SKETCH.shapes.push({t:"point",x:p.x,y:p.y,open:T==="open"}); }
+        else if(!SKETCH.pending){ SKETCH.pending=p; }
+        else { if(!(SKETCH.pending.x===p.x&&SKETCH.pending.y===p.y)) SKETCH.shapes.push({t:T,x1:SKETCH.pending.x,y1:SKETCH.pending.y,x2:p.x,y2:p.y}); SKETCH.pending=null; }
+        draw();
+      });
+      optsEl.querySelector(".skbar").addEventListener("click", function(e){ var b=e.target.closest(".sktool"); if(!b) return; if(b.dataset.act==="undo"){ SKETCH.shapes.pop(); SKETCH.pending=null; draw(); } else if(b.dataset.act==="clear"){ SKETCH.shapes=[]; SKETCH.pending=null; draw(); } else if(b.dataset.tool){ setTool(b.dataset.tool); } });
+      setTool("closed");
+    }
+    // sample the drawing against f(x) defined by q.pieces ({m,b,x0,x1}); fraction covered → score
+    function gradeSketch(q){
+      var shapes=(SKETCH&&SKETCH.shapes)||[], dom=q.domain||[-8,8], P=q.pieces;
+      function fval(x){ for(var i=0;i<P.length;i++){ if(x>=P[i].x0-1e-9 && x<=P[i].x1+1e-9) return P[i].m*x+P[i].b; } return null; }
+      function shapeY(s,x){ if(s.t==="point"||s.x1===s.x2) return null; var m=(s.y2-s.y1)/(s.x2-s.x1), y=s.y1+m*(x-s.x1);
+        if(s.t==="segment"){ var lo=Math.min(s.x1,s.x2),hi=Math.max(s.x1,s.x2); return (x>=lo-1e-9&&x<=hi+1e-9)?y:null; }
+        if(s.t==="ray"){ var dir=s.x2-s.x1; if(dir>0) return x>=s.x1-1e-9?y:null; if(dir<0) return x<=s.x1+1e-9?y:null; return null; }
+        return y;
+      }
+      var hit=0, tot=0;
+      for(var x=dom[0]; x<=dom[1]+1e-9; x+=0.5){ var ey=fval(x); if(ey===null) continue; tot++;
+        if(shapes.some(function(s){ var y=shapeY(s,x); return y!==null && Math.abs(y-ey)<0.2; })) hit++;
+      }
+      return tot? Math.round(hit/tot*q.points) : 0;
+    }
     function render(){
       var q = DECK[idx];
       if (typeof resetTutorUI==="function") resetTutorUI();
@@ -1186,6 +1271,9 @@
           lh += '<div class="mrow lmrow"><div class="lmtop"><select class="msel" aria-label="Item '+(i+1)+'">'+o+'</select><span class="mark"></span></div><div class="lmmedia">'+media+'</div></div>';
         });
         optsEl.innerHTML = lh;
+      } else if (q.type==="graphsketch") {
+        promptEl.innerHTML = q.prompt;
+        mountSketch(q);
       }
       if (!ph) {
         var textFields = (q.fields||[]).filter(function(f){ return f.kind!=="select"; });
@@ -1222,6 +1310,7 @@
     }
     function grade(){
       var q=DECK[idx]; if(q.type==="placeholder") return;
+      if (q.type==="graphsketch") { finishGrade(gradeSketch(q), q.points); return; }
       if (q.type==="input") {
         var inp=optsEl.querySelector(".ansin"), mk=optsEl.querySelector(".mark");
         if (!(aval(inp)||"").trim()) { scoreEl.textContent="Type an answer"; return; }
