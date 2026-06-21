@@ -521,15 +521,18 @@ export class InklingPanel {
   /** Open the quiz deck (full-screen overlay). Pass a question id ("1.2.11") to deep-link. */
   showFlashcards(q) {
     const src = "/quiz.html" + (q ? "?q=" + encodeURIComponent(q) : "");
-    this._openCanvasOverlay(src, "Flashcards", "_quizOverlay", false);
+    // z 12010 keeps the flashcards ABOVE the Mind overlay (z 12000) — otherwise,
+    // tapping a node's flashcard opens it hidden BEHIND the knowledge graph (looks
+    // like nothing happens) whenever the quiz overlay was created before the Mind one.
+    this._openCanvasOverlay(src, "Flashcards", "_quizOverlay", false, 12010);
   }
 
   /** Shared full-screen iframe overlay used by the Mind canvas and the flashcards. */
-  _openCanvasOverlay(src, title, key, gyro) {
+  _openCanvasOverlay(src, title, key, gyro, zIndex = 12000) {
     let ov = this[key];
     if (ov) {
       const f = ov.querySelector("iframe");
-      if (f && f.getAttribute("src") !== src) f.setAttribute("src", src);  // re-point (e.g. jump to a question)
+      if (f && f.getAttribute("src") !== src) f.setAttribute("src", src);  // re-point (e.g. jump to a question / 2D↔3D)
       ov.style.display = "block";
       // The iframe stays loaded between opens, so nudge it to re-read quiz progress
       // (green/done orbs, right/wrong badges) every time it's shown.
@@ -537,7 +540,7 @@ export class InklingPanel {
       return;
     }
     ov = document.createElement("div");
-    ov.style.cssText = "position:fixed;inset:0;z-index:12000;background:#05060d";
+    ov.style.cssText = `position:fixed;inset:0;z-index:${zIndex};background:#05060d`;
     const frame = document.createElement("iframe");
     frame.setAttribute("src", src);
     frame.title = title;

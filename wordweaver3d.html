@@ -357,6 +357,16 @@ document.getElementById("exit3d").onclick = () => {
   if (window.parent && window.parent !== window){ try { window.parent.postMessage({ type:"inkling-close-graph" }, "*"); return; } catch(_){} }
   location.href = "/";
 };
+// switch to the 2D canvas — in-app, route through the panel (postMessage) so it
+// re-points the SAME Mind iframe and keeps its src attribute in sync; a raw <a href>
+// navigation desynced that attribute and broke the 2D→3D toggle afterward.
+// Standalone: fall through to the <a href="wordweaver.html"> default navigation.
+document.getElementById("to2d").addEventListener("click", (e) => {
+  if (window.parent && window.parent !== window){
+    e.preventDefault();
+    try { window.parent.postMessage({ type:"inkling-open-graph", mode:"2d" }, "*"); } catch(_){}
+  }
+});
 // fly / descend (hold)
 function holdFly(id, v){ const b=document.getElementById(id);
   const on=()=>{ flyV=v; }, off=()=>{ flyV=0; };
