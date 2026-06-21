@@ -33,6 +33,12 @@
   .btn.acc{background:var(--accent);color:#fff}
   .btn.acc:hover{filter:brightness(1.08)}
   .btn:disabled{opacity:.5;cursor:default}
+  /* hover preview of a flashcard question */
+  #peek{position:fixed;z-index:7;max-width:300px;background:rgba(12,17,30,.96);backdrop-filter:blur(10px);border:.5px solid var(--problem);border-radius:13px;padding:10px 12px;box-shadow:0 14px 40px rgba(0,0,0,.55);pointer-events:none;opacity:0;transform:translateY(6px);transition:opacity .14s,transform .14s;display:none}
+  #peek.show{opacity:1;transform:translateY(0)}
+  #peek .peek-h{font-size:11px;letter-spacing:.5px;color:var(--problem);font-weight:700;margin-bottom:5px}
+  #peekBody{font-size:13.5px;line-height:1.45;color:#e9edf8}
+  #peek .peek-go{margin-top:7px;font-size:11px;color:var(--muted)}
   /* controls */
   #ctl{right:14px;bottom:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
   #ctl button{pointer-events:auto;width:42px;height:42px;border-radius:12px;border:.5px solid var(--line);background:rgba(14,19,32,.85);color:var(--text);font-size:19px;cursor:pointer}
@@ -63,13 +69,15 @@
   <button id="zout" title="Zoom out">−</button>
   <button id="home" title="Reset view">⌂</button>
 </div>
-<div id="hint" class="hud">Scroll / pinch to zoom · drag to pan · click a node to dive in</div>
+<div id="hint" class="hud">Scroll / pinch to zoom · drag to pan · tap a topic to dive · tap a 📇 question to open it</div>
+<div id="peek"><div class="peek-h"><span id="peekTag">📇 Flashcard question</span></div><div id="peekBody"></div><div class="peek-go">click to open in flashcards →</div></div>
 <div id="card">
   <div class="kind" id="cardKind"></div>
   <h2 id="cardTitle"></h2>
   <p id="cardDesc"></p>
   <div class="row">
     <button class="btn acc" id="cardExpand">✨ Break it down</button>
+    <button class="btn" id="cardOpen" style="display:none">📇 Open flashcard →</button>
     <button class="btn" id="cardUp">↑ Parent</button>
   </div>
 </div>
@@ -92,42 +100,48 @@
         ch:[
           { t:"1.1 Functions & Notation", k:"section", d:"Definition of a function, function notation f(x), evaluating, and reading graphs.",
             ch:[
-              { t:"1.1.1 Evaluate a function", k:"subsection", d:"Substitute an input value and simplify.",
-                ch:[
-                  { t:"Find f(−2) for f(x)=3x²−7x+3", k:"problem", d:"Evaluate the quadratic function at x = −2.",
-                    ch:[
-                      { t:"Substitute x = −2", k:"step", d:"f(−2) = 3(−2)² − 7(−2) + 3." },
-                      { t:"Square first", k:"step", d:"(−2)² = 4, so the term is 3·4 = 12." },
-                      { t:"Multiply & add", k:"step", d:"12 + 14 + 3." },
-                      { t:"Answer: 29", k:"answer", d:"f(−2) = 29." }
-                    ] }
-                ] },
-              { t:"1.1.2 Domain & range", k:"subsection", d:"The set of valid inputs and resulting outputs.",
-                ch:[
-                  { t:"Domain of f(x)=√(7−x)", k:"problem", d:"Find the domain in interval notation.",
-                    ch:[
-                      { t:"Radicand ≥ 0", k:"step", d:"Need 7 − x ≥ 0." },
-                      { t:"Solve", k:"step", d:"x ≤ 7." },
-                      { t:"Answer: (−∞, 7]", k:"answer", d:"Domain = (−∞, 7]." }
-                    ] }
-                ] },
-              { t:"1.1.3 Graph interpretation", k:"subsection", d:"Read values and behavior directly off a graph.",
-                ch:[
-                  { t:"Read f(4) from a graph", k:"problem", d:"Use the plotted curve to find the output at x = 4.",
-                    ch:[
-                      { t:"Locate x = 4", k:"step", d:"Trace up from 4 on the x-axis." },
-                      { t:"Find the curve height", k:"step", d:"The point sits at y = 3." },
-                      { t:"Answer: f(4) = 3", k:"answer", d:"f(4) = 3." }
-                    ] }
-                ] }
+              { t:"Function notation (real-world)", k:"problem", d:"Read & evaluate a function described in words.", q:"1.1.1", prev:"G(p) gives a city's garbage (tons) from its population p — read the function from its description and evaluate it." },
+              { t:"Is it a function? — graphs", k:"problem", d:"Vertical line test on graphs.", q:"1.1.2", prev:"Select all graphs where y is a function of x (vertical line test)." },
+              { t:"Is it a function? — tables", k:"problem", d:"Recognize functions from tables.", q:"1.1.3", prev:"Select all tables where y is a function of x." },
+              { t:"One-to-one functions", k:"problem", d:"Horizontal line test.", q:"1.1.5", prev:"Select all graphs that are one-to-one (horizontal line test)." },
+              { t:"Read a value off a graph", k:"problem", d:"Evaluate f(x) from a plotted curve.", q:"1.1.6", prev:"The plot shows f(x). Evaluate f at the marked input." },
+              { t:"Read a value off a table", k:"problem", d:"Evaluate / solve from a table.", q:"1.1.7", prev:"From the table, evaluate f(2) and solve f(x) = 6." },
+              { t:"Evaluate a formula", k:"problem", d:"Substitute into a quadratic.", q:"1.1.9", prev:"f(x) = 3x² − 7x + 3 — compute f(−2), f(−1), f(0), f(1), f(2)." },
+              { t:"Toolkit functions", k:"problem", d:"Match the parent functions.", q:"1.1.11", prev:"Match each toolkit function name to its equation (linear, quadratic, √x, 1/x, |x|, x³…)." },
+              { t:"Difference quotient", k:"problem", d:"[f(a+h) − f(a)] / h.", q:"1.1.16", prev:"f(x) = 7x + 6 — find f(a), f(a+h), and the difference quotient [f(a+h) − f(a)]/h." }
             ] },
-          { t:"1.2 Domain & Range", k:"section", d:"Find domains of rational/radical functions; describe range; interval notation.",
+          { t:"1.2 Domain & Range", k:"section", d:"Find domains of rational/radical functions; describe range; interval notation; piecewise.",
             ch:[
-              { t:"1.2.1 Interval notation", k:"subsection", d:"Write sets of real numbers as intervals." },
-              { t:"1.2.2 Piecewise functions", k:"subsection", d:"Evaluate functions defined in pieces." }
+              { t:"Domain — rational", k:"problem", d:"Exclude zeros of the denominator.", q:"1.2.2", prev:"Find the domain of f(x) = (x + 1)/(2 − x) in interval notation." },
+              { t:"Domain — radical", k:"problem", d:"Keep the radicand ≥ 0.", q:"1.2.3", prev:"Find the domain of f(x) = √(7 − x) in interval notation." },
+              { t:"Interval notation", k:"problem", d:"Write sets as intervals.", q:"1.2.9", prev:"Write the set { x | 1 ≤ x ≤ 3 or x > 5 } in interval notation." },
+              { t:"Domain of √x and ∛x", k:"problem", d:"Roots' domains.", q:"1.2.10", prev:"What is the domain of f(x) = √x ?" },
+              { t:"Piecewise functions", k:"problem", d:"Evaluate a function defined in pieces.", q:"1.2.11", prev:"For f(x) = { x + 1 if x < −2 ;  −2x − 3 if x ≥ −2 }, find f(−3), f(−2), f(−1), f(0)." },
+              { t:"Domain & range together", k:"problem", d:"Both sets, in interval notation.", q:"1.2.14", prev:"Find the domain AND range of f(x) = 2/(x + 1) in interval notation." },
+              { t:"Domain in context", k:"problem", d:"Real-world sensible inputs.", q:"1.2.20", prev:"Cost to make x items is C(x) = 10x + 500 — what's the sensible domain in context?" }
             ] },
-          { t:"1.3 Rates of Change", k:"section", d:"Average rate of change; increasing/decreasing; local & absolute extrema." },
-          { t:"1.4 Composition", k:"section", d:"Combine functions with +,−,×,÷ and composition (f∘g)." },
+          { t:"1.3 Rates of Change", k:"section", d:"Average rate of change; increasing/decreasing; local & absolute extrema.",
+            ch:[
+              { t:"Average rate of change", k:"problem", d:"Slope between two points.", q:"1.3.1", prev:"Find the average rate of change of f(x) = x² − 1 on the interval [2, 4]." },
+              { t:"Rate of change — table", k:"problem", d:"ARC from tabulated values.", q:"1.3.5", prev:"Use the table to find the average rate of change of f over an interval." },
+              { t:"Rate of change — symbolic", k:"problem", d:"ARC on [0, a], simplified.", q:"1.3.6", prev:"Find the average rate of change of f(x) = x² + 3x + 1 on [0, a] and simplify." },
+              { t:"Increasing intervals", k:"problem", d:"Where the graph rises.", q:"1.3.7", prev:"Use the graph of f — on what interval(s) is f increasing?" },
+              { t:"Decreasing intervals", k:"problem", d:"Where the graph falls.", q:"1.3.8", prev:"Use the graph — on what interval is f decreasing?" },
+              { t:"Local max & min", k:"problem", d:"Turning points.", q:"1.3.9", prev:"From the graph, identify the local maximum (and the local minimum)." },
+              { t:"Absolute extrema", k:"problem", d:"Highest / lowest overall.", q:"1.3.11", prev:"From the graph of f(x) = x² − 4, identify the absolute minimum." },
+              { t:"Rate of change in context", k:"problem", d:"Real-world average rate.", q:"1.3.17", prev:"A car's distance goes 10 → 292 miles over 6 hours — find the average rate of change." }
+            ] },
+          { t:"1.4 Composition", k:"section", d:"Combine functions with +, −, ×, ÷ and composition (f∘g).",
+            ch:[
+              { t:"Sum & difference (f ± g)", k:"problem", d:"Add / subtract functions.", q:"1.4.1", prev:"Let f(x) = 2x + 1 and g(x) = 3x − 2. Find the sum (f + g)(x)." },
+              { t:"Product (f·g)", k:"problem", d:"Multiply and expand.", q:"1.4.4", prev:"With f(x) = 2x + 1 and g(x) = 3x − 2, find the product (fg)(x), expanded." },
+              { t:"Quotient restriction", k:"problem", d:"Where (f/g) is undefined.", q:"1.4.5", prev:"For (f/g)(x) with g(x) = 3x − 2, which value of x must be excluded?" },
+              { t:"Composition formula", k:"problem", d:"Build f(g(x)).", q:"1.4.6", prev:"Let f(x) = x² + 1 and g(x) = x − 3. Find f(g(x)), expanded." },
+              { t:"Numeric composition", k:"problem", d:"Evaluate a composition.", q:"1.4.8", prev:"With f(x) = x² + 1 and g(x) = x − 3, evaluate f(g(5))." },
+              { t:"Composition from a table", k:"problem", d:"Read compositions off a table.", q:"1.4.11", prev:"Use the table of values to evaluate compositions like f(g(2))." },
+              { t:"Domain of a composition", k:"problem", d:"Restrictions of f∘g.", q:"1.4.15", prev:"Let f(x) = √x and g(x) = x − 4. State the domain of (f∘g)(x) = √(x − 4)." },
+              { t:"Decomposition (h = f∘g)", k:"problem", d:"Split a function into two.", q:"1.4.17", prev:"Which f and g give h(x) = (x + 1)³ as f(g(x))?" }
+            ] },
           { t:"1.5 Transformations", k:"section", d:"Shifts, reflections, stretches; even & odd symmetry." },
           { t:"1.6 Absolute Value", k:"section", d:"Graph, solve equations & inequalities with |x|." },
           { t:"1.7 Inverse Functions", k:"section", d:"One-to-one functions, the horizontal line test, and finding inverses." }
@@ -163,6 +177,9 @@
       parentId: parent ? parent.id : null,
       depthLevel: depth,
       children: [],
+      q: raw.q || null,              // deep link into the flashcards (e.g. "1.2.11")
+      prev: raw.prev || null,        // hover preview = the flashcard question itself
+      done: false,                   // completed in the quiz (learning trajectory)
       _expanded: false, _aiKids: false,
       appear: parent ? 0 : 1            // grow-in animation progress
     };
@@ -172,6 +189,15 @@
     return node;
   }
   var ROOT = build(RAW, null, 0);
+
+  // Learning trajectory: read flashcard progress (same-origin localStorage) → mark which question-nodes are done.
+  function loadProgressMap(){ try { return JSON.parse(localStorage.getItem("inkling-quiz-progress") || "{}") || {}; } catch(_){ return {}; } }
+  function refreshDone(){ var prog = loadProgressMap(); NODES.forEach(function(n){
+    if (!n.q) return; var m=/^(\d+\.\d+)\.(\d+)$/.exec(n.q); if(!m) return;
+    var sec=prog[m[1]]; n.done = !!(sec && sec[(parseInt(m[2],10)-1)] != null);
+  }); }
+  refreshDone();
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) refreshDone(); });  // re-check after returning from the quiz
 
   var COLOR = { domain:"#ffcf5c", chapter:"#b48bff", section:"#5aa9ff", subsection:"#3fe0d0", problem:"#ff8a4c", step:"#7be08a", answer:"#ffd66b" };
   var KINDLABEL = { domain:"Domain", chapter:"Chapter", section:"Section", subsection:"Subsection", problem:"Problem", step:"Solution step", answer:"Final answer" };
@@ -343,7 +369,9 @@
       var va2 = vis(nd) * (nd.appear>0.02?1:0); if (va2 <= 0) continue;
       var sc = w2s(nd.x, nd.y); if (offscreen(sc, 80)) continue;
       var rad = nd.size * cam.s * (0.4 + 0.6*nd.appear);
-      var col = COLOR[nd.contentType] || "#5aa9ff";
+      var baseCol = COLOR[nd.contentType] || "#5aa9ff";
+      var qNode = !!nd.q;
+      var col = (qNode && nd.done) ? "#7be08a" : baseCol;     // completed questions glow green (learning trajectory)
       var isFocus = nd.id===focusId, isHover = nd.id===hoverId;
 
       // glow
@@ -357,8 +385,14 @@
       ctx.beginPath(); ctx.arc(sc[0],sc[1], rad, 0, 7);
       ctx.fillStyle = hexA(col, isFocus?1:0.92); ctx.fill();
       if (isFocus || isHover){ ctx.lineWidth=2; ctx.strokeStyle="#fff"; ctx.globalAlpha=va2*(isFocus?0.95:0.6); ctx.stroke(); ctx.globalAlpha=va2; }
-      // child-count ring when collapsed cluster is small
-      if (nd.children.length && rad < 13 && rad > 3){
+      // question-node marker: an outer ring (orange) → a clickable flashcard; ✓ when completed
+      if (qNode && rad > 4){
+        ctx.lineWidth=1.5; ctx.strokeStyle=hexA(nd.done?"#7be08a":"#ff8a4c", isHover?0.95:0.7);
+        ctx.beginPath(); ctx.arc(sc[0],sc[1], rad+3.5, 0, 7); ctx.stroke();
+        if (nd.done && rad > 9){ ctx.globalAlpha=va2; ctx.fillStyle="#0c1422"; ctx.font="700 "+Math.min(rad*0.9,15)+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("✓", sc[0], sc[1]+0.5); }
+      }
+      // child-count ring when a collapsed cluster is small
+      if (!qNode && nd.children.length && rad < 13 && rad > 3){
         ctx.lineWidth=1.5; ctx.strokeStyle=hexA(col,.5); ctx.beginPath(); ctx.arc(sc[0],sc[1], rad+3, 0, 7); ctx.stroke();
       }
       // label
@@ -406,18 +440,25 @@
       cardTitle=document.getElementById("cardTitle"), cardDesc=document.getElementById("cardDesc"),
       cardExpand=document.getElementById("cardExpand"), cardUp=document.getElementById("cardUp"),
       crumb=document.getElementById("crumb");
+  var cardOpen = document.getElementById("cardOpen");
   function updateCard(n){
-    cardKind.textContent = KINDLABEL[n.contentType] || n.contentType;
-    cardKind.style.color = COLOR[n.contentType];
+    cardKind.textContent = (KINDLABEL[n.contentType] || n.contentType) + (n.q ? (n.done ? " · ✓ done" : "") : "");
+    cardKind.style.color = n.done ? "var(--step)" : COLOR[n.contentType];
     cardTitle.textContent = n.title;
-    cardDesc.textContent = n.description || "—";
+    cardDesc.textContent = (n.q && n.prev) ? n.prev : (n.description || "—");
     cardUp.style.display = n.parentId ? "" : "none";
-    var canGrow = !n.children.length || (!n._aiKids && (n.contentType==="problem"||n.contentType==="subsection"||n.contentType==="section"));
-    cardExpand.disabled = false;
-    cardExpand.textContent = n.children.length ? (n._aiKids? "✨ Break down further" : "↓ Open "+n.children.length+" inside") : "✨ Break it down";
     cardExpand.dataset.id = n.id;
+    if (n.q){                                   // a flashcard question-node
+      cardOpen.style.display = ""; cardOpen.dataset.id = n.id;
+      cardExpand.style.display = "none";
+    } else {
+      cardOpen.style.display = "none"; cardExpand.style.display = "";
+      cardExpand.disabled = false;
+      cardExpand.textContent = n.children.length ? (n._aiKids? "✨ Break down further" : "↓ Open "+n.children.length+" inside") : "✨ Break it down";
+    }
     card.classList.add("show");
   }
+  cardOpen.onclick = function(){ var n=byId[this.dataset.id]; if(n) openFlashcard(n); };
   function pathTo(n){ var p=[]; var c=n; while(c){ p.unshift(c); c=c.parentId?byId[c.parentId]:null; } return p; }
   function updateCrumb(n){
     var p = pathTo(n); crumb.innerHTML="";
@@ -497,15 +538,37 @@
   cv.addEventListener("pointermove", function(e){
     if (!down){ var h=hit(e.clientX,e.clientY); hoverId = h?h.id:null; cv.style.cursor = h?"pointer":"grab";
       if (!gyroOn) tilt(e.clientX/W*2-1, e.clientY/H*2-1);   // desktop: cursor drives the sky parallax
+      showPeek(h, e.clientX, e.clientY);
       return; }
+    hidePeek();
     var dx=e.clientX-lastX, dy=e.clientY-lastY; lastX=e.clientX; lastY=e.clientY;
     if (Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY) > 4) moved=true;
     cam.x -= dx/cam.s; cam.y -= dy/cam.s; camT.x=cam.x; camT.y=cam.y;
   });
+  cv.addEventListener("pointerleave", function(){ hidePeek(); });
   cv.addEventListener("pointerup", function(e){
     down=false; cv.classList.remove("drag"); cv.style.cursor="grab";
-    if (!moved){ var n=hit(e.clientX,e.clientY); if (n) focusNode(n); }
+    if (!moved){ var n=hit(e.clientX,e.clientY); if (n){ if (n.q) openFlashcard(n); else focusNode(n); } }
   });
+  // ── Hover preview of a flashcard question; click a question-node to open it ──
+  var peek=document.getElementById("peek"), peekBody=document.getElementById("peekBody");
+  function showPeek(n, x, y){
+    if (!n || !n.prev){ hidePeek(); return; }
+    peekBody.textContent = n.prev;
+    peek.style.display="block";
+    var pw=Math.min(300, W-24), px=Math.min(x+16, W-pw-10), py=y+18;
+    if (py > H-130) py = y - 130;
+    peek.style.left=Math.max(10,px)+"px"; peek.style.top=Math.max(10,py)+"px";
+    requestAnimationFrame(function(){ peek.classList.add("show"); });
+  }
+  function hidePeek(){ peek.classList.remove("show"); peek.style.display="none"; }
+  function openFlashcard(n){
+    if (!n.q) return;
+    hidePeek();
+    try { localStorage.setItem("inkling-quiz-incoming-from", "wordweaver"); } catch(_){}
+    var url = "quiz.html?q=" + encodeURIComponent(n.q);
+    try { (window.top || window).location.href = url; } catch(_){ window.location.href = url; }
+  }
   function zoomAt(sx, sy, factor){
     var before = s2w(sx, sy);
     camT.s = Math.max(0.04, Math.min(5, camT.s*factor)); cam.s = camT.s;   // apply now for anchor math

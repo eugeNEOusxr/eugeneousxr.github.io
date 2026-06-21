@@ -1600,7 +1600,20 @@
       showHomeAt(bootLoc && bootLoc.view === "home" ? bootLoc.homeView : null);
     }
     document.getElementById("homeBtn").addEventListener("click", showHome);
-    restoreLoc();
+    // Deep link: ?q=1.2.11 opens that section's question directly (used by WordWeaver node links).
+    function gotoDeepLink(){
+      var qp; try { qp = new URLSearchParams(location.search).get("q"); } catch(_){ qp = null; }
+      if (!qp) return false;
+      var m = /^(\d+\.\d+)\.(\d+)$/.exec(qp.trim()); if (!m) return false;
+      var sec = m[1], n = parseInt(m[2],10) - 1, di = -1;
+      for (var i=0;i<DECKS.length;i++){ if (DECKS[i].id===sec && !DECKS[i].generated){ di=i; break; } }
+      if (di<0) for (var j=0;j<DECKS.length;j++){ if (DECKS[j].id===sec){ di=j; break; } }
+      if (di<0) return false;
+      hideHome(); switchDeck(di);
+      if (n>=0 && n<DECK.length){ idx=n; render(); }
+      closeMenu(); return true;
+    }
+    if (!gotoDeepLink()) restoreLoc();
 
     // Receive generated decks from a host page (Inkling embeds this in an iframe).
     window.addEventListener("message", function(e){
