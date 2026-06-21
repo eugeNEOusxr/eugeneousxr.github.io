@@ -7,6 +7,27 @@
   <title>Flashcards — Inkling</title>
   <link rel="icon" href="/icons/inkling-icon.svg" type="image/svg+xml" />
   <style>
+    /* Self-hosted KaTeX fonts for MathLive (pinned 0.110.0) — bundled so math input never depends on a CDN font fetch */
+    @font-face{font-family:KaTeX_AMS;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_AMS-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Caligraphic;font-weight:700;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Caligraphic-Bold.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Caligraphic;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Caligraphic-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Fraktur;font-weight:700;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Fraktur-Bold.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Fraktur;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Fraktur-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Main;font-weight:700;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Main-Bold.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Main;font-weight:700;font-style:italic;src:url(/vendor/mathlive/fonts/KaTeX_Main-BoldItalic.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Main;font-weight:400;font-style:italic;src:url(/vendor/mathlive/fonts/KaTeX_Main-Italic.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Main;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Main-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Math;font-weight:700;font-style:italic;src:url(/vendor/mathlive/fonts/KaTeX_Math-BoldItalic.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Math;font-weight:400;font-style:italic;src:url(/vendor/mathlive/fonts/KaTeX_Math-Italic.woff2?v=0110) format("woff2")}
+    @font-face{font-family:"KaTeX_SansSerif";font-weight:700;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_SansSerif-Bold.woff2?v=0110) format("woff2")}
+    @font-face{font-family:"KaTeX_SansSerif";font-weight:400;font-style:italic;src:url(/vendor/mathlive/fonts/KaTeX_SansSerif-Italic.woff2?v=0110) format("woff2")}
+    @font-face{font-family:"KaTeX_SansSerif";font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_SansSerif-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Script;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Script-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Size1;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Size1-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Size2;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Size2-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Size3;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Size3-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Size4;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Size4-Regular.woff2?v=0110) format("woff2")}
+    @font-face{font-family:KaTeX_Typewriter;font-weight:400;font-style:normal;src:url(/vendor/mathlive/fonts/KaTeX_Typewriter-Regular.woff2?v=0110) format("woff2")}
     *{box-sizing:border-box}
     html,body{margin:0}
     body{
@@ -182,8 +203,13 @@
     .homebox .hx:hover{background:#dc2626}
   </style>
   <script src="/inkling-config.js"></script>
-  <!-- MathLive: 2D math input field (stacked fractions, editable exponents) — driven by our keyboard -->
-  <script defer src="https://cdn.jsdelivr.net/npm/mathlive"></script>
+  <!-- MathLive (self-hosted, pinned 0.110.0): 2D math input — stacked fractions, editable exponents.
+       Loaded blocking so fontsDirectory is set BEFORE any <math-field> renders (avoids the broken auto font path). -->
+  <script src="/vendor/mathlive/mathlive.min.js"></script>
+  <script>
+    // We provide the KaTeX @font-face ourselves (below), so tell MathLive not to load fonts itself.
+    (function(){ var M = customElements.get("math-field"); if (M){ M.fontsDirectory = null; M.soundsDirectory = null; } })();
+  </script>
 </head>
 <body data-theme="dark">
   <header>
