@@ -1108,6 +1108,10 @@
     var curDeck = 0;
     DECKS.forEach(function(d){ d.qcount = d.qcount || DEFAULT_QCOUNT; while (d.questions.length < d.qcount) d.questions.push({ type: "placeholder", points: 10 }); d.total = d.qcount * 10; });
 
+    // Ask the browser not to evict this origin's storage (so points/progress survive
+    // between opens). Auto-granted on engaged origins in Chromium; no-op elsewhere.
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(_){}
+
     // Persist quiz progress across sessions (localStorage, keyed by section id).
     // Only hand-built "My set" decks are saved — AI sets are regenerated fresh.
     var PROGRESS_KEY = "inkling-quiz-progress";

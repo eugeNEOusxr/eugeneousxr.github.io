@@ -4,7 +4,7 @@
  * to cycle its mastery (Not yet → Learning → Confident → Mastered). The not-yet
  * leaves are your study nudges.
  */
-import { loadStudyMaps, getStudyMap, generateStudyMap, deleteStudyMap, cycleMastery, mapProgress, MASTERY, MASTERY_COLOR } from "../../inkling/study/studyMapModel.js";
+import { loadStudyMaps, getStudyMap, generateStudyMap, deleteStudyMap, cycleMastery, mapProgress, MASTERY, MASTERY_COLOR, seedBuiltInStudyMaps } from "../../inkling/study/studyMapModel.js";
 import { findSetFor, generateFlashcards } from "../../inkling/study/flashcardsModel.js";
 
 function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -43,6 +43,7 @@ export class StudyMapPanel {
 
   _renderList() {
     this._openId = null;
+    seedBuiltInStudyMaps();          // pre-built questionnaires (Precalculus) show up automatically
     const maps = loadStudyMaps();
     this._body.innerHTML = "";
 

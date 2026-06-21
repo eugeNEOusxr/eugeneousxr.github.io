@@ -65,6 +65,59 @@ export function mapProgress(map) {
 }
 
 /**
+ * Built-in study maps for the questionnaires already mapped out in the app, so
+ * they show up under Study Maps automatically (no need to search/generate). Seeds
+ * ONCE — if the user later deletes one, it stays deleted (we don't re-add).
+ */
+const BUILTIN_SEEDED_KEY = "inkling-studymaps-builtin-seeded-v1";
+
+function buildPrecalcMap() {
+  const leaf = (label) => ({ id: uid("l"), label, mastery: 0 });
+  const branch = (label, labels) => ({ id: uid("b"), label, leaves: labels.map(leaf) });
+  return {
+    id: "sm_builtin_precalc",
+    topic: "OpenStax Precalculus",
+    builtin: true,
+    createdAt: Date.now(),
+    branches: [
+      branch("Chapter 1 · Functions", [
+        "1.1 Functions & Function Notation",
+        "1.2 Domain and Range",
+        "1.3 Rates of Change & Behavior of Graphs",
+        "1.4 Composition of Functions",
+        "1.5 Transformation of Functions",
+        "1.6 Absolute Value Functions",
+        "1.7 Inverse Functions"
+      ]),
+      branch("Chapter 2 · Linear Functions", [
+        "2.1 Linear Functions",
+        "2.2 Graphs of Linear Functions",
+        "2.3 Modeling with Linear Functions",
+        "2.4 Fitting Linear Models to Data"
+      ]),
+      branch("Chapter 3 · Polynomial & Rational Functions", [
+        "3.1 Complex Numbers",
+        "3.2 Quadratic Functions",
+        "3.3 Power Functions & Polynomial Functions"
+      ])
+    ]
+  };
+}
+
+/** Ensure the built-in maps exist. Idempotent; safe to call on every panel open. */
+export function seedBuiltInStudyMaps() {
+  try {
+    if (localStorage.getItem(BUILTIN_SEEDED_KEY)) return;   // already seeded once
+    const maps = loadStudyMaps();
+    if (!maps.some((m) => m.id === "sm_builtin_precalc")) {
+      maps.unshift(buildPrecalcMap());                       // surface it at the top
+      saveAll(maps);
+    }
+    localStorage.setItem(BUILTIN_SEEDED_KEY, "1");
+  } catch { /* non-fatal */ }
+}
+
+/**
  * Generate a study map for a topic via Haiku (server). Saves + returns it.
  * @returns {Promise<{ok:boolean, map?:object, reason?:string}>}
  */

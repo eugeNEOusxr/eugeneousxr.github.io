@@ -14,6 +14,11 @@ if (embedded) {
   document.body.classList.add("embedded-app");
 }
 
+// Ask the browser not to evict our local data (flashcard progress/points, study
+// maps, goals, calendar). Granted automatically on engaged origins in Chromium;
+// a harmless no-op where unsupported. Best-effort — never blocks startup.
+try { navigator.storage?.persist?.(); } catch { /* ignore */ }
+
 const authed = await requireAuthForApp();
 if (!authed) {
   throw new Error("Redirecting to login");
