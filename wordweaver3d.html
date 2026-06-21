@@ -131,7 +131,7 @@ const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(8, 24, 1
 const rim = new THREE.PointLight(0x7c5cff, 60, 120); rim.position.set(-10, 16, -8); scene.add(rim);
 
 /* galaxy dome sky */
-new THREE.TextureLoader().load("assets/wordweaver/galaxy.png", (tex) => {
+new THREE.TextureLoader().load("assets/wordweaver/galaxy.webp", (tex) => {
   tex.colorSpace = THREE.SRGBColorSpace;
   const dome = new THREE.Mesh(new THREE.SphereGeometry(150, 48, 32),
     new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite:false }));
