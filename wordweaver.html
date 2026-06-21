@@ -283,10 +283,42 @@
         ] },
       { t:"2 · Linear Functions", k:"chapter", d:"Slope, equations of lines, modeling, and fitting linear models to data.",
         ch:[
-          { t:"2.1 Linear Functions", k:"section", d:"Slope-intercept and point-slope forms." },
-          { t:"2.2 Graphs of Lines", k:"section", d:"Graphing lines; parallel & perpendicular." },
-          { t:"2.3 Modeling", k:"section", d:"Build linear models from words." },
-          { t:"2.4 Fitting Models", k:"section", d:"Lines of best fit / regression intuition." }
+          { t:"2.1 Linear Functions", k:"section", d:"Slope as a constant rate of change; slope-intercept and point-slope forms.",
+            ch:[
+              { t:"Linear function", k:"subsection", prev:"A function whose graph is a straight line — a constant rate of change, f(x) = mx + b." },
+              { t:"Slope = rate of change", k:"subsection", prev:"Slope m = rise/run = Δy/Δx: how much the output changes per unit of input." },
+              { t:"Slope-intercept form", k:"subsection", prev:"y = mx + b, where m is the slope and b is the y-intercept (the value at x = 0)." },
+              { t:"Point-slope form", k:"subsection", prev:"y − y₁ = m(x − x₁): build a line from one point and the slope." },
+              { t:"Increasing / decreasing / constant", k:"subsection", prev:"m > 0 rises, m < 0 falls, m = 0 is a horizontal line." },
+              { t:"Line through two points", k:"subsection", prev:"Compute m = (y₂ − y₁)/(x₂ − x₁), then use point-slope to write the equation." }
+            ] },
+          { t:"2.2 Graphs of Linear Functions", k:"section", d:"Graphing lines; intercepts; parallel & perpendicular.",
+            ch:[
+              { t:"Graph from slope-intercept", k:"subsection", prev:"Plot the y-intercept b, then step by the slope (rise over run) to a second point." },
+              { t:"x- and y-intercepts", k:"subsection", prev:"y-intercept: set x = 0. x-intercept: set y = 0 and solve for x." },
+              { t:"Horizontal & vertical lines", k:"subsection", prev:"y = c is horizontal (slope 0); x = c is vertical (slope undefined)." },
+              { t:"Parallel lines", k:"subsection", prev:"Two lines are parallel exactly when they share the same slope." },
+              { t:"Perpendicular lines", k:"subsection", prev:"Slopes are negative reciprocals: m₁ · m₂ = −1." },
+              { t:"Equation from a graph", k:"subsection", prev:"Read the y-intercept and a clear lattice point to recover slope, then write y = mx + b." },
+              { t:"Transformations of f(x)=x", k:"subsection", prev:"Stretch (slope) and shift (intercept) the parent line y = x." }
+            ] },
+          { t:"2.3 Modeling with Linear Functions", k:"section", d:"Build and interpret linear models from words.",
+            ch:[
+              { t:"Identify slope & intercept in context", k:"subsection", prev:"The starting amount is b; the per-unit change is m." },
+              { t:"Model from a description", k:"subsection", prev:"Translate a verbal rate-and-start situation into f(x) = mx + b." },
+              { t:"Interpret slope as a rate", k:"subsection", prev:"Slope carries units — dollars per month, miles per hour — read it in context." },
+              { t:"Predict with the model", k:"subsection", prev:"Evaluate the model inside the data (interpolate) to estimate a value." },
+              { t:"Systems / break-even", k:"subsection", prev:"Set two linear models equal to find where cost meets revenue." }
+            ] },
+          { t:"2.4 Fitting Linear Models to Data", k:"section", d:"Scatter plots, correlation, and lines of best fit.",
+            ch:[
+              { t:"Scatter plots", k:"subsection", prev:"Plot paired data to see whether a linear trend is reasonable." },
+              { t:"Correlation", k:"subsection", prev:"Positive, negative, or none — the direction the cloud of points leans." },
+              { t:"Line of best fit (eyeball)", k:"subsection", prev:"Draw a line that balances the points above and below it." },
+              { t:"Least-squares regression", k:"subsection", prev:"The line that minimizes the sum of squared vertical distances to the points." },
+              { t:"Correlation coefficient r", k:"subsection", prev:"r ranges −1 to 1; nearer ±1 means a tighter linear fit." },
+              { t:"Interpolation vs extrapolation", k:"subsection", prev:"Predicting inside the data is safer than predicting beyond it." }
+            ] }
         ] },
       { t:"3 · Polynomial & Rational", k:"chapter", d:"Power, polynomial, and rational functions; zeros and asymptotes." },
       { t:"4 · Exponential & Log", k:"chapter", d:"Exponential growth/decay, logarithms, and their equations." },
@@ -348,39 +380,60 @@
   var KINDLABEL = { domain:"Domain", chapter:"Chapter", section:"Section", subsection:"Subsection", problem:"Problem", step:"Solution step", answer:"Final answer" };
 
   /* ─────────────────────────────────────────────────────────────────────────
-     LAYOUT — radial sunburst. Each node owns an angular wedge sized by how
-     many leaves live beneath it; depth maps to a ring radius. Children stay
-     positioned relative to their parent (same wedge, next ring out).
+     LAYOUT — a GROWING SPIRAL with Precalculus at the core. The 12 chapters are
+     laid head-to-tail along an Archimedean spiral: each owns an angular span
+     sized by how much lives beneath it, and the spiral radius grows with the
+     running angle. While the built-out chapters still fit inside one turn they
+     simply sit side by side on the circumference (Ch.2 extends just past Ch.1);
+     once they overflow 2π the spiral keeps looping outward around the core, so
+     every chapter keeps its own room no matter how large the map grows. Each
+     chapter's subtree (sections → topics → questions) fans outward from the
+     chapter within its own angular span — the familiar sunburst, re-anchored.
   ───────────────────────────────────────────────────────────────────────── */
-  var RING  = [0, 560, 1080, 1560, 1980, 2360, 2700];   // radius per depth
-  var SIZE  = [120, 52, 30, 18, 12, 8, 6];               // node radius per depth
-  function ringAt(d){ return RING[Math.min(d, RING.length-1)] + (d>=RING.length ? (d-RING.length+1)*340 : 0); }
+  var SIZE  = [120, 52, 30, 18, 12, 8, 6];          // node radius per depth
+  var RSTEP = [0, 0, 540, 360, 230, 165, 130];      // radius a child sits beyond its parent, by child depth
+  var SPIRAL = { r0:540, grow:225, start:-Math.PI/2 - 0.25, apw:0.108, minSpan:0.12, maxSpan:2.6, gap:0.06 };
   function sizeAt(d){ return SIZE[Math.min(d, SIZE.length-1)]; }
+  function stepAt(d){ return RSTEP[Math.min(d, RSTEP.length-1)]; }
   function countLeaves(n){ if(!n.children.length){ n._leaves=1; return 1; } var s=0; n.children.forEach(function(c){ s+=countLeaves(c); }); n._leaves=s; return s; }
-  function layout(n, a0, a1){
-    var mid = (a0 + a1) / 2;
-    n._a0=a0; n._a1=a1; n.angle=mid;
-    var r = ringAt(n.depthLevel);
-    n.x = Math.cos(mid) * r;  n.y = Math.sin(mid) * r;
-    n.size = sizeAt(n.depthLevel);
+  function place(n, angle, radius){ n.angle=angle; n._r=radius; n.x=Math.cos(angle)*radius; n.y=Math.sin(angle)*radius; n.size=sizeAt(n.depthLevel); }
+  // fan a node's children across [a0,a1], each on the ring just beyond the parent
+  function fanChildren(n, a0, a1){
     if (!n.children.length) return;
     // give every child at least a small slice so deep branches stay clickable;
-    // soften huge leaf-count imbalances (a 152-question chapter shouldn't eat the whole circle)
+    // soften huge leaf-count imbalances (a 152-question chapter shouldn't eat its whole arc)
     var span = a1 - a0, n2 = n.children.length, minFrac = 0.5 / n2;
     var weights = n.children.map(function(c){ return Math.pow(Math.max(c._leaves, 1), 0.6); });
     var tot = weights.reduce(function(s,w){ return s+w; }, 0) || 1;
     var fr = weights.map(function(w){ return Math.max(w/tot, minFrac); });
-    var frSum = fr.reduce(function(s,x){ return s+x; }, 0);   // normalize so slices fill exactly [a0,a1]
+    var frSum = fr.reduce(function(s,x){ return s+x; }, 0);   // normalize so slices fill [a0,a1]
     var a = a0;
     n.children.forEach(function(c, i){
-      var cspan = span * (fr[i] / frSum);
-      layout(c, a, a + cspan); a += cspan;
+      var cspan = span * (fr[i] / frSum), mid = a + cspan/2;
+      place(c, mid, n._r + stepAt(c.depthLevel));
+      fanChildren(c, a, a + cspan);
+      a += cspan;
+    });
+  }
+  // place the 12 chapters along the spiral, then fan each chapter's subtree outward
+  function layoutSpiral(){
+    countLeaves(ROOT);
+    place(ROOT, SPIRAL.start, 0);              // Precalculus core at the very center
+    var cursor = SPIRAL.start;
+    ROOT.children.forEach(function(ch){
+      var w = Math.pow(Math.max(ch._leaves, 1), 0.6);
+      var span = Math.max(SPIRAL.minSpan, Math.min(SPIRAL.maxSpan, w * SPIRAL.apw));
+      var a0 = cursor, a1 = cursor + span, mid = (a0 + a1) / 2;
+      var radius = SPIRAL.r0 + SPIRAL.grow * (mid - SPIRAL.start);   // grows with running angle → the spiral
+      place(ch, mid, radius);
+      fanChildren(ch, a0, a1);
+      cursor = a1 + SPIRAL.gap;
     });
   }
   // shallow→deep paint order; only changes when nodes are added, so cache it
   var drawOrder = [];
   function rebuildDrawOrder(){ drawOrder = NODES.slice().sort(function(a,b){ return a.depthLevel-b.depthLevel; }); }
-  function relayout(){ countLeaves(ROOT); layout(ROOT, -Math.PI/2 - Math.PI, -Math.PI/2 + Math.PI); rebuildDrawOrder(); }
+  function relayout(){ layoutSpiral(); rebuildDrawOrder(); }
   relayout();
 
   /* ── Camera (with a smooth target it eases toward) ── */
@@ -583,20 +636,21 @@
 
   /* ── Focus a node: smoothly center it and zoom so its children are readable ── */
   function targetScaleFor(n){
-    // scale so this node's ring of children comfortably fills the viewport
-    var childR = n.children.length ? ringAt(n.depthLevel+1) - ringAt(n.depthLevel) : ringAt(n.depthLevel)*0.5+200;
+    // the core frames itself + the inner chapters at a readable zoom (pan / zoom out
+    // to follow the spiral arm outward); deeper nodes frame their own ring of children
+    var childR = n.depthLevel===0 ? (SPIRAL.r0 + 380)
+               : n.children.length ? stepAt(n.depthLevel+1) : 320;
     var want = Math.min(W,H) * 0.42 / Math.max(childR, 120);
-    return Math.max(0.04, Math.min(4.5, want));
+    return Math.max(0.03, Math.min(4.5, want));
   }
   function focusNode(n, soft){
     focusId = n.id;
     camT.s = targetScaleFor(n);
     // aim a touch past the node (toward its children) so they sit in view
-    var r = ringAt(n.depthLevel), rc = ringAt(n.depthLevel+1);
-    var aimR = n.children.length ? (r+rc)/2 : r;
+    var aimR = (n._r || 0) + (n.children.length ? stepAt(n.depthLevel+1) * 0.5 : 0);
     camT.x = Math.cos(n.angle||0) * aimR;
     camT.y = Math.sin(n.angle||0) * aimR;
-    if (n.depthLevel===0){ camT.x=0; camT.y=0; }
+    if (n.depthLevel===0){ camT.x=0; camT.y=0; }   // the core sits at the center of the spiral
     updateCard(n); updateCrumb(n);
   }
 
