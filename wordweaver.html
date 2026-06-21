@@ -416,8 +416,12 @@
      chapter's subtree (sections → topics → questions) fans outward from the
      chapter within its own angular span — the familiar sunburst, re-anchored.
   ───────────────────────────────────────────────────────────────────────── */
-  var SIZE  = [120, 52, 30, 18, 12, 8, 6];          // node radius per depth
-  var RSTEP = [0, 0, 540, 360, 230, 165, 130];      // radius a child sits beyond its parent, by child depth
+  var SIZE  = [120, 52, 30, 13, 11, 8, 6];          // node radius per depth (question orbs trimmed so the
+                                                    // dense Ch.1 ring stops overlapping — a hair of gap)
+  var RSTEP = [0, 0, 600, 600, 280, 200, 150];      // radius a child sits beyond its parent, by child depth
+                                                    // (question ring pushed out so the orbs spread apart
+                                                    //  radially — more circumference, same wedge → no bleed
+                                                    //  into the neighbouring chapter's angular slice)
   // Concentric rings first, spiral later: chapters share ONE radius (so every chapter's
   // sections line up on the blue ring and questions line up on the outer ring) for the whole
   // first turn; only as the arc nears a full circle back to 1.1.1 does the radius ease outward,
