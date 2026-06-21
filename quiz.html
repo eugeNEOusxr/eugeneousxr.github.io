@@ -320,9 +320,35 @@
       g+='<circle cx="'+sx(3)+'" cy="'+sy(0)+'" r="2.6" style="fill:var(--curve)"/>';
       return '<svg viewBox="0 0 130 122" width="100%" style="display:block">'+g+'</svg>';
     }
+    // Piecewise-linear graph — each segment clipped to the view (Liang-Barsky), with
+    // closed/open endpoint dots (open = bg-filled). Reusable for read-the-graph questions.
+    function pwGraph(segs, xr, yr){
+      var xmin=xr[0],xmax=xr[1],ymin=yr[0],ymax=yr[1], Wd=144, Hd=120, pX=12, pY=8;
+      var SX=(Wd-2*pX)/(xmax-xmin), SY=(Hd-2*pY)/(ymax-ymin), OX=pX-xmin*SX, OY=Hd-pY+ymin*SY;
+      function sx(x){ return (OX+x*SX).toFixed(1); } function sy(y){ return (OY-y*SY).toFixed(1); }
+      function odot(x,y,open){ return open ? '<circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="2.6" style="fill:var(--bg);stroke:var(--curve);stroke-width:1.6"/>' : '<circle cx="'+sx(x)+'" cy="'+sy(y)+'" r="2.7" style="fill:var(--curve)"/>'; }
+      var g="", i;
+      for(i=Math.ceil(xmin);i<=xmax;i++) g+='<line x1="'+sx(i)+'" y1="'+sy(ymin)+'" x2="'+sx(i)+'" y2="'+sy(ymax)+'" style="stroke:var(--grid);stroke-width:.5"/>';
+      for(i=Math.ceil(ymin);i<=ymax;i++) g+='<line x1="'+sx(xmin)+'" y1="'+sy(i)+'" x2="'+sx(xmax)+'" y2="'+sy(i)+'" style="stroke:var(--grid);stroke-width:.5"/>';
+      g+='<line x1="'+sx(xmin)+'" y1="'+sy(0)+'" x2="'+sx(xmax)+'" y2="'+sy(0)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      g+='<line x1="'+sx(0)+'" y1="'+sy(ymin)+'" x2="'+sx(0)+'" y2="'+sy(ymax)+'" style="stroke:var(--axis);stroke-width:1"/>';
+      for(i=Math.ceil(xmin);i<=xmax;i++){ if(i===0)continue; g+='<text x="'+sx(i)+'" y="'+(parseFloat(sy(0))+6).toFixed(1)+'" text-anchor="middle" style="fill:var(--muted);font:5px system-ui">'+i+'</text>'; }
+      for(i=Math.ceil(ymin);i<=ymax;i++){ if(i===0)continue; g+='<text x="'+(parseFloat(sx(0))-2).toFixed(1)+'" y="'+(parseFloat(sy(i))+1.8).toFixed(1)+'" text-anchor="end" style="fill:var(--muted);font:5px system-ui">'+i+'</text>'; }
+      segs.forEach(function(s){
+        var t0=0,t1=1,dx=s.x2-s.x1,dy=s.y2-s.y1,P=[-dx,dx,-dy,dy],Q=[s.x1-xmin,xmax-s.x1,s.y1-ymin,ymax-s.y1],ok=true,k,r;
+        for(k=0;k<4;k++){ if(P[k]===0){ if(Q[k]<0){ok=false;break;} } else { r=Q[k]/P[k]; if(P[k]<0){ if(r>t1){ok=false;break;} if(r>t0)t0=r; } else { if(r<t0){ok=false;break;} if(r<t1)t1=r; } } }
+        if(!ok) return;
+        g+='<line x1="'+sx(s.x1+t0*dx)+'" y1="'+sy(s.y1+t0*dy)+'" x2="'+sx(s.x1+t1*dx)+'" y2="'+sy(s.y1+t1*dy)+'" style="stroke:var(--curve);stroke-width:2"/>';
+        if(t0===0) g+=odot(s.x1,s.y1,s.openL);   // dot only where the real endpoint is in view
+        if(t1===1) g+=odot(s.x2,s.y2,s.openR);
+      });
+      return '<svg viewBox="0 0 '+Wd+' '+Hd+'" width="100%" style="display:block">'+g+'</svg>';
+    }
     function graphSVG(kind) {
       if (kind==="salesWave") return waveGraph();
       if (kind==="cubicMaxMin") return cubicMaxMin();
+      if (kind==="pw1210") return pwGraph([{x1:-6,y1:-5,x2:-2,y2:-5,openL:false,openR:false},{x1:-2,y1:4,x2:1,y2:4,openL:true,openR:false},{x1:1,y1:1,x2:4,y2:1,openL:true,openR:false}], [-7,7], [-6,6]);
+      if (kind==="pw1211") return pwGraph([{x1:-6,y1:-3,x2:-2,y2:3,openL:false,openR:false},{x1:-2,y1:2,x2:1,y2:2,openL:true,openR:false},{x1:1,y1:1,x2:6,y2:-9,openL:true,openR:false}], [-7,7], [-6,6]);
       var S = 9, O = 60, W = 120;
       function sx(x){ return (O + x*S).toFixed(1); } function sy(y){ return (O - y*S).toFixed(1); }
       var g = "";
@@ -984,6 +1010,13 @@
       { type:"multiinput", prompt:"Find the modulus |3 + 4<em>i</em>|.", blanks:[{label:"|3 + 4<em>i</em>| =", answer:5}], points:10 },
       { type:"multiinput", prompt:"Find the modulus |−5 + 12<em>i</em>|.", blanks:[{label:"|−5 + 12<em>i</em>| =", answer:13}], points:10 },
       { type:"multiinput", prompt:"Let <em>z</em> = 4 + 3<em>i</em>. Fill in each value (<em>z̄</em> is the conjugate).", blanks:[{label:"Re(<em>z</em>) =", answer:4},{label:"Im(<em>z</em>) =", answer:3},{label:"|<em>z</em>| =", answer:5},{label:"Re(<em>z̄</em>) =", answer:4},{label:"Im(<em>z̄</em>) =", answer:-3, answerText:"-3"}], points:10 }
+    ] },
+    /* School WebWork — Assignment 1.2: Domain & Range (Q9–Q13). These merge into the
+       1.2 "My set". Q12–Q13 (sketch the piecewise graph) come with the drawing tool. */
+    { id:"1.2", title:"1.2 · Domain and Range", graded:{}, questions: [
+      { type:"multiinput", prompt:"Given <em>f</em>(<em>x</em>) = { 9<em>x</em> + 6 if <em>x</em> &lt; 0;  9<em>x</em> + 12 if <em>x</em> ≥ 0 }, calculate each value.", blanks:[{label:"<em>f</em>(−1) =", answer:-3, answerText:"-3"},{label:"<em>f</em>(0) =", answer:12},{label:"<em>f</em>(2) =", answer:30}], points:10 },
+      { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Use interval notation for each interval.", graph:"pw1210", blanks:[{ask:"Where <em>f</em>(<em>x</em>) = −5:", label:"<em>x</em> ∈", answer:"[-6, -2]"},{ask:"Where <em>f</em>(<em>x</em>) = 4:", label:"<em>x</em> ∈", answer:"(-2, 1]"},{ask:"Where <em>f</em>(<em>x</em>) = 1:", label:"<em>x</em> ∈", answer:"(1, 4]"}], points:10 },
+      { type:"graphinput", prompt:"Complete the description of the piecewise function graphed below. Write each piece's formula.", graph:"pw1211", blanks:[{ask:"For −6 ≤ <em>x</em> ≤ −2:", label:"<em>f</em>(<em>x</em>) =", answer:"3/2 x + 6", answerText:"(3/2)x + 6"},{ask:"For −2 &lt; <em>x</em> ≤ 1:", label:"<em>f</em>(<em>x</em>) =", answer:2},{ask:"For 1 &lt; <em>x</em> ≤ 6:", label:"<em>f</em>(<em>x</em>) =", answer:"-2x + 3", answerText:"−2x + 3"}], points:10 }
     ] }
     ];
     // One hand-built "My set" per section: merge any non-generated decks that
