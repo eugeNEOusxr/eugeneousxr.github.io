@@ -55,7 +55,7 @@
   <a href="wordweaver.html" class="tab" id="to2d" style="pointer-events:auto;text-decoration:none">🗺 2D</a>
 </div>
 <div id="ew" class="hud"><button id="west" title="Previous section">‹</button><button id="east" title="Next section">›</button></div>
-<div id="climb" class="hud"><button id="up" title="Climb to next question">▲</button><button id="down" title="Back down a step">▼</button></div>
+<div id="climb" class="hud"><button id="view" title="Switch view (climb / on the platform / survey down the spiral)" style="font-size:13px;height:auto;padding:7px 4px;line-height:1.2">⛰<br>Climb</button><button id="up" title="Climb to next question">▲</button><button id="down" title="Back down a step">▼</button></div>
 <div id="hint" class="hud">Drag to look · ▲ climb step-by-step · ‹ › jump sections · tap a step for its question</div>
 <div id="qpanel">
   <button id="qclose" aria-label="Close">✕</button>
@@ -138,14 +138,16 @@ const grid = new THREE.GridHelper(120, 60, 0x2a3560, 0x141c34); grid.position.y 
 
 /* the helix group (rebuilt per section) */
 const helix = new THREE.Group(); scene.add(helix);
-const boxGeo = new THREE.BoxGeometry(2.1, 2.1, 2.1);
+const boxGeo = new THREE.BoxGeometry(2.0, 1.5, 2.0);          // each step (a fighting block)
+const platGeo = new THREE.CylinderGeometry(3.0, 3.3, 0.45, 6); // the arena platform it stands on
+const SHARED = new Set([boxGeo, platGeo]);
 const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
 let pickables = [];
 
 function disposeHelix(){
   // remove EVERY label's DOM element (labels are nested inside cubes), then dispose + clear
   helix.traverse(o => { if (o.element && o.element.remove) o.element.remove(); });
-  helix.traverse(o => { if (o.geometry && o.geometry !== boxGeo) o.geometry.dispose?.(); if (o.material) o.material.dispose?.(); });
+  helix.traverse(o => { if (o.geometry && !SHARED.has(o.geometry)) o.geometry.dispose?.(); if (o.material) o.material.dispose?.(); });
   helix.clear();
   pickables = [];
 }
@@ -171,6 +173,10 @@ function buildTower(){
         color: base, emissive: base, emissiveIntensity: s.done ? 0.55 : 0.15, metalness:0.45, roughness:0.35 }));
       cube.position.set(x, y, z); cube.userData = { q, sec, gi };
       helix.add(cube); pickables.push(cube);
+      // the arena platform this step stands on (the floor where fighters will face off)
+      const plat = new THREE.Mesh(platGeo, new THREE.MeshStandardMaterial({
+        color: base.clone().multiplyScalar(0.45), emissive: base, emissiveIntensity: 0.12, metalness:0.7, roughness:0.4 }));
+      plat.position.set(x, y - 1.2, z); plat.userData = { q, sec, gi }; helix.add(plat); pickables.push(plat);
       nodes.push({ mesh:cube, q, sec, gi, pos:cube.position.clone() }); pathPts.push(cube.position.clone());
       if (miss) strugglers.push(cube);
       let badges=""; if(s.p) badges+=`<span class="badge bp">${s.p>99?"99":s.p}</span>`; if(s.f) badges+=`<span class="badge bf">${s.f>99?"99":s.f}</span>`;
@@ -200,14 +206,24 @@ function buildTower(){
 
 /* ── Climbing camera: smoothly FLIES from one step up to the next so you feel
    the height. The view sits beside a step looking UP at the blocks above. ── */
-let tween = null, focusGi = 0;
+let tween = null, focusGi = 0, viewMode = "climb";   // climb | platform | survey
+const VIEW_LABEL = { climb:"⛰ Climb", platform:"🏟 Platform", survey:"🔭 Survey" };
 const _v = new THREE.Vector3();
 function easeInOut(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
 function camFor(gi){
   const n = nodes[Math.max(0, Math.min(nodes.length-1, gi))];
   _v.set(n.pos.x, 0, n.pos.z); if (_v.lengthSq() < 0.001) _v.set(1,0,0); _v.normalize();
-  const camPos = n.pos.clone().add(_v.clone().multiplyScalar(12)).add(new THREE.Vector3(0, 3.5, 0));
-  const look = n.pos.clone().add(new THREE.Vector3(0, 7.5, 0));   // gaze up the tower
+  let camPos, look;
+  if (viewMode === "platform"){          // stand ON this floor, arena-level, looking across it
+    camPos = n.pos.clone().add(_v.clone().multiplyScalar(6)).add(new THREE.Vector3(0, 2.2, 0));
+    look   = n.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
+  } else if (viewMode === "survey"){     // gaze DOWN the spiral you've climbed
+    camPos = n.pos.clone().add(_v.clone().multiplyScalar(5)).add(new THREE.Vector3(0, 16, 0));
+    look   = n.pos.clone().add(new THREE.Vector3(0, -16, 0));
+  } else {                                // climb: beside the step, gazing UP the tower
+    camPos = n.pos.clone().add(_v.clone().multiplyScalar(12)).add(new THREE.Vector3(0, 3.5, 0));
+    look   = n.pos.clone().add(new THREE.Vector3(0, 7.5, 0));
+  }
   return { camPos, look };
 }
 function flyTo(gi, andShow){
@@ -255,6 +271,12 @@ renderer.domElement.addEventListener("pointerup", e => {
 function sectionStart(sec){ return Math.max(0, nodes.findIndex(n => n.sec === sec)); }
 document.getElementById("up").onclick   = () => flyTo(focusGi + 1, true);
 document.getElementById("down").onclick = () => flyTo(focusGi - 1, true);
+const VIEW_ORDER = ["climb","platform","survey"];
+document.getElementById("view").onclick = () => {
+  viewMode = VIEW_ORDER[(VIEW_ORDER.indexOf(viewMode)+1)%VIEW_ORDER.length];
+  document.getElementById("view").innerHTML = VIEW_LABEL[viewMode].replace(" ", "<br>");
+  flyTo(focusGi, false);
+};
 document.getElementById("east").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
 document.getElementById("west").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+SECTIONS.length-1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
 const tabsEl = document.getElementById("secTabs");
