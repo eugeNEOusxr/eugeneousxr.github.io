@@ -3,7 +3,7 @@
  */
 
 /** Default idle backdrop (served from public/) */
-export const DEFAULT_COSMOS_BACKDROP_URL = "/assets/backgrounds/cosmos-backdrop.jpg";
+export const DEFAULT_COSMOS_BACKDROP_URL = "/assets/backgrounds/cosmos-backdrop.webp";
 
 /** Image credit (Pismis 24, JWST) */
 export const COSMOS_BACKDROP_CREDIT =

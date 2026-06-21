@@ -7,6 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="/manifest.json" />
+  <!-- Start fetching the cosmos backdrop immediately (parallel with the JS) so it's
+       ready when the app shows it — avoids the late background pop-in on load. -->
+  <link rel="preload" as="image" href="/assets/backgrounds/cosmos-backdrop.webp" fetchpriority="high" />
   <link rel="icon" href="/icons/inkling-icon.svg" type="image/svg+xml" />
   <link rel="icon" href="/icons/favicon-64.png" sizes="64x64" type="image/png" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
@@ -74,6 +77,11 @@
   <link rel="stylesheet" href="style-enhancements-shell.css" />
   <link rel="stylesheet" href="style-appearance-palettes.css" />
   <style>
+    /* Show a dark cosmos gradient from the very first paint (before the JS/3D and the
+       backdrop image load) so the app opens onto deep space instead of flashing black. */
+    html, body, #app {
+      background: radial-gradient(125% 95% at 50% 18%, #0a0e1a 0%, #060810 52%, #020308 100%);
+    }
     /* Alerts live on the Inkling orb (its red count badge) + the Alerts nav tab.
        Hide the redundant standalone alerts bells: the top-chrome 🔔 and the
        floating notification bell beside the orb. (2026-06-18) */
