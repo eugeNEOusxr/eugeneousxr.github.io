@@ -57,6 +57,7 @@
   <button class="tab" id="mode" style="pointer-events:auto" title="Switch between guided platform view and free-flight">🕹 Free fly</button>
   <button class="tab" id="miss" style="pointer-events:auto;border-color:#ff5a5a;color:#ff8a8a" title="Fly through what you keep missing">🔴 Missing</button>
   <a href="wordweaver.html" class="tab" id="to2d" style="pointer-events:auto;text-decoration:none">🗺 2D</a>
+  <button class="tab" id="exit3d" style="pointer-events:auto;border-color:rgba(255,90,90,.55);color:#ff7a7a;font-weight:700" title="Exit the knowledge spiral">✕</button>
 </div>
 <div id="ew" class="hud"><button id="west" title="Previous section">‹</button><button id="east" title="Next section">›</button></div>
 <div id="climb" class="hud"><button id="up" title="Climb to next question">▲</button><button id="down" title="Back down a step">▼</button></div>
@@ -328,6 +329,11 @@ function setMode(m){
   updateLabelLOD();
 }
 document.getElementById("mode").onclick = () => setMode(mode === "free" ? "platform" : "free");
+// exit — in-app closes the Mind overlay, standalone returns to the app
+document.getElementById("exit3d").onclick = () => {
+  if (window.parent && window.parent !== window){ try { window.parent.postMessage({ type:"inkling-close-graph" }, "*"); return; } catch(_){} }
+  location.href = "/";
+};
 // fly / descend (hold)
 function holdFly(id, v){ const b=document.getElementById(id);
   const on=()=>{ flyV=v; }, off=()=>{ flyV=0; };

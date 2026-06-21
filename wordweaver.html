@@ -45,8 +45,11 @@
   #ctl button:hover{border-color:var(--accent)}
   #hint{left:50%;bottom:16px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:rgba(14,19,32,.6);padding:5px 12px;border-radius:999px;white-space:nowrap}
   /* legend */
-  #to3d{position:fixed;right:14px;top:12px;z-index:6;pointer-events:auto;border:.5px solid var(--accent);background:rgba(124,92,255,.18);color:#cdbcff;font-weight:700;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer;backdrop-filter:blur(6px)}
+  #topright{position:fixed;right:14px;top:12px;z-index:6;display:flex;gap:8px;align-items:center}
+  #to3d{pointer-events:auto;border:.5px solid var(--accent);background:rgba(124,92,255,.18);color:#cdbcff;font-weight:700;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer;backdrop-filter:blur(6px)}
   #to3d:active{background:var(--accent);color:#fff}
+  #exitCanvas{pointer-events:auto;width:34px;height:34px;border-radius:50%;border:.5px solid rgba(255,90,90,.55);background:rgba(14,19,32,.85);color:#ff7a7a;font-size:15px;font-weight:700;cursor:pointer}
+  #exitCanvas:active{background:#ff5a5a;color:#fff}
   #legend{right:14px;top:50px;display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);text-align:right}
   #legend .lg{display:flex;align-items:center;gap:6px;justify-content:flex-end}
   #legend .dot{width:9px;height:9px;border-radius:50%}
@@ -66,7 +69,10 @@
   <div class="lg"><span>Problem</span><span class="dot" style="background:var(--problem)"></span></div>
   <div class="lg"><span>Solution step</span><span class="dot" style="background:var(--step)"></span></div>
 </div>
-<button id="to3d" class="hud" title="Open the 3D Knowledge Spiral">🌀 3D Spiral</button>
+<div id="topright" class="hud">
+  <button id="to3d" title="Open the 3D Knowledge Spiral">🌀 3D Spiral</button>
+  <button id="exitCanvas" title="Exit the knowledge canvas">✕</button>
+</div>
 <div id="ctl" class="hud">
   <button id="zin" title="Zoom in">+</button>
   <button id="zout" title="Zoom out">−</button>
@@ -753,6 +759,11 @@
   document.getElementById("to3d").onclick=function(){
     if (window.parent && window.parent !== window){ try { window.parent.postMessage({ type:"inkling-open-graph", mode:"3d" }, "*"); return; } catch(_){} }
     location.href = "wordweaver3d.html";
+  };
+  // exit the knowledge canvas — in-app closes the Mind overlay, standalone returns to the app
+  document.getElementById("exitCanvas").onclick=function(){
+    if (window.parent && window.parent !== window){ try { window.parent.postMessage({ type:"inkling-close-graph" }, "*"); return; } catch(_){} }
+    location.href = "/";
   };
 
   // start focused on the whole subject

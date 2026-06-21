@@ -118,6 +118,7 @@ export class InklingPanel {
         if (this._quizOverlay) this._quizOverlay.style.display = "none";   // leave the flashcards
         this._openCanvasOverlay(m.mode === "3d" ? "/wordweaver3d.html" : "/wordweaver.html", "Mind — knowledge graph", "_mindOverlay", true);
       }
+      else if (m.type === "inkling-close-graph") { if (this._mindOverlay) this._mindOverlay.style.display = "none"; }
     });
     this._startCron();
 
