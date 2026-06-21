@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Graphing Tool — Inkling</title>
+<style>
+  :root{ --bg:#070912; --panel:#0e1320; --line:#1f2740; --grid:#1a2236; --axis:#46506e; --text:#e8ecf6; --muted:#8a93ad; --accent:#7c5cff; --curve:#ff8a4c; --ok:#7be08a; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  #wrap{max-width:680px;margin:0 auto;padding:10px 12px 24px;display:flex;flex-direction:column;gap:10px;min-height:100%}
+  h1{font-size:16px;margin:6px 2px 0;font-weight:700;letter-spacing:.3px}
+  h1 small{color:var(--muted);font-weight:500}
+  /* toolbar */
+  #bar{display:flex;flex-wrap:wrap;gap:6px}
+  .tool{display:flex;align-items:center;gap:6px;border:.5px solid var(--line);background:var(--panel);color:var(--text);
+        border-radius:10px;padding:8px 11px;font-size:13px;font-weight:600;cursor:pointer}
+  .tool .gly{font-size:15px;line-height:1}
+  .tool.on{border-color:var(--accent);background:rgba(124,92,255,.20);color:#cdbcff}
+  .tool.act{margin-left:auto}            /* undo / clear pushed right */
+  .tool.act.clear{color:#ff7a7a;border-color:rgba(255,90,90,.45)}
+  /* plane */
+  #planewrap{position:relative;width:100%;aspect-ratio:1/1;background:var(--panel);border:.5px solid var(--line);border-radius:14px;overflow:hidden}
+  svg#plane{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+  .gridline{stroke:var(--grid);stroke-width:1}
+  .axis{stroke:var(--axis);stroke-width:1.6}
+  .tick{fill:var(--muted);font-size:10px}
+  .shape{stroke:var(--curve);stroke-width:3;fill:none;stroke-linecap:round}
+  .dot-closed{fill:var(--curve);stroke:none}
+  .dot-open{fill:var(--panel);stroke:var(--curve);stroke-width:3}
+  .pending{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:3 3}
+  #hint{font-size:12px;color:var(--muted);line-height:1.5;padding:0 2px}
+  #hint b{color:#cdbcff;font-weight:600}
+  .count{color:var(--muted);font-size:12px;margin-left:2px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>📈 Graphing Tool <small>— plot points & connect them</small></h1>
+  <div id="bar">
+    <button class="tool" data-tool="closed"><span class="gly">●</span>Closed dot</button>
+    <button class="tool" data-tool="open"><span class="gly">○</span>Open dot</button>
+    <button class="tool" data-tool="segment"><span class="gly">／</span>Segment</button>
+    <button class="tool" data-tool="ray"><span class="gly">➝</span>Ray</button>
+    <button class="tool" data-tool="line"><span class="gly">↔</span>Line</button>
+    <button class="tool act" data-act="undo"><span class="gly">⌫</span>Undo</button>
+    <button class="tool act clear" data-act="clear"><span class="gly">🗑</span>Clear</button>
+  </div>
+  <div id="planewrap">
+    <svg id="plane" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--curve)"/>
+        </marker>
+      </defs>
+      <g id="bggrid"></g>
+      <g id="draw"></g>
+    </svg>
+  </div>
+  <div id="hint">
+    <b>Closed / Open dot</b> — tap the grid to drop a point (● included · ○ not included).<br>
+    <b>Segment · Ray · Line</b> — tap two grid points. A ray extends past the 2nd point; a line extends both ways.<br>
+    Drop an <b>open dot</b> on a line's endpoint to mark "doesn't touch."<span class="count" id="count"></span>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var svg = document.getElementById("plane"),
+      gGrid = document.getElementById("bggrid"),
+      gDraw = document.getElementById("draw"),
+      SVGNS = "http://www.w3.org/2000/svg";
+  var R = 10, PAD = 44, BOX = 640, SPAN = BOX - 2*PAD, U = SPAN / (2*R);   // px per unit
+
+  function sx(wx){ return PAD + (wx + R) * U; }
+  function sy(wy){ return PAD + (R - wy) * U; }
+  function el(name, attrs){ var e = document.createElementNS(SVGNS, name); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+  /* ── static grid + axes ── */
+  (function grid(){
+    for (var i = -R; i <= R; i++){
+      gGrid.appendChild(el("line", { class:"gridline", x1:sx(i), y1:sy(-R), x2:sx(i), y2:sy(R) }));
+      gGrid.appendChild(el("line", { class:"gridline", x1:sx(-R), y1:sy(i), x2:sx(R), y2:sy(i) }));
+    }
+    gGrid.appendChild(el("line", { class:"axis", x1:sx(-R), y1:sy(0), x2:sx(R), y2:sy(0) }));
+    gGrid.appendChild(el("line", { class:"axis", x1:sx(0), y1:sy(-R), x2:sx(0), y2:sy(R) }));
+    for (var t = -R; t <= R; t += 2){
+      if (t === 0) continue;
+      var tx = el("text", { class:"tick", x:sx(t), y:sy(0)+13, "text-anchor":"middle" }); tx.textContent = t; gGrid.appendChild(tx);
+      var ty = el("text", { class:"tick", x:sx(0)-7, y:sy(t)+3, "text-anchor":"end" }); ty.textContent = t; gGrid.appendChild(ty);
+    }
+  })();
+
+  /* ── state ── */
+  var TOOL = "closed", shapes = [], pending = null;   // pending = first endpoint of a line tool
+  var bar = document.getElementById("bar"), count = document.getElementById("count");
+  function selectTool(t){
+    TOOL = t; pending = null;
+    [].forEach.call(bar.querySelectorAll(".tool"), function(b){ b.classList.toggle("on", b.dataset.tool === t); });
+    render();
+  }
+  bar.addEventListener("click", function(e){
+    var b = e.target.closest(".tool"); if (!b) return;
+    if (b.dataset.act === "undo"){ shapes.pop(); pending = null; render(); return; }
+    if (b.dataset.act === "clear"){ shapes = []; pending = null; render(); return; }
+    if (b.dataset.tool) selectTool(b.dataset.tool);
+  });
+
+  /* ── where does a ray leave the box, going from (px,py) in direction (dx,dy)? ── */
+  function exit(px, py, dx, dy){
+    var ts = [];
+    if (dx > 0) ts.push((R - px)/dx); else if (dx < 0) ts.push((-R - px)/dx);
+    if (dy > 0) ts.push((R - py)/dy); else if (dy < 0) ts.push((-R - py)/dy);
+    ts = ts.filter(function(t){ return t > 1e-9; });
+    var t = ts.length ? Math.min.apply(null, ts) : 0;
+    return [px + dx*t, py + dy*t];
+  }
+
+  /* ── pointer → snapped lattice point ── */
+  function locate(evt){
+    var r = svg.getBoundingClientRect();
+    var px = (evt.clientX - r.left) / r.width * BOX, py = (evt.clientY - r.top) / r.height * BOX;
+    var wx = (px - PAD)/U - R, wy = R - (py - PAD)/U;
+    wx = Math.max(-R, Math.min(R, Math.round(wx)));
+    wy = Math.max(-R, Math.min(R, Math.round(wy)));
+    return { x:wx, y:wy };
+  }
+  svg.addEventListener("pointerdown", function(evt){
+    evt.preventDefault();
+    var p = locate(evt);
+    if (TOOL === "closed" || TOOL === "open"){
+      shapes.push({ t:"point", x:p.x, y:p.y, open: TOOL === "open" });
+    } else { // segment / ray / line
+      if (!pending){ pending = p; }
+      else {
+        if (!(pending.x === p.x && pending.y === p.y)) shapes.push({ t:TOOL, x1:pending.x, y1:pending.y, x2:p.x, y2:p.y });
+        pending = null;
+      }
+    }
+    render();
+  });
+
+  /* ── render everything ── */
+  function dot(x, y, open){
+    return el("circle", { class: open ? "dot-open" : "dot-closed", cx:sx(x), cy:sy(y), r: open ? 6 : 6.5 });
+  }
+  function render(){
+    while (gDraw.firstChild) gDraw.removeChild(gDraw.firstChild);
+    shapes.forEach(function(s){
+      if (s.t === "point"){ gDraw.appendChild(dot(s.x, s.y, s.open)); return; }
+      var a, b, attrs = { class:"shape" };
+      if (s.t === "segment"){ a = [s.x1, s.y1]; b = [s.x2, s.y2]; }
+      else if (s.t === "ray"){ a = [s.x1, s.y1]; b = exit(s.x2, s.y2, s.x2 - s.x1, s.y2 - s.y1); attrs["marker-end"] = "url(#arrow)"; }
+      else { // line — extend both ways
+        a = exit(s.x1, s.y1, s.x1 - s.x2, s.y1 - s.y2);
+        b = exit(s.x2, s.y2, s.x2 - s.x1, s.y2 - s.y1);
+        attrs["marker-start"] = "url(#arrow)"; attrs["marker-end"] = "url(#arrow)";
+      }
+      attrs.x1 = sx(a[0]); attrs.y1 = sy(a[1]); attrs.x2 = sx(b[0]); attrs.y2 = sy(b[1]);
+      gDraw.appendChild(el("line", attrs));
+      // the two defining lattice points get closed dots (overlay an open dot to change them)
+      gDraw.appendChild(dot(s.x1, s.y1, false));
+      if (s.t === "segment" || s.t === "ray") gDraw.appendChild(dot(s.x2, s.y2, false));
+    });
+    if (pending) gDraw.appendChild(el("circle", { class:"pending", cx:sx(pending.x), cy:sy(pending.y), r:8 }));
+    count.textContent = shapes.length ? "  ·  " + shapes.length + " object" + (shapes.length>1?"s":"") : "";
+  }
+
+  selectTool("closed");
+  render();
+})();
+</script>
+</body>
+</html>
