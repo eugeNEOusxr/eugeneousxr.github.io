@@ -851,7 +851,7 @@
   // sections line up on the blue ring and questions line up on the outer ring) for the whole
   // first turn; only as the arc nears a full circle back to 1.1.1 does the radius ease outward,
   // gracefully clearing 1.1.1 and opening into a spiral for the next loop.
-  var SPIRAL = { r0:540, grow:170, start:-Math.PI/2 - 0.25, apw:0.108, minSpan:0.12, maxSpan:2.6, gap:0.06, ramp:1.15 };
+  var SPIRAL = { r0:540, grow:170, start:-Math.PI/2 - 0.25, apw:0.108, minSpan:0.12, maxSpan:2.6, gap:0.06, ramp:1.15, tail:0.15 };
   function sizeAt(d){ return SIZE[Math.min(d, SIZE.length-1)]; }
   function stepAt(d){ return RSTEP[Math.min(d, RSTEP.length-1)]; }
   function countLeaves(n){ if(!n.children.length){ n._leaves=1; return 1; } var s=0; n.children.forEach(function(c){ s+=countLeaves(c); }); n._leaves=s; return s; }
@@ -879,13 +879,20 @@
     countLeaves(ROOT);
     place(ROOT, SPIRAL.start, 0);              // Precalculus core at the very center
     var cursor = SPIRAL.start;
-    ROOT.children.forEach(function(ch){
+    var overCap = null;                                               // set at chapter 8 — it's far out enough
+    ROOT.children.forEach(function(ch, idx){
       var w = Math.pow(Math.max(ch._leaves, 1), 0.6);
       var span = Math.max(SPIRAL.minSpan, Math.min(SPIRAL.maxSpan, w * SPIRAL.apw));
       var a0 = cursor, a1 = cursor + span, mid = (a0 + a1) / 2;
       var theta = mid - SPIRAL.start;                                  // angle travelled from the 1.1.1 spoke
       var over  = Math.max(0, theta - (2*Math.PI - SPIRAL.ramp));      // 0 for the first full turn, then climbs
-      var radius = SPIRAL.r0 + SPIRAL.grow * over;                     // concentric rings, easing into a spiral near 1.1.1
+      if (idx === 7) overCap = over;                                   // chapter 8 sets the "far enough" radius
+      // Past chapter 8, grow the radius MUCH slower (tail) so chapters 9-12 ring in
+      // close to chapter 8 instead of flinging ever further out.
+      var overEff = (overCap != null && idx > 7 && over > overCap)
+        ? overCap + (over - overCap) * SPIRAL.tail
+        : over;
+      var radius = SPIRAL.r0 + SPIRAL.grow * overEff;                  // concentric rings → spiral → plateau after ch 8
       place(ch, mid, radius);
       fanChildren(ch, a0, a1);
       cursor = a1 + SPIRAL.gap;
