@@ -1,7 +1,8 @@
 /**
  * Cosmos intro — the app lands on the JWST cosmos backdrop as a calm welcome.
- * No buttons, no "click to continue": a tap anywhere simply opens the Inkling
- * chat. The Inkling orb stays visible above it the whole time.
+ * No buttons, no "click to continue": a tap anywhere opens the 3D calendar
+ * (used to open the Inkling chat, which felt like a detour — the Inkling orb is
+ * always there for chat). The orb stays visible above it the whole time.
  */
 export class CosmosIntro {
   /** @param {import("../CalendarApp.js").CalendarApp} app */
@@ -92,10 +93,10 @@ export class CosmosIntro {
     greet.innerHTML =
       `<div style="font:800 clamp(34px,8vw,64px) system-ui;letter-spacing:1px;` +
       `background:linear-gradient(90deg,#c7d2fe,#a5b4fc,#f0abfc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">✦ Inkling</div>` +
-      `<div id="cosmos-intro-tap" style="margin-top:26px;font:900 15px system-ui;letter-spacing:.6px;color:#c4b5fd;-webkit-text-stroke:0.6px rgba(255,255,255,.85);text-stroke:0.6px rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.85);animation:cosmos-pulse 2s ease-in-out infinite">Tap anywhere to talk to Inkling</div>`;
+      `<div id="cosmos-intro-tap" style="margin-top:26px;font:900 15px system-ui;letter-spacing:.6px;color:#c4b5fd;-webkit-text-stroke:0.6px rgba(255,255,255,.85);text-stroke:0.6px rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.85);animation:cosmos-pulse 2s ease-in-out infinite">Tap anywhere to open your calendar</div>`;
     el.appendChild(greet);
 
-    // A tap anywhere on the backdrop simply opens the Inkling chat.
+    // A tap anywhere on the backdrop opens the 3D calendar in one go.
     el.addEventListener("click", () => this._enter());
 
     document.body.appendChild(el);
@@ -103,10 +104,11 @@ export class CosmosIntro {
     this._greet = greet;
   }
 
-  /** Any tap → leave the welcome and bring up the Inkling chatbox. */
+  /** Any tap → leave the welcome and open the 3D calendar (notebook-wall months),
+   *  so the very first tap lands you where you can tap a day. */
   _enter() {
     this.hide();
-    try { this.app?.inklingPanel?.expand?.(); } catch { /* ignore */ }
+    try { this.app?.enterCalendarMaxLayer?.(); } catch { /* ignore */ }
   }
 
   show() {

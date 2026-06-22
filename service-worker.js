@@ -1,5 +1,5 @@
 /* Phase 1 PWA baseline: minimal offline support with safe caching strategy. */
-const CACHE_VERSION = "eugeneousxr-1782094998910";
+const CACHE_VERSION = "eugeneousxr-1782097660897";
 const CACHE_NAME = `${CACHE_VERSION}-core`;
 // Persistent, version-INDEPENDENT cache for the heavy 3D boot-loader dino
 // (~8 MB). Kept out of the per-deploy cache so it's downloaded once, not on

@@ -232,7 +232,7 @@ export class CalendarApp {
       getActiveWall: () => this._getActiveWall(),
       isInteractionEnabled: () => this.viewMode !== "notification-wall",
       dayDetailView: this.dayDetailView,
-      onNotebookDayClick: (dayId) => this.openDayNotesLayer(dayId),
+      onNotebookDayClick: (dayId) => this.enterNotebookDetail(dayId),  // tap a day → 3D cylinder day view (was openDayNotesLayer = flat notes panel)
       onHourClick: (hour) => this._syncHour(hour),
       onCanvasTapEmpty: () => this._handleCanvasTapEmpty()
     });
