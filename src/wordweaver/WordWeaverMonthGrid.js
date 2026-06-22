@@ -1057,6 +1057,29 @@ function wrapWords(text, maxChars) {
   return lines.length ? lines : [""];
 }
 
+// Bend a text group's geometries around the Y axis (radius R) so the text curves to
+// match the day's cylinder wall — concave toward the viewer, "same curvature" as the
+// wrapped background photo. Each line's TextGeometry is centered at x=0, so the bend
+// is symmetric. mesh+outline share a geometry, so a Set bends each one once.
+const WALL_BEND_R = 55; // matches the bgPhoto cylinder radius
+function bendTextAroundY(root, radius = WALL_BEND_R) {
+  const done = new Set();
+  root.traverse((o) => {
+    const g = o.geometry;
+    if (!g || done.has(g) || !g.attributes || !g.attributes.position) return;
+    done.add(g);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i), a = x / radius;
+      p.setX(i, radius * Math.sin(a));
+      p.setZ(i, z + radius * (1 - Math.cos(a)));
+    }
+    p.needsUpdate = true;
+    g.computeVertexNormals();
+    g.computeBoundingSphere();
+  });
+}
+
 export function createDayView(scene, dayIso, opts = {}) {
   // opts: { camera, controls, segment, mode }. Back-compat: a string = segment.
   if (typeof opts === "string") opts = { segment: opts };
@@ -1107,6 +1130,7 @@ export function createDayView(scene, dayIso, opts = {}) {
   });
   const headingGroup = heading3d.getGroup();
   headingGroup.position.set(0, 6.2, 0); // raised so the bigger column headers clear it
+  bendTextAroundY(headingGroup);        // curve the date heading with the wall too
   headingGroup.layers.set(1);
   headingGroup.traverse((o) => o.layers.set(1));
   group.add(headingGroup);
@@ -1230,6 +1254,7 @@ export function createDayView(scene, dayIso, opts = {}) {
         });
         const tg = t3d.getGroup();
         tg.position.set(0, startY - li * lineH, 0.08);
+        bendTextAroundY(tg);   // curve the note text to follow the cylinder wall
         tg.layers.set(1);
         tg.traverse((o) => o.layers.set(1));
         card.add(tg);
@@ -1331,9 +1356,9 @@ export function createDayView(scene, dayIso, opts = {}) {
       const aspect = camera.aspect || 1.6;
       const distH = (contentH / 2) / Math.tan(fovR / 2);
       const distW = (contentW / 2) / (Math.tan(fovR / 2) * aspect);
-      // Pull back to fit BOTH dimensions, plus a margin so everything shows.
-      // A few extra paces back so the date heading is never cropped at the top.
-      const dist = Math.max(distH, distW) + 9;
+      // Pull back to fit BOTH dimensions, plus a small margin. Closer than before
+      // (was +9) so you sit nearer the wall and the text's curve is visible.
+      const dist = Math.max(distH, distW) + 4;
       if (controls.maxDistance < dist + 5) controls.maxDistance = dist + 60;
       controls.target.set(0, cy, 0);
       camera.position.set(0, cy, dist);
