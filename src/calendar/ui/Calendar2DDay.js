@@ -130,10 +130,11 @@ export class Calendar2DDay {
     this._addBar = null;  // shared quick-add note bar (day view only)
   }
 
-  /** Show the shared add-note bar in day + week + month views. */
+  /** Show the shared add-note bar in the DAY view only — it's just clutter in the
+   *  year/month/week overviews, where you're not jotting against a specific day. */
   _syncAddBar() {
     const open = this.root && this.root.style.display !== "none";
-    if (open && (this.view === "day" || this.view === "week" || this.view === "month")) {
+    if (open && this.view === "day") {
       if (!this._addBar) {
         // After adding, jump to that day's view so you land where the note went.
         this._addBar = new NoteAddBar({
@@ -144,9 +145,7 @@ export class Calendar2DDay {
           }
         });
       }
-      // Day view targets the open day; month view defaults to today. Either way
-      // the bar's ‹ › day stepper lets you retarget any day before adding.
-      this._addBar.show(this.view === "day" ? this.iso : todayIsoDate());
+      this._addBar.show(this.iso);
     } else {
       this._addBar?.hide();
     }
