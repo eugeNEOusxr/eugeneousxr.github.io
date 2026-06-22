@@ -358,17 +358,423 @@
               { t:"3.1.19 Modulus", k:"problem", q:"3.1.19", prev:"Find the modulus |3 + 4i|." },
               { t:"3.1.20 Modulus", k:"problem", q:"3.1.20", prev:"Find the modulus |−5 + 12i|." },
               { t:"3.1.21 Parts of z", k:"problem", q:"3.1.21", prev:"Let z = 4 + 3i. Fill in Re(z), Im(z), |z|, Re(z̄), Im(z̄)." }
+            ] },
+          { t:"3.2 Quadratic Functions", k:"section", d:"Parabolas: vertex, axis of symmetry, roots, and modeling.",
+            ch:[
+              { t:"Standard & vertex form", k:"subsection", prev:"f(x) = ax² + bx + c (standard) vs f(x) = a(x − h)² + k (vertex form, vertex at (h, k))." },
+              { t:"Axis of symmetry & vertex", k:"subsection", prev:"Axis x = −b/(2a); the vertex is the point on it — a maximum if a < 0, minimum if a > 0." },
+              { t:"x-intercepts (roots)", k:"subsection", prev:"Solve ax² + bx + c = 0 by factoring, the quadratic formula, or the square root." },
+              { t:"Completing the square", k:"subsection", prev:"Rewrite standard form into vertex form to read off the vertex directly." },
+              { t:"Modeling with quadratics", k:"subsection", prev:"Maximize area/revenue or model projectile height with the vertex." }
+            ] },
+          { t:"3.3 Power & Polynomial Functions", k:"section", d:"Power functions, degree, leading coefficient, and end behavior.",
+            ch:[
+              { t:"Power function", k:"subsection", prev:"f(x) = k·xⁿ — a single power of x; its shape is set by whether n is even/odd, +/−." },
+              { t:"Polynomial form & degree", k:"subsection", prev:"A sum of power terms; the degree is the highest exponent, the leading term dominates." },
+              { t:"End behavior", k:"subsection", prev:"Set by the leading term: even degree both ends agree, odd degree ends oppose; sign from the leading coefficient." },
+              { t:"Turning points", k:"subsection", prev:"A degree-n polynomial has at most n − 1 turning points." }
+            ] },
+          { t:"3.4 Graphs of Polynomial Functions", k:"section", d:"Zeros, multiplicity, and sketching from factored form.",
+            ch:[
+              { t:"Zeros from factors", k:"subsection", prev:"Each factor (x − r) gives a zero (x-intercept) at x = r." },
+              { t:"Multiplicity: touch vs cross", k:"subsection", prev:"Odd multiplicity crosses the axis; even multiplicity touches and turns back." },
+              { t:"Sign chart", k:"subsection", prev:"Use the zeros to split the line and test where the graph is above/below the axis." },
+              { t:"Sketching", k:"subsection", prev:"Combine end behavior + zeros + multiplicities to draw the curve." },
+              { t:"Intermediate Value Theorem", k:"subsection", prev:"A sign change between two x-values guarantees a real zero between them." }
+            ] },
+          { t:"3.5 Dividing Polynomials", k:"section", d:"Long division and synthetic division.",
+            ch:[
+              { t:"Polynomial long division", k:"subsection", prev:"Divide term by term to get a quotient + remainder, just like numbers." },
+              { t:"Synthetic division", k:"subsection", prev:"A fast shortcut for dividing by a linear factor (x − c)." },
+              { t:"Division algorithm", k:"subsection", prev:"f(x) = (divisor)·(quotient) + remainder." }
+            ] },
+          { t:"3.6 Zeros of Polynomial Functions", k:"section", d:"Remainder/Factor theorems, rational zeros, and the FTA.",
+            ch:[
+              { t:"Remainder Theorem", k:"subsection", prev:"The remainder of f(x) ÷ (x − c) equals f(c)." },
+              { t:"Factor Theorem", k:"subsection", prev:"(x − c) is a factor exactly when f(c) = 0." },
+              { t:"Rational Zero Theorem", k:"subsection", prev:"Possible rational zeros are ±(factor of constant)/(factor of leading coefficient)." },
+              { t:"Fundamental Theorem of Algebra", k:"subsection", prev:"A degree-n polynomial has exactly n complex zeros (counting multiplicity)." },
+              { t:"Complex & conjugate zeros", k:"subsection", prev:"Non-real zeros of a real polynomial come in conjugate pairs a ± bi." }
+            ] },
+          { t:"3.7 Rational Functions", k:"section", d:"Domain, asymptotes, holes, and intercepts.",
+            ch:[
+              { t:"Domain & excluded values", k:"subsection", prev:"Exclude x-values that make the denominator zero." },
+              { t:"Vertical asymptotes & holes", k:"subsection", prev:"A leftover denominator zero → vertical asymptote; a cancelled factor → a hole." },
+              { t:"Horizontal asymptote", k:"subsection", prev:"Compare degrees of top and bottom (0, ratio of leading coefficients, or none)." },
+              { t:"Slant asymptote", k:"subsection", prev:"When the top's degree is exactly one more than the bottom's, divide to get a slant line." },
+              { t:"Intercepts", k:"subsection", prev:"x-intercepts where the numerator is 0; y-intercept at f(0)." }
+            ] },
+          { t:"3.8 Inverses & Radical Functions", k:"section", d:"Inverse functions, restricting domains, and radicals.",
+            ch:[
+              { t:"Finding an inverse", k:"subsection", prev:"Swap x and y, then solve for y; the inverse undoes the original." },
+              { t:"Restricting the domain", k:"subsection", prev:"Limit the domain so a non-one-to-one function (like x²) becomes invertible." },
+              { t:"Radical functions", k:"subsection", prev:"Square/cube roots — inverses of power functions on a restricted domain." },
+              { t:"Domain of a radical", k:"subsection", prev:"Even roots need a non-negative radicand; odd roots accept all reals." }
+            ] },
+          { t:"3.9 Modeling Using Variation", k:"section", d:"Direct, inverse, and joint variation.",
+            ch:[
+              { t:"Direct variation", k:"subsection", prev:"y = kx — y grows in proportion to x; k is the constant of variation." },
+              { t:"Inverse variation", k:"subsection", prev:"y = k/x — y shrinks as x grows." },
+              { t:"Joint / combined variation", k:"subsection", prev:"y varies with a product/quotient of several variables, e.g. y = kxz." },
+              { t:"Solving variation problems", k:"subsection", prev:"Find k from a known case, then use the equation to predict another." }
             ] }
         ] },
-      { t:"4 · Exponential & Log", k:"chapter", d:"Exponential growth/decay, logarithms, and their equations." },
-      { t:"5 · Trig Functions", k:"chapter", d:"Angles, the unit circle, and the six trigonometric functions." },
-      { t:"6 · Periodic Functions", k:"chapter", d:"Graphs of sine, cosine, and other periodic models." },
-      { t:"7 · Trig Identities", k:"chapter", d:"Identities and solving trigonometric equations." },
-      { t:"8 · Applied Trig", k:"chapter", d:"Law of sines/cosines, vectors, polar coordinates." },
-      { t:"9 · Systems", k:"chapter", d:"Systems of equations & inequalities; matrices." },
-      { t:"10 · Analytic Geometry", k:"chapter", d:"Conic sections: parabolas, ellipses, hyperbolas." },
-      { t:"11 · Sequences & Prob.", k:"chapter", d:"Sequences, series, counting, and probability." },
-      { t:"12 · Intro to Calculus", k:"chapter", d:"Limits and the idea of the derivative." }
+      { t:"4 · Exponential & Log", k:"chapter", d:"Exponential growth/decay, logarithms, and their equations.",
+        ch:[
+          { t:"4.1 Exponential Functions", k:"section", d:"Growth and decay, base, compound interest, and e.",
+            ch:[
+              { t:"Exponential form", k:"subsection", prev:"f(x) = a·bˣ — a constant percent change per step; b is the base." },
+              { t:"Growth vs decay", k:"subsection", prev:"b > 1 grows; 0 < b < 1 decays." },
+              { t:"Compound interest", k:"subsection", prev:"A = P(1 + r/n)^(nt) for n compounds; A = Pe^(rt) when compounded continuously." },
+              { t:"The number e", k:"subsection", prev:"e ≈ 2.718 — the natural base for continuous growth." }
+            ] },
+          { t:"4.2 Graphs of Exponential Functions", k:"section", d:"Parent shape, asymptote, and transformations.",
+            ch:[
+              { t:"Parent graph & asymptote", k:"subsection", prev:"y = bˣ passes through (0, 1) with a horizontal asymptote y = 0." },
+              { t:"Transformations", k:"subsection", prev:"Shifts/reflections/stretches move the curve and its asymptote." },
+              { t:"Domain & range", k:"subsection", prev:"Domain all reals; range y > 0 (shifted by any vertical translation)." }
+            ] },
+          { t:"4.3 Logarithmic Functions", k:"section", d:"Logs as the inverse of exponentials.",
+            ch:[
+              { t:"Definition of a log", k:"subsection", prev:"log_b(x) = y means bʸ = x — the exponent you raise b to." },
+              { t:"Convert log ↔ exponential", k:"subsection", prev:"Rewrite between the two forms to evaluate or solve." },
+              { t:"Common & natural log", k:"subsection", prev:"log = log₁₀; ln = log_e." },
+              { t:"Evaluating logs", k:"subsection", prev:"Ask 'b to what power gives x?' for exact values." }
+            ] },
+          { t:"4.4 Graphs of Logarithmic Functions", k:"section", d:"Parent shape, vertical asymptote, and transformations.",
+            ch:[
+              { t:"Parent graph & asymptote", k:"subsection", prev:"y = log_b(x) passes through (1, 0) with a vertical asymptote x = 0." },
+              { t:"Transformations", k:"subsection", prev:"Shifts/reflections move the curve and its asymptote." },
+              { t:"Domain & range", k:"subsection", prev:"Domain x > 0 (the argument must be positive); range all reals." }
+            ] },
+          { t:"4.5 Logarithmic Properties", k:"section", d:"Product, quotient, power rules, and change of base.",
+            ch:[
+              { t:"Product rule", k:"subsection", prev:"log_b(MN) = log_b M + log_b N." },
+              { t:"Quotient rule", k:"subsection", prev:"log_b(M/N) = log_b M − log_b N." },
+              { t:"Power rule", k:"subsection", prev:"log_b(Mᵖ) = p·log_b M." },
+              { t:"Change of base", k:"subsection", prev:"log_b(x) = ln x / ln b (or log/log)." },
+              { t:"Expand & condense", k:"subsection", prev:"Use the rules to break apart or combine log expressions." }
+            ] },
+          { t:"4.6 Exponential & Log Equations", k:"section", d:"Solving with like bases, logs, and checking domains.",
+            ch:[
+              { t:"Like bases", k:"subsection", prev:"If bˣ = bʸ then x = y." },
+              { t:"Take a log of both sides", k:"subsection", prev:"When bases differ, log both sides and use the power rule." },
+              { t:"Log equations", k:"subsection", prev:"Condense to one log, rewrite as exponential, then solve." },
+              { t:"Extraneous solutions", k:"subsection", prev:"Reject answers that make a log's argument ≤ 0." }
+            ] },
+          { t:"4.7 Exponential & Log Models", k:"section", d:"Growth/decay, half-life, doubling, and logistic models.",
+            ch:[
+              { t:"Growth & decay", k:"subsection", prev:"A = A₀e^(kt): k > 0 grows, k < 0 decays." },
+              { t:"Half-life & doubling time", k:"subsection", prev:"Solve for the time when the amount halves or doubles." },
+              { t:"Logistic growth", k:"subsection", prev:"Growth that levels off at a carrying capacity." },
+              { t:"Newton's law of cooling", k:"subsection", prev:"Temperature decays exponentially toward the surroundings." }
+            ] },
+          { t:"4.8 Fitting Exponential Models to Data", k:"section", d:"Regression and choosing a model.",
+            ch:[
+              { t:"Exponential regression", k:"subsection", prev:"Fit y = a·bˣ to data with technology." },
+              { t:"Choosing a model", k:"subsection", prev:"Decide between linear, exponential, logarithmic, or logistic from the data's shape." }
+            ] }
+        ] },
+      { t:"5 · Trig Functions", k:"chapter", d:"Angles, the unit circle, and the six trigonometric functions.",
+        ch:[
+          { t:"5.1 Angles", k:"section", d:"Degrees, radians, coterminal & reference angles, arc length.",
+            ch:[
+              { t:"Degrees & radians", k:"subsection", prev:"180° = π radians; convert by multiplying by π/180 or 180/π." },
+              { t:"Coterminal angles", k:"subsection", prev:"Add/subtract full turns (360° or 2π) to land on the same ray." },
+              { t:"Reference angle", k:"subsection", prev:"The acute angle to the x-axis — gives the size of the trig value." },
+              { t:"Arc length & sector area", k:"subsection", prev:"s = rθ and A = ½r²θ with θ in radians." },
+              { t:"Angular & linear speed", k:"subsection", prev:"ω = θ/t (angular); v = rω (linear)." }
+            ] },
+          { t:"5.2 Unit Circle: Sine & Cosine", k:"section", d:"Coordinates on the unit circle and special angles.",
+            ch:[
+              { t:"Unit-circle definition", k:"subsection", prev:"On the unit circle, cos θ = x and sin θ = y of the point at angle θ." },
+              { t:"Special angles", k:"subsection", prev:"Know 0, 30, 45, 60, 90° (and π multiples) by heart." },
+              { t:"Signs by quadrant", k:"subsection", prev:"ASTC: All, Sine, Tangent, Cosine positive in quadrants I–IV." },
+              { t:"Pythagorean identity", k:"subsection", prev:"sin²θ + cos²θ = 1." }
+            ] },
+          { t:"5.3 Other Trig Functions", k:"section", d:"Tangent, cotangent, secant, cosecant.",
+            ch:[
+              { t:"Definitions", k:"subsection", prev:"tan = sin/cos, cot = cos/sin, sec = 1/cos, csc = 1/sin." },
+              { t:"Special-angle values", k:"subsection", prev:"Read them off sine and cosine at the special angles." },
+              { t:"Even/odd & reciprocal identities", k:"subsection", prev:"cos and sec are even; sin, tan, csc, cot are odd." }
+            ] },
+          { t:"5.4 Right Triangle Trig", k:"section", d:"SOHCAHTOA and solving right triangles.",
+            ch:[
+              { t:"SOHCAHTOA", k:"subsection", prev:"sin = opp/hyp, cos = adj/hyp, tan = opp/adj." },
+              { t:"Solving right triangles", k:"subsection", prev:"Find missing sides/angles from one side + one acute angle (or two sides)." },
+              { t:"Elevation & depression", k:"subsection", prev:"Angles measured up from / down from the horizontal in word problems." },
+              { t:"Cofunctions", k:"subsection", prev:"sin θ = cos(90° − θ): cofunctions of complementary angles are equal." }
+            ] }
+        ] },
+      { t:"6 · Periodic Functions", k:"chapter", d:"Graphs of sine, cosine, and other periodic models.",
+        ch:[
+          { t:"6.1 Graphs of Sine & Cosine", k:"section", d:"Amplitude, period, phase shift, vertical shift.",
+            ch:[
+              { t:"Amplitude", k:"subsection", prev:"|a| in y = a·sin(...) — half the height from peak to trough." },
+              { t:"Period", k:"subsection", prev:"Period = 2π/|b| for y = sin(bx): b stretches/squeezes horizontally." },
+              { t:"Phase & vertical shift", k:"subsection", prev:"y = a·sin(b(x − c)) + d shifts right by c and up by d." },
+              { t:"Modeling", k:"subsection", prev:"Fit a sinusoid to tides, daylight, temperature, and other cycles." }
+            ] },
+          { t:"6.2 Graphs of Other Trig Functions", k:"section", d:"Tangent, cotangent, secant, cosecant graphs.",
+            ch:[
+              { t:"Tangent & cotangent", k:"subsection", prev:"Period π, with vertical asymptotes where the function is undefined." },
+              { t:"Secant & cosecant", k:"subsection", prev:"Reciprocal graphs with U-shapes between asymptotes." },
+              { t:"Asymptotes & period", k:"subsection", prev:"Asymptotes occur where the reciprocal's base function is zero." }
+            ] },
+          { t:"6.3 Inverse Trig Functions", k:"section", d:"Arcsin, arccos, arctan and their restricted ranges.",
+            ch:[
+              { t:"Definitions & ranges", k:"subsection", prev:"arcsin/arccos/arctan undo sin/cos/tan on restricted ranges so they're functions." },
+              { t:"Evaluating", k:"subsection", prev:"Give the one angle in the allowed range whose trig value matches." },
+              { t:"Compositions", k:"subsection", prev:"Simplify sin(arccos x) etc. using a reference triangle." }
+            ] }
+        ] },
+      { t:"7 · Trig Identities", k:"chapter", d:"Identities and solving trigonometric equations.",
+        ch:[
+          { t:"7.1 Solving with Identities", k:"section", d:"Fundamental identities, simplifying, and proving.",
+            ch:[
+              { t:"Pythagorean identities", k:"subsection", prev:"sin²+cos²=1, 1+tan²=sec², 1+cot²=csc²." },
+              { t:"Reciprocal & quotient identities", k:"subsection", prev:"sec=1/cos, csc=1/sin, cot=1/tan; tan=sin/cos, cot=cos/sin." },
+              { t:"Simplifying expressions", k:"subsection", prev:"Rewrite everything in sin/cos and reduce." },
+              { t:"Proving identities", k:"subsection", prev:"Work one side until it matches the other." }
+            ] },
+          { t:"7.2 Sum & Difference Identities", k:"section", d:"sin, cos, tan of A ± B.",
+            ch:[
+              { t:"cos(A ± B)", k:"subsection", prev:"cos A cos B ∓ sin A sin B." },
+              { t:"sin(A ± B)", k:"subsection", prev:"sin A cos B ± cos A sin B." },
+              { t:"tan(A ± B)", k:"subsection", prev:"(tan A ± tan B)/(1 ∓ tan A tan B)." },
+              { t:"Exact values", k:"subsection", prev:"Split angles like 15° = 45° − 30° to get exact trig values." }
+            ] },
+          { t:"7.3 Double, Half-Angle & Reduction", k:"section", d:"Double-angle, half-angle, and power-reduction formulas.",
+            ch:[
+              { t:"Double-angle formulas", k:"subsection", prev:"sin 2θ = 2 sinθ cosθ; cos 2θ has three forms; tan 2θ formula." },
+              { t:"Half-angle formulas", k:"subsection", prev:"sin(θ/2), cos(θ/2), tan(θ/2) with a ± from the quadrant." },
+              { t:"Power-reduction", k:"subsection", prev:"Rewrite sin²/cos² in terms of cos 2θ." }
+            ] },
+          { t:"7.4 Sum-to-Product & Product-to-Sum", k:"section", d:"Converting between sums and products.",
+            ch:[
+              { t:"Product-to-sum", k:"subsection", prev:"Turn a product of sines/cosines into a sum." },
+              { t:"Sum-to-product", k:"subsection", prev:"Turn a sum/difference of sines/cosines into a product." }
+            ] },
+          { t:"7.5 Solving Trig Equations", k:"section", d:"Factoring, identities, and general solutions.",
+            ch:[
+              { t:"Linear & quadratic in a trig function", k:"subsection", prev:"Isolate or factor (treat sinθ like a variable)." },
+              { t:"Using identities", k:"subsection", prev:"Rewrite so the equation has a single trig function." },
+              { t:"General solutions", k:"subsection", prev:"Add the period (e.g. +2πk) to capture all solutions." }
+            ] },
+          { t:"7.6 Modeling with Trig Functions", k:"section", d:"Sinusoidal models from periodic data.",
+            ch:[
+              { t:"Sinusoidal models", k:"subsection", prev:"Pick amplitude, period, shift to fit a repeating phenomenon." },
+              { t:"From data", k:"subsection", prev:"Read max/min and timing to set the parameters." }
+            ] }
+        ] },
+      { t:"8 · Applied Trig", k:"chapter", d:"Law of sines/cosines, vectors, polar coordinates.",
+        ch:[
+          { t:"8.1 Law of Sines", k:"section", d:"Oblique triangles: AAS, ASA, and the ambiguous case.",
+            ch:[
+              { t:"The law", k:"subsection", prev:"sin A / a = sin B / b = sin C / c." },
+              { t:"AAS / ASA", k:"subsection", prev:"Two angles + a side determine the triangle uniquely." },
+              { t:"Ambiguous case (SSA)", k:"subsection", prev:"Two sides + a non-included angle can give 0, 1, or 2 triangles." },
+              { t:"Area", k:"subsection", prev:"Area = ½ab sin C." }
+            ] },
+          { t:"8.2 Law of Cosines", k:"section", d:"Oblique triangles: SAS and SSS.",
+            ch:[
+              { t:"The law", k:"subsection", prev:"c² = a² + b² − 2ab cos C (a generalized Pythagorean theorem)." },
+              { t:"SAS / SSS", k:"subsection", prev:"Use it when you know two sides + the included angle, or all three sides." },
+              { t:"Heron's formula", k:"subsection", prev:"Area from the three side lengths via the semi-perimeter." }
+            ] },
+          { t:"8.3 Polar Coordinates", k:"section", d:"Points as (r, θ) and converting to/from (x, y).",
+            ch:[
+              { t:"Polar ↔ rectangular", k:"subsection", prev:"x = r cosθ, y = r sinθ; r² = x²+y², tanθ = y/x." },
+              { t:"Plotting points", k:"subsection", prev:"Go out r along the angle θ (r can be negative)." },
+              { t:"Multiple representations", k:"subsection", prev:"The same point has many (r, θ) names." }
+            ] },
+          { t:"8.4 Polar Graphs", k:"section", d:"Circles, cardioids, limaçons, and roses.",
+            ch:[
+              { t:"Circles & lines", k:"subsection", prev:"r = a, r = a cosθ, θ = c give basic polar shapes." },
+              { t:"Cardioids & limaçons", k:"subsection", prev:"r = a ± b cosθ / a ± b sinθ — heart and looped shapes." },
+              { t:"Rose curves", k:"subsection", prev:"r = a cos(nθ) makes petals (n or 2n of them)." },
+              { t:"Symmetry", k:"subsection", prev:"Test symmetry about the axes/pole to graph faster." }
+            ] },
+          { t:"8.5 Polar Form of Complex Numbers", k:"section", d:"Modulus, argument, De Moivre's theorem.",
+            ch:[
+              { t:"Modulus & argument", k:"subsection", prev:"r = |z|, θ = arg z; z = r(cosθ + i sinθ)." },
+              { t:"Multiply & divide", k:"subsection", prev:"Multiply moduli and add arguments (divide → subtract)." },
+              { t:"De Moivre's theorem", k:"subsection", prev:"zⁿ = rⁿ(cos nθ + i sin nθ)." },
+              { t:"Roots", k:"subsection", prev:"The n nth-roots are spaced evenly around a circle." }
+            ] },
+          { t:"8.6 Parametric Equations", k:"section", d:"Describe a path with x(t) and y(t).",
+            ch:[
+              { t:"Parametrizing", k:"subsection", prev:"Let a parameter t drive both x and y." },
+              { t:"Eliminating the parameter", k:"subsection", prev:"Solve for t (or use an identity) to get a relation in x and y." }
+            ] },
+          { t:"8.7 Parametric Graphs", k:"section", d:"Plotting, orientation, and motion.",
+            ch:[
+              { t:"Plotting & orientation", k:"subsection", prev:"Tracing t shows the direction of travel along the curve." },
+              { t:"Projectile motion", k:"subsection", prev:"x and y as functions of time model a thrown object." }
+            ] },
+          { t:"8.8 Vectors", k:"section", d:"Magnitude, direction, components, and the dot product.",
+            ch:[
+              { t:"Components", k:"subsection", prev:"⟨x, y⟩ from magnitude and direction (or two points)." },
+              { t:"Magnitude & direction", k:"subsection", prev:"|v| = √(x²+y²); direction angle from tanθ = y/x." },
+              { t:"Operations", k:"subsection", prev:"Add/subtract componentwise; scalar multiply scales length." },
+              { t:"Dot product", k:"subsection", prev:"u·v = |u||v|cosθ — tells you the angle (0 if perpendicular)." }
+            ] }
+        ] },
+      { t:"9 · Systems", k:"chapter", d:"Systems of equations & inequalities; matrices.",
+        ch:[
+          { t:"9.1 Systems: Two Variables", k:"section", d:"Substitution, elimination, and solution types.",
+            ch:[
+              { t:"Substitution", k:"subsection", prev:"Solve one equation for a variable and plug into the other." },
+              { t:"Elimination", k:"subsection", prev:"Add multiples of the equations to cancel a variable." },
+              { t:"Solution types", k:"subsection", prev:"One solution, none (parallel), or infinitely many (same line)." }
+            ] },
+          { t:"9.2 Systems: Three Variables", k:"section", d:"Eliminating to back-substitution.",
+            ch:[
+              { t:"Elimination to 2 variables", k:"subsection", prev:"Combine pairs to remove one variable, then solve the smaller system." },
+              { t:"Back-substitution", k:"subsection", prev:"Work back up to find all three variables." },
+              { t:"Dependent / inconsistent", k:"subsection", prev:"Recognize infinitely-many or no-solution outcomes." }
+            ] },
+          { t:"9.3 Nonlinear Systems & Inequalities", k:"section", d:"Curves meeting curves; shaded regions.",
+            ch:[
+              { t:"Solving nonlinear systems", k:"subsection", prev:"Substitution/elimination where at least one equation is nonlinear." },
+              { t:"Graphing inequalities", k:"subsection", prev:"Shade the region that satisfies each inequality; the overlap is the solution." }
+            ] },
+          { t:"9.4 Partial Fractions", k:"section", d:"Breaking a rational expression into simpler pieces.",
+            ch:[
+              { t:"Distinct linear factors", k:"subsection", prev:"Split into A/(x−a) + B/(x−b) + …." },
+              { t:"Repeated / quadratic factors", k:"subsection", prev:"Add terms for each power and for irreducible quadratics." }
+            ] },
+          { t:"9.5 Matrices & Operations", k:"section", d:"Notation, addition, scalar, and multiplication.",
+            ch:[
+              { t:"Matrix notation", k:"subsection", prev:"Rows × columns; entry aᵢⱼ at row i, column j." },
+              { t:"Add & scalar multiply", k:"subsection", prev:"Add entrywise; scalar scales every entry." },
+              { t:"Matrix multiplication", k:"subsection", prev:"Row · column dot products; sizes must match (n×m by m×p)." }
+            ] },
+          { t:"9.6 Gaussian Elimination", k:"section", d:"Augmented matrices and row operations.",
+            ch:[
+              { t:"Augmented matrix", k:"subsection", prev:"Write the system's coefficients + constants as one matrix." },
+              { t:"Row operations", k:"subsection", prev:"Swap, scale, and add rows to simplify." },
+              { t:"Row-echelon form", k:"subsection", prev:"Reduce to read off the solution by back-substitution." }
+            ] },
+          { t:"9.7 Solving with Inverses", k:"section", d:"Matrix inverses to solve AX = B.",
+            ch:[
+              { t:"The inverse matrix", k:"subsection", prev:"A⁻¹ undoes A; exists only when det A ≠ 0." },
+              { t:"Solve AX = B", k:"subsection", prev:"X = A⁻¹B." }
+            ] },
+          { t:"9.8 Cramer's Rule", k:"section", d:"Determinants to solve systems.",
+            ch:[
+              { t:"Determinants", k:"subsection", prev:"2×2: ad − bc; 3×3 by expansion or the shortcut." },
+              { t:"Cramer's rule", k:"subsection", prev:"Each variable = (replaced-column determinant)/(coefficient determinant)." }
+            ] }
+        ] },
+      { t:"10 · Analytic Geometry", k:"chapter", d:"Conic sections: parabolas, ellipses, hyperbolas.",
+        ch:[
+          { t:"10.1 The Ellipse", k:"section", d:"Standard form, center, vertices, and foci.",
+            ch:[
+              { t:"Standard form", k:"subsection", prev:"(x−h)²/a² + (y−k)²/b² = 1, centered at (h, k)." },
+              { t:"Vertices & foci", k:"subsection", prev:"Major axis along the larger denominator; c² = a² − b² locates the foci." },
+              { t:"Graphing", k:"subsection", prev:"Plot center, vertices, co-vertices, then sketch the oval." },
+              { t:"Applications", k:"subsection", prev:"Orbits and whispering galleries." }
+            ] },
+          { t:"10.2 The Hyperbola", k:"section", d:"Standard form, vertices, foci, and asymptotes.",
+            ch:[
+              { t:"Standard form", k:"subsection", prev:"(x−h)²/a² − (y−k)²/b² = 1 opens left/right; swap for up/down." },
+              { t:"Vertices & foci", k:"subsection", prev:"c² = a² + b² locates the foci along the transverse axis." },
+              { t:"Asymptotes", k:"subsection", prev:"The branches approach lines through the center with slope ±b/a." },
+              { t:"Graphing", k:"subsection", prev:"Box from a and b, draw the asymptotes, then the branches." }
+            ] },
+          { t:"10.3 The Parabola", k:"section", d:"Vertex, focus, and directrix form.",
+            ch:[
+              { t:"Standard form", k:"subsection", prev:"(x−h)² = 4p(y−k) (and the sideways version)." },
+              { t:"Focus & directrix", k:"subsection", prev:"p is the distance from the vertex to the focus (and to the directrix)." },
+              { t:"Graphing", k:"subsection", prev:"Plot vertex, focus, and a couple of points using the focal width." }
+            ] },
+          { t:"10.4 Rotation of Axes", k:"section", d:"Rotated conics and the discriminant.",
+            ch:[
+              { t:"Rotating the axes", k:"subsection", prev:"An xy term means the conic is tilted; rotate to remove it." },
+              { t:"Identify by discriminant", k:"subsection", prev:"B² − 4AC: < 0 ellipse, = 0 parabola, > 0 hyperbola." }
+            ] },
+          { t:"10.5 Conics in Polar Coordinates", k:"section", d:"Eccentricity and polar equations of conics.",
+            ch:[
+              { t:"Eccentricity", k:"subsection", prev:"e < 1 ellipse, e = 1 parabola, e > 1 hyperbola." },
+              { t:"Polar form", k:"subsection", prev:"r = ep/(1 ± e cosθ) puts a focus at the pole." }
+            ] }
+        ] },
+      { t:"11 · Sequences & Prob.", k:"chapter", d:"Sequences, series, counting, and probability.",
+        ch:[
+          { t:"11.1 Sequences & Their Notation", k:"section", d:"Explicit and recursive rules; factorials.",
+            ch:[
+              { t:"Explicit formula", k:"subsection", prev:"aₙ given directly as a function of n." },
+              { t:"Recursive formula", k:"subsection", prev:"Each term defined from the previous one(s)." },
+              { t:"Factorial notation", k:"subsection", prev:"n! = n·(n−1)···2·1; 0! = 1." }
+            ] },
+          { t:"11.2 Arithmetic Sequences", k:"section", d:"Common difference, nth term, and sum.",
+            ch:[
+              { t:"Common difference", k:"subsection", prev:"Each term adds a constant d." },
+              { t:"nth term", k:"subsection", prev:"aₙ = a₁ + (n − 1)d." },
+              { t:"Sum (arithmetic series)", k:"subsection", prev:"Sₙ = n(a₁ + aₙ)/2." }
+            ] },
+          { t:"11.3 Geometric Sequences", k:"section", d:"Common ratio, nth term, and sums.",
+            ch:[
+              { t:"Common ratio", k:"subsection", prev:"Each term multiplies by a constant r." },
+              { t:"nth term", k:"subsection", prev:"aₙ = a₁·r^(n−1)." },
+              { t:"Finite & infinite sums", k:"subsection", prev:"Sₙ = a₁(1 − rⁿ)/(1 − r); if |r| < 1, S = a₁/(1 − r)." }
+            ] },
+          { t:"11.4 Series & Their Notation", k:"section", d:"Summation notation and series.",
+            ch:[
+              { t:"Summation (Σ) notation", k:"subsection", prev:"Σ adds terms over an index range." },
+              { t:"Arithmetic & geometric series", k:"subsection", prev:"Apply the sum formulas in Σ form." },
+              { t:"Infinite geometric series", k:"subsection", prev:"Converges to a₁/(1 − r) when |r| < 1." }
+            ] },
+          { t:"11.5 Counting Principles", k:"section", d:"Permutations and combinations.",
+            ch:[
+              { t:"Addition & multiplication rules", k:"subsection", prev:"OR adds choices; AND multiplies stages." },
+              { t:"Permutations", k:"subsection", prev:"Order matters: nPr = n!/(n−r)!." },
+              { t:"Combinations", k:"subsection", prev:"Order doesn't matter: nCr = n!/(r!(n−r)!)." }
+            ] },
+          { t:"11.6 Binomial Theorem", k:"section", d:"Expanding (a + b)ⁿ.",
+            ch:[
+              { t:"Pascal's triangle & coefficients", k:"subsection", prev:"Row n gives the binomial coefficients nCk." },
+              { t:"Expansion", k:"subsection", prev:"(a + b)ⁿ = Σ nCk · a^(n−k) · bᵏ." },
+              { t:"A specific term", k:"subsection", prev:"Find the kth term without expanding the whole thing." }
+            ] },
+          { t:"11.7 Probability", k:"section", d:"Events, complements, and unions.",
+            ch:[
+              { t:"Sample space & events", k:"subsection", prev:"P(event) = favorable / total (equally likely)." },
+              { t:"Complement", k:"subsection", prev:"P(not A) = 1 − P(A)." },
+              { t:"Unions (OR)", k:"subsection", prev:"P(A or B) = P(A) + P(B) − P(A and B)." },
+              { t:"Mutually exclusive", k:"subsection", prev:"Disjoint events can't both happen: P(A and B) = 0." }
+            ] }
+        ] },
+      { t:"12 · Intro to Calculus", k:"chapter", d:"Limits and the idea of the derivative.",
+        ch:[
+          { t:"12.1 Finding Limits: Numerical & Graphical", k:"section", d:"The limit idea from tables and graphs.",
+            ch:[
+              { t:"The limit idea", k:"subsection", prev:"The value f(x) heads toward as x approaches a (not f(a) itself)." },
+              { t:"From a table", k:"subsection", prev:"Plug in x-values closing in from both sides." },
+              { t:"One-sided limits", k:"subsection", prev:"Left and right limits; the two-sided limit exists only when they agree." },
+              { t:"From a graph", k:"subsection", prev:"Read where the curve approaches near x = a." }
+            ] },
+          { t:"12.2 Finding Limits: Properties", k:"section", d:"Limit laws and algebraic techniques.",
+            ch:[
+              { t:"Limit laws", k:"subsection", prev:"Limits of sums/products/quotients split apart." },
+              { t:"Direct substitution", k:"subsection", prev:"For continuous functions, just plug in a." },
+              { t:"Factoring & rationalizing", k:"subsection", prev:"Cancel the 0/0 trouble spot, then substitute." }
+            ] },
+          { t:"12.3 Continuity", k:"section", d:"Continuous functions and types of breaks.",
+            ch:[
+              { t:"Continuity at a point", k:"subsection", prev:"f(a) defined, the limit exists, and they're equal." },
+              { t:"Types of discontinuity", k:"subsection", prev:"Removable (hole), jump, and infinite (asymptote)." },
+              { t:"On an interval", k:"subsection", prev:"Continuous everywhere on the interval — drawable without lifting the pen." }
+            ] },
+          { t:"12.4 Derivatives", k:"section", d:"Rates of change and the slope of the tangent.",
+            ch:[
+              { t:"Average vs instantaneous rate", k:"subsection", prev:"Secant slope over an interval vs the slope at a single instant." },
+              { t:"The derivative as a limit", k:"subsection", prev:"f′(x) = lim_{h→0} [f(x+h) − f(x)] / h." },
+              { t:"Tangent line", k:"subsection", prev:"f′(a) is the slope of the tangent at x = a." },
+              { t:"Basic rules", k:"subsection", prev:"Power, constant, sum rules for quick derivatives." }
+            ] }
+        ] }
     ]
   };
 

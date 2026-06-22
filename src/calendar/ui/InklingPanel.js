@@ -738,13 +738,10 @@ export class InklingPanel {
         "inkling-msg--proactive"
       );
       this._appendTitleIdeas();
-    } else {
-      this._appendBubble(
-        "inkling",
-        escapeHtml(`You're on ${pageName}. I can add an event, set a reminder, jump you to a day, or just talk — what's up?`),
-        "inkling-msg--proactive"
-      );
     }
+    // No generic "You're on the 3D Calendar — I can add an event…" greeting: it was
+    // redundant noise on every open. The real AI insights/check-ins still fire.
+    void pageName;
   }
 
   _appendTitleIdeas() {
