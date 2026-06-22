@@ -101,6 +101,11 @@ body.inkling-tab-wordweaver #wordweaver-embed.wordweaver-embed--stage .wordweave
 .wordweaver-embed.wordweaver-embed--stage .wordweaver-embed__date-nav {
   display: none !important;
 }
+/* …but in the 3D DAY view the ‹ Today › arrows DO work — they step the focused day,
+   so bring them back there as the day-switcher (the year/month overview stays clean). */
+body.ww-level-day .wordweaver-embed.wordweaver-embed--stage .wordweaver-embed__date-nav {
+  display: flex !important;
+}
 
 /* Now the canvas is full-bleed (extends under the bottom nav), lift the floating
    bottom control cluster (Slide / Fly / Down / orb) above the nav so it stays

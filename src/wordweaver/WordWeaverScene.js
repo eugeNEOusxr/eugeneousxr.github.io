@@ -1353,6 +1353,9 @@ export class WordWeaverScene {
 
   _updateViewButtons() {
     this._updateMonthStepper();
+    // Flag the DAY drill-down so CSS can re-show the ‹ Today › date-nav there (it's
+    // hidden in the year/month overview but works as the day-switcher in the day view).
+    document.body.classList.toggle("ww-level-day", this._navLevel === "day");
     const wrap = this._viewBtns;
     if (!wrap) return;
     const is3d = getCalendarMode() === "3d" && isWordWeaverTabActive();
