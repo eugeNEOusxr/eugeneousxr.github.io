@@ -159,8 +159,8 @@ export class CalendarApp {
 
     // Dock before WordWeaver so a weave error cannot block the small calendar.
     this.notebookCalendarDock = new NotebookCalendarDock({
-      onOpenDay: (date) => this.openDayNotesByDate(date),
-      onOpenNotes: (date) => this.openDayNotesByDate(date),
+      onOpenDay: (date) => this.openDayCylinderByDate(date),     // month-view day click → 3D cylinder day
+      onOpenNotes: (date) => this.openDayCylinderByDate(date),
       onOpenWriter: (date) => this.openNotebookDayByDate(date),
       onSyncMonth: (date) => this.syncCalendarMonth(date),
       onMaximize: () => this.enterCalendarMaxLayer(),
@@ -573,6 +573,22 @@ export class CalendarApp {
     const dayId = this._resolveDayIdForDate(dateStr);
     if (!dayId) return;
     await this.openDayNotesLayer(dayId);
+  }
+
+  /**
+   * Open a day as the 3D CYLINDER (DayDetailView) and zoom into it. The current
+   * inkling-notebook layout otherwise hides DayDetailView and shows a flat panel,
+   * so clicking a day in the month view never showed the cylinder. Ensure the
+   * notebook-wall is up first (the cylinder anchors to the day's 3D tile).
+   * @param {string} dateStr YYYY-MM-DD
+   */
+  async openDayCylinderByDate(dateStr) {
+    if (!dateStr) return;
+    await this.syncCalendarMonth(dateStr);
+    if (!this.layerManager.isOpen("calendar-max")) await this.enterCalendarMaxLayer();
+    const dayId = this._resolveDayIdForDate(dateStr);
+    if (!dayId) return;
+    await this.enterNotebookDetail(dayId);
   }
 
   async enterCalendarMaxLayer() {
