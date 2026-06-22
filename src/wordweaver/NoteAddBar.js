@@ -63,6 +63,12 @@ function injectStyles() {
       backdrop-filter: blur(10px);
     }
     .nab-bar.hidden { display: none !important; }
+    /* In the Schedule writer, the DayScroller already gives every time slot its own
+       note box + Enter button, so this floating quick-add bar is redundant there —
+       and it was sitting on top of those Enter buttons. Hide it (and its time wheel)
+       whenever the Schedule/writer tab is active. */
+    body.inkling-tab-writer .nab-bar,
+    body.inkling-tab-writer .nab-wheel { display: none !important; }
     .nab-handle { display: flex; justify-content: center; margin: -2px 0 0; }
     .nab-toggle {
       width: 76px; height: 22px; border-radius: 8px;
