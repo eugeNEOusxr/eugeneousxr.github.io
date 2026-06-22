@@ -325,13 +325,26 @@ document.getElementById("qopen").onclick = () => {
 
 let downX=0, downY=0, moved=false;
 renderer.domElement.addEventListener("pointerdown", e => { downX=e.clientX; downY=e.clientY; moved=false; });
-renderer.domElement.addEventListener("pointermove", e => { if(Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY)>5) moved=true; });
+renderer.domElement.addEventListener("pointermove", e => { if(Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY)>10) moved=true; });   // 10px (was 5) — a finger tap drifts a little; 5 treated taps as drags
+const _pick = new THREE.Vector3();
 renderer.domElement.addEventListener("pointerup", e => {
   if (moved) return;
   pointer.x = (e.clientX/innerWidth)*2-1; pointer.y = -(e.clientY/innerHeight)*2+1;
   raycaster.setFromCamera(pointer, camera);
   const hit = raycaster.intersectObjects(pickables, false)[0];
-  if (hit){ flyTo(hit.object.userData.gi, true); }   // fly to it, then reveal the question
+  if (hit){ flyTo(hit.object.userData.gi, true); return; }   // direct hit → fly + reveal
+  // Forgiving pick: at distance a node is a tiny target, so the first tap often just
+  // MISSED (nothing happened, panel stayed on the previous question → you tapped again).
+  // Fall back to the nearest on-screen node within ~46px of the tap.
+  let best=null, bestD=Infinity;
+  for (const n of nodes){
+    _pick.copy(n.pos).project(camera);
+    if (_pick.z > 1) continue;                                            // behind the camera
+    const sx=(_pick.x*0.5+0.5)*innerWidth, sy=(-_pick.y*0.5+0.5)*innerHeight;
+    const d=Math.hypot(sx-e.clientX, sy-e.clientY);
+    if (d<bestD){ bestD=d; best=n; }
+  }
+  if (best && bestD < 46) flyTo(best.gi, true);
 });
 
 /* ── nav: ▲▼ climb step-by-step, ‹ › jump sections, tabs jump to a band ── */
