@@ -993,6 +993,10 @@
   function maybeRequestGyro(){ try{ if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission==="function"){ DeviceOrientationEvent.requestPermission().then(function(s){ if(s==="granted") startGyro(); }).catch(function(){}); } else startGyro(); }catch(_){} }
 
   var focusId = ROOT.id, hoverId = null;
+  // HL = ids of the selected node's whole subtree → its pathway (edges + child orbs)
+  // lights up so it's easy to trace. Null when the core is selected (calm overview).
+  var HL = null;
+  function subtreeIds(n){ var s=new Set(), st=[n]; while(st.length){ var x=st.pop(); s.add(x.id); for(var i=0;i<x.children.length;i++) st.push(x.children[i]); } return s; }
 
   /* ─────────────────────────────────────────────────────────────────────────
      LEVEL OF DETAIL — a node fades in as its on-screen size grows, so the map
@@ -1024,9 +1028,21 @@
       var va = Math.min(vis(n), vis(p)); if (va <= 0) continue;
       var s1 = w2s(p.x, p.y), s2 = w2s(n.x, n.y);
       if (offscreen(s1) && offscreen(s2)) continue;
-      ctx.globalAlpha = va * 0.32 * (n.appear);
-      ctx.strokeStyle = COLOR[n.contentType] || "#5aa9ff";
-      ctx.beginPath(); ctx.moveTo(s1[0],s1[1]); ctx.lineTo(s2[0],s2[1]); ctx.stroke();
+      var hotE = HL && HL.has(n.id) && HL.has(p.id);   // this edge is on the selected pathway
+      var ecol = COLOR[n.contentType] || "#5aa9ff";
+      if (hotE){
+        // soft wide underlay + crisp bright line = a cheap glow (no costly shadowBlur)
+        ctx.strokeStyle = ecol; ctx.lineCap = "round";
+        ctx.globalAlpha = va * 0.28 * n.appear; ctx.lineWidth = 5.5;
+        ctx.beginPath(); ctx.moveTo(s1[0],s1[1]); ctx.lineTo(s2[0],s2[1]); ctx.stroke();
+        ctx.globalAlpha = va * 0.95 * n.appear; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(s1[0],s1[1]); ctx.lineTo(s2[0],s2[1]); ctx.stroke();
+        ctx.lineCap = "butt";
+      } else {
+        ctx.strokeStyle = ecol; ctx.lineWidth = 1;
+        ctx.globalAlpha = va * 0.32 * n.appear;
+        ctx.beginPath(); ctx.moveTo(s1[0],s1[1]); ctx.lineTo(s2[0],s2[1]); ctx.stroke();
+      }
     }
     ctx.globalAlpha = 1;
 
@@ -1044,18 +1060,21 @@
       var qNode = !!nd.q;
       var col = (qNode && nd.done) ? "#7be08a" : baseCol;     // completed questions glow green (learning trajectory)
       var isFocus = nd.id===focusId, isHover = nd.id===hoverId;
+      var hot = HL && HL.has(nd.id);     // orb sits on the selected pathway → lit up
 
-      // glow
+      // glow (brighter + wider for lit-up orbs)
       ctx.globalAlpha = va2;
-      if (rad > 4){
-        var gg = ctx.createRadialGradient(sc[0],sc[1],0, sc[0],sc[1], rad*2.6);
-        gg.addColorStop(0, hexA(col, .35)); gg.addColorStop(1, hexA(col, 0));
-        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(sc[0],sc[1], rad*2.6, 0, 7); ctx.fill();
+      var glowR = rad * (hot ? 3.1 : 2.6);
+      if (rad > 3){
+        var gg = ctx.createRadialGradient(sc[0],sc[1],0, sc[0],sc[1], glowR);
+        gg.addColorStop(0, hexA(col, hot ? .6 : .35)); gg.addColorStop(1, hexA(col, 0));
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(sc[0],sc[1], glowR, 0, 7); ctx.fill();
       }
       // body
       ctx.beginPath(); ctx.arc(sc[0],sc[1], rad, 0, 7);
-      ctx.fillStyle = hexA(col, isFocus?1:0.92); ctx.fill();
+      ctx.fillStyle = hexA(col, (isFocus||hot)?1:0.92); ctx.fill();
       if (isFocus || isHover){ ctx.lineWidth=2; ctx.strokeStyle="#fff"; ctx.globalAlpha=va2*(isFocus?0.95:0.6); ctx.stroke(); ctx.globalAlpha=va2; }
+      else if (hot){ ctx.lineWidth=1.5; ctx.strokeStyle=hexA(col,0.9); ctx.globalAlpha=va2; ctx.stroke(); }
       // question-node marker: an outer ring (orange) → a clickable flashcard; ✓ when completed
       if (qNode && rad > 4){
         ctx.lineWidth=1.5; ctx.strokeStyle=hexA(nd.done?"#7be08a":"#ff8a4c", isHover?0.95:0.7);
@@ -1113,6 +1132,7 @@
   }
   function focusNode(n, soft){
     focusId = n.id;
+    HL = (n.depthLevel >= 1) ? subtreeIds(n) : null;   // light the pathway under a chapter/section
     camT.s = targetScaleFor(n);
     // aim a touch past the node (toward its children) so they sit in view
     var aimR = (n._r || 0) + (n.children.length ? stepAt(n.depthLevel+1) * 0.5 : 0);
