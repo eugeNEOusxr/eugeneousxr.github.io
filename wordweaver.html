@@ -801,7 +801,14 @@
     (raw.ch || []).forEach(function(c){ build(c, node, depth + 1); });
     return node;
   }
-  var ROOT = build(RAW, null, 0);
+  var BIO_RAW = {"t":"Biology","k":"domain","d":"OpenStax Biology 2e — the whole subject as one living map. Dive into any chapter to see its sections (and, soon, its questions).","ch":[{"t":"1 · The Study of Life","k":"chapter","d":"Unit 1 · The Chemistry of Life","ch":[{"t":"1.1 The Science of Biology","k":"section"},{"t":"1.2 Themes and Concepts of Biology","k":"section"}]},{"t":"2 · The Chemical Foundation of Life","k":"chapter","d":"Unit 1 · The Chemistry of Life","ch":[{"t":"2.1 Atoms, Isotopes, Ions, and Molecules","k":"section"},{"t":"2.2 Water","k":"section"},{"t":"2.3 Carbon","k":"section"}]},{"t":"3 · Biological Macromolecules","k":"chapter","d":"Unit 1 · The Chemistry of Life","ch":[{"t":"3.1 Synthesis of Biological Macromolecules","k":"section"},{"t":"3.2 Carbohydrates","k":"section"},{"t":"3.3 Lipids","k":"section"},{"t":"3.4 Proteins","k":"section"},{"t":"3.5 Nucleic Acids","k":"section"}]},{"t":"4 · Cell Structure","k":"chapter","d":"Unit 2 · The Cell","ch":[{"t":"4.1 Studying Cells","k":"section"},{"t":"4.2 Prokaryotic Cells","k":"section"},{"t":"4.3 Eukaryotic Cells","k":"section"},{"t":"4.4 The Endomembrane System and Proteins","k":"section"},{"t":"4.5 The Cytoskeleton","k":"section"},{"t":"4.6 Connections between Cells and Cellular Activities","k":"section"}]},{"t":"5 · Structure and Function of Plasma Membranes","k":"chapter","d":"Unit 2 · The Cell","ch":[{"t":"5.1 Components and Structure","k":"section"},{"t":"5.2 Passive Transport","k":"section"},{"t":"5.3 Active Transport","k":"section"},{"t":"5.4 Bulk Transport","k":"section"}]},{"t":"6 · Metabolism","k":"chapter","d":"Unit 2 · The Cell","ch":[{"t":"6.1 Energy and Metabolism","k":"section"},{"t":"6.2 Potential, Kinetic, Free, and Activation Energy","k":"section"},{"t":"6.3 The Laws of Thermodynamics","k":"section"},{"t":"6.4 ATP: Adenosine Triphosphate","k":"section"},{"t":"6.5 Enzymes","k":"section"}]},{"t":"7 · Cellular Respiration","k":"chapter","d":"Unit 2 · The Cell","ch":[{"t":"7.1 Energy in Living Systems","k":"section"},{"t":"7.2 Glycolysis","k":"section"},{"t":"7.3 Oxidation of Pyruvate and the Citric Acid Cycle","k":"section"},{"t":"7.4 Oxidative Phosphorylation","k":"section"},{"t":"7.5 Metabolism without Oxygen","k":"section"},{"t":"7.6 Connections of Carbohydrate, Protein, and Lipid Pathways","k":"section"},{"t":"7.7 Regulation of Cellular Respiration","k":"section"}]},{"t":"8 · Photosynthesis","k":"chapter","d":"Unit 2 · The Cell","ch":[{"t":"8.1 Overview of Photosynthesis","k":"section"},{"t":"8.2 The Light-Dependent Reactions","k":"section"},{"t":"8.3 Using Light to Make Organic Molecules","k":"section"}]},{"t":"9 · Cell Communication","k":"chapter","d":"Unit 2 · The Cell","ch":[{"t":"9.1 Signaling Molecules and Cellular Receptors","k":"section"},{"t":"9.2 Propagation of the Signal","k":"section"},{"t":"9.3 Response to the Signal","k":"section"},{"t":"9.4 Signaling in Single-Celled Organisms","k":"section"}]},{"t":"10 · Cell Reproduction","k":"chapter","d":"Unit 2 · The Cell","ch":[{"t":"10.1 Cell Division","k":"section"},{"t":"10.2 The Cell Cycle","k":"section"},{"t":"10.3 Control of the Cell Cycle","k":"section"},{"t":"10.4 Cancer and the Cell Cycle","k":"section"},{"t":"10.5 Prokaryotic Cell Division","k":"section"}]},{"t":"11 · Meiosis and Sexual Reproduction","k":"chapter","d":"Unit 3 · Genetics","ch":[{"t":"11.1 The Process of Meiosis","k":"section"},{"t":"11.2 Sexual Reproduction","k":"section"}]},{"t":"12 · Mendel's Experiments and Heredity","k":"chapter","d":"Unit 3 · Genetics","ch":[{"t":"12.1 Mendel's Experiments and the Laws of Probability","k":"section"},{"t":"12.2 Characteristics and Traits","k":"section"},{"t":"12.3 Laws of Inheritance","k":"section"}]},{"t":"13 · Modern Understanding of Inheritance","k":"chapter","d":"Unit 3 · Genetics","ch":[{"t":"13.1 Chromosomal Theory and Genetic Linkage","k":"section"},{"t":"13.2 Chromosomal Basis of Inherited Disorders","k":"section"}]},{"t":"14 · DNA Structure and Function","k":"chapter","d":"Unit 3 · Genetics","ch":[{"t":"14.1 Historical Basis of Modern Understanding","k":"section"},{"t":"14.2 DNA Structure and Sequencing","k":"section"},{"t":"14.3 Basics of DNA Replication","k":"section"},{"t":"14.4 DNA Replication in Prokaryotes","k":"section"},{"t":"14.5 DNA Replication in Eukaryotes","k":"section"},{"t":"14.6 DNA Repair","k":"section"}]},{"t":"15 · Genes and Proteins","k":"chapter","d":"Unit 3 · Genetics","ch":[{"t":"15.1 The Genetic Code","k":"section"},{"t":"15.2 Prokaryotic Transcription","k":"section"},{"t":"15.3 Eukaryotic Transcription","k":"section"},{"t":"15.4 RNA Processing in Eukaryotes","k":"section"},{"t":"15.5 Ribosomes and Protein Synthesis","k":"section"}]},{"t":"16 · Gene Expression","k":"chapter","d":"Unit 3 · Genetics","ch":[{"t":"16.1 Regulation of Gene Expression","k":"section"},{"t":"16.2 Prokaryotic Gene Regulation","k":"section"},{"t":"16.3 Eukaryotic Epigenetic Regulation","k":"section"},{"t":"16.4 Eukaryotic Transcriptional Regulation","k":"section"},{"t":"16.5 Eukaryotic Post-transcriptional Regulation","k":"section"},{"t":"16.6 Eukaryotic Translational/Post-translational Regulation","k":"section"},{"t":"16.7 Cancer and Gene Regulation","k":"section"}]},{"t":"17 · Biotechnology and Genomics","k":"chapter","d":"Unit 3 · Genetics","ch":[{"t":"17.1 Biotechnology","k":"section"},{"t":"17.2 Mapping Genomes","k":"section"},{"t":"17.3 Whole-Genome Sequencing","k":"section"},{"t":"17.4 Applying Genomics","k":"section"},{"t":"17.5 Genomics and Proteomics","k":"section"}]},{"t":"18 · Evolution and the Origin of Species","k":"chapter","d":"Unit 4 · Evolutionary Processes","ch":[{"t":"18.1 Understanding Evolution","k":"section"},{"t":"18.2 Formation of New Species","k":"section"},{"t":"18.3 Reconnection and Rates of Speciation","k":"section"}]},{"t":"19 · The Evolution of Populations","k":"chapter","d":"Unit 4 · Evolutionary Processes","ch":[{"t":"19.1 Population Evolution","k":"section"},{"t":"19.2 Population Genetics","k":"section"},{"t":"19.3 Adaptive Evolution","k":"section"}]},{"t":"20 · Phylogenies and the History of Life","k":"chapter","d":"Unit 4 · Evolutionary Processes","ch":[{"t":"20.1 Organizing Life on Earth","k":"section"},{"t":"20.2 Determining Evolutionary Relationships","k":"section"},{"t":"20.3 Perspectives on the Phylogenetic Tree","k":"section"}]},{"t":"21 · Viruses","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"21.1 Viral Evolution, Morphology, and Classification","k":"section"},{"t":"21.2 Virus Infections and Hosts","k":"section"},{"t":"21.3 Prevention and Treatment of Viral Infections","k":"section"},{"t":"21.4 Other Acellular Entities: Prions and Viroids","k":"section"}]},{"t":"22 · Prokaryotes: Bacteria and Archaea","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"22.1 Prokaryotic Diversity","k":"section"},{"t":"22.2 Structure of Prokaryotes","k":"section"},{"t":"22.3 Prokaryotic Metabolism","k":"section"},{"t":"22.4 Bacterial Diseases in Humans","k":"section"},{"t":"22.5 Beneficial Prokaryotes","k":"section"}]},{"t":"23 · Protists","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"23.1 Eukaryotic Origins","k":"section"},{"t":"23.2 Characteristics of Protists","k":"section"},{"t":"23.3 Groups of Protists","k":"section"},{"t":"23.4 Ecology of Protists","k":"section"}]},{"t":"24 · Fungi","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"24.1 Characteristics of Fungi","k":"section"},{"t":"24.2 Classifications of Fungi","k":"section"},{"t":"24.3 Ecology of Fungi","k":"section"},{"t":"24.4 Fungal Parasites and Pathogens","k":"section"},{"t":"24.5 Importance of Fungi in Human Life","k":"section"}]},{"t":"25 · Seedless Plants","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"25.1 Early Plant Life","k":"section"},{"t":"25.2 Green Algae: Precursors of Land Plants","k":"section"},{"t":"25.3 Bryophytes","k":"section"},{"t":"25.4 Seedless Vascular Plants","k":"section"}]},{"t":"26 · Seed Plants","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"26.1 Evolution of Seed Plants","k":"section"},{"t":"26.2 Gymnosperms","k":"section"},{"t":"26.3 Angiosperms","k":"section"},{"t":"26.4 The Role of Seed Plants","k":"section"}]},{"t":"27 · Introduction to Animal Diversity","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"27.1 Features of the Animal Kingdom","k":"section"},{"t":"27.2 Features Used to Classify Animals","k":"section"},{"t":"27.3 Animal Phylogeny","k":"section"},{"t":"27.4 The Evolutionary History of the Animal Kingdom","k":"section"}]},{"t":"28 · Invertebrates","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"28.1 Phylum Porifera","k":"section"},{"t":"28.2 Phylum Cnidaria","k":"section"},{"t":"28.3 Superphylum Lophotrochozoa","k":"section"},{"t":"28.4 Superphylum Ecdysozoa","k":"section"},{"t":"28.5 Superphylum Deuterostomia","k":"section"}]},{"t":"29 · Vertebrates","k":"chapter","d":"Unit 5 · Biological Diversity","ch":[{"t":"29.1 Chordates","k":"section"},{"t":"29.2 Fishes","k":"section"},{"t":"29.3 Amphibians","k":"section"},{"t":"29.4 Reptiles","k":"section"},{"t":"29.5 Birds","k":"section"},{"t":"29.6 Mammals","k":"section"},{"t":"29.7 The Evolution of Primates","k":"section"}]},{"t":"30 · Plant Form and Physiology","k":"chapter","d":"Unit 6 · Plant Structure and Function","ch":[{"t":"30.1 The Plant Body","k":"section"},{"t":"30.2 Stems","k":"section"},{"t":"30.3 Roots","k":"section"},{"t":"30.4 Leaves","k":"section"},{"t":"30.5 Transport of Water and Solutes in Plants","k":"section"},{"t":"30.6 Plant Sensory Systems and Responses","k":"section"}]},{"t":"31 · Soil and Plant Nutrition","k":"chapter","d":"Unit 6 · Plant Structure and Function","ch":[{"t":"31.1 Nutritional Requirements of Plants","k":"section"},{"t":"31.2 The Soil","k":"section"},{"t":"31.3 Nutritional Adaptations of Plants","k":"section"}]},{"t":"32 · Plant Reproduction","k":"chapter","d":"Unit 6 · Plant Structure and Function","ch":[{"t":"32.1 Reproductive Development and Structure","k":"section"},{"t":"32.2 Pollination and Fertilization","k":"section"},{"t":"32.3 Asexual Reproduction","k":"section"}]},{"t":"33 · The Animal Body: Basic Form and Function","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"33.1 Animal Form and Function","k":"section"},{"t":"33.2 Animal Primary Tissues","k":"section"},{"t":"33.3 Homeostasis","k":"section"}]},{"t":"34 · Animal Nutrition and the Digestive System","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"34.1 Digestive Systems","k":"section"},{"t":"34.2 Nutrition and Energy Production","k":"section"},{"t":"34.3 Digestive System Processes","k":"section"},{"t":"34.4 Digestive System Regulation","k":"section"}]},{"t":"35 · The Nervous System","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"35.1 Neurons and Glial Cells","k":"section"},{"t":"35.2 How Neurons Communicate","k":"section"},{"t":"35.3 The Central Nervous System","k":"section"},{"t":"35.4 The Peripheral Nervous System","k":"section"},{"t":"35.5 Nervous System Disorders","k":"section"}]},{"t":"36 · Sensory Systems","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"36.1 Sensory Processes","k":"section"},{"t":"36.2 Somatosensation","k":"section"},{"t":"36.3 Taste and Smell","k":"section"},{"t":"36.4 Hearing and Vestibular Sensation","k":"section"},{"t":"36.5 Vision","k":"section"}]},{"t":"37 · The Endocrine System","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"37.1 Types of Hormones","k":"section"},{"t":"37.2 How Hormones Work","k":"section"},{"t":"37.3 Regulation of Body Processes","k":"section"},{"t":"37.4 Regulation of Hormone Production","k":"section"},{"t":"37.5 Endocrine Glands","k":"section"}]},{"t":"38 · The Musculoskeletal System","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"38.1 Types of Skeletal Systems","k":"section"},{"t":"38.2 Bone","k":"section"},{"t":"38.3 Joints and Skeletal Movement","k":"section"},{"t":"38.4 Muscle Contraction and Locomotion","k":"section"}]},{"t":"39 · The Respiratory System","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"39.1 Systems of Gas Exchange","k":"section"},{"t":"39.2 Gas Exchange across Respiratory Surfaces","k":"section"},{"t":"39.3 Breathing","k":"section"},{"t":"39.4 Transport of Gases in Human Bodily Fluids","k":"section"}]},{"t":"40 · The Circulatory System","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"40.1 Overview of the Circulatory System","k":"section"},{"t":"40.2 Components of the Blood","k":"section"},{"t":"40.3 Mammalian Heart and Blood Vessels","k":"section"},{"t":"40.4 Blood Flow and Blood Pressure Regulation","k":"section"}]},{"t":"41 · Osmotic Regulation and Excretion","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"41.1 Osmoregulation and Osmotic Balance","k":"section"},{"t":"41.2 The Kidneys and Osmoregulatory Organs","k":"section"},{"t":"41.3 Excretion Systems","k":"section"},{"t":"41.4 Nitrogenous Wastes","k":"section"},{"t":"41.5 Hormonal Control of Osmoregulatory Functions","k":"section"}]},{"t":"42 · The Immune System","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"42.1 Innate Immune Response","k":"section"},{"t":"42.2 Adaptive Immune Response","k":"section"},{"t":"42.3 Antibodies","k":"section"},{"t":"42.4 Disruptions in the Immune System","k":"section"}]},{"t":"43 · Animal Reproduction and Development","k":"chapter","d":"Unit 7 · Animal Structure and Function","ch":[{"t":"43.1 Reproduction Methods","k":"section"},{"t":"43.2 Fertilization","k":"section"},{"t":"43.3 Human Reproductive Anatomy and Gametogenesis","k":"section"},{"t":"43.4 Hormonal Control of Human Reproduction","k":"section"},{"t":"43.5 Human Pregnancy and Birth","k":"section"},{"t":"43.6 Fertilization and Early Embryonic Development","k":"section"},{"t":"43.7 Organogenesis and Vertebrate Formation","k":"section"}]},{"t":"44 · Ecology and the Biosphere","k":"chapter","d":"Unit 8 · Ecology","ch":[{"t":"44.1 The Scope of Ecology","k":"section"},{"t":"44.2 Biogeography","k":"section"},{"t":"44.3 Terrestrial Biomes","k":"section"},{"t":"44.4 Aquatic Biomes","k":"section"},{"t":"44.5 Climate and the Effects of Global Climate Change","k":"section"}]},{"t":"45 · Population and Community Ecology","k":"chapter","d":"Unit 8 · Ecology","ch":[{"t":"45.1 Population Demography","k":"section"},{"t":"45.2 Life Histories and Natural Selection","k":"section"},{"t":"45.3 Environmental Limits to Population Growth","k":"section"},{"t":"45.4 Population Dynamics and Regulation","k":"section"},{"t":"45.5 Human Population Growth","k":"section"},{"t":"45.6 Community Ecology","k":"section"},{"t":"45.7 Behavioral Biology","k":"section"}]},{"t":"46 · Ecosystems","k":"chapter","d":"Unit 8 · Ecology","ch":[{"t":"46.1 Ecology of Ecosystems","k":"section"},{"t":"46.2 Energy Flow through Ecosystems","k":"section"},{"t":"46.3 Biogeochemical Cycles","k":"section"}]},{"t":"47 · Conservation Biology and Biodiversity","k":"chapter","d":"Unit 8 · Ecology","ch":[{"t":"47.1 The Biodiversity Crisis","k":"section"},{"t":"47.2 The Importance of Biodiversity to Human Life","k":"section"},{"t":"47.3 Threats to Biodiversity","k":"section"},{"t":"47.4 Preserving Biodiversity","k":"section"}]}]};
+  // Multi-subject canvas: each domain is its own yellow core with its own spiral.
+  var DOMAINS = [
+    { raw: RAW,     center: { x: 0,    y: 0 }, plateau: true  },   // Precalculus
+    { raw: BIO_RAW, center: { x: 6800, y: 0 }, plateau: false }    // Biology (47 ch) — off to the right
+  ];
+  var ROOTS = DOMAINS.map(function(d){ return build(d.raw, null, 0); });
+  var ROOT = ROOTS[0];   // primary domain — existing single-root references still resolve
 
   // Learning trajectory: read flashcard progress + per-question guess counts (same-origin localStorage).
   function loadJSON(k){ try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch(_){ return {}; } }
@@ -855,7 +862,8 @@
   function sizeAt(d){ return SIZE[Math.min(d, SIZE.length-1)]; }
   function stepAt(d){ return RSTEP[Math.min(d, RSTEP.length-1)]; }
   function countLeaves(n){ if(!n.children.length){ n._leaves=1; return 1; } var s=0; n.children.forEach(function(c){ s+=countLeaves(c); }); n._leaves=s; return s; }
-  function place(n, angle, radius){ n.angle=angle; n._r=radius; n.x=Math.cos(angle)*radius; n.y=Math.sin(angle)*radius; n.size=sizeAt(n.depthLevel); }
+  var _LCX=0, _LCY=0;   // center of the domain currently being laid out
+  function place(n, angle, radius){ n.angle=angle; n._r=radius; n.x=_LCX+Math.cos(angle)*radius; n.y=_LCY+Math.sin(angle)*radius; n.size=sizeAt(n.depthLevel); }
   // fan a node's children across [a0,a1], each on the ring just beyond the parent
   function fanChildren(n, a0, a1){
     if (!n.children.length) return;
@@ -876,26 +884,31 @@
   }
   // place the 12 chapters along the spiral, then fan each chapter's subtree outward
   function layoutSpiral(){
-    countLeaves(ROOT);
-    place(ROOT, SPIRAL.start, 0);              // Precalculus core at the very center
-    var cursor = SPIRAL.start;
-    var overCap = null;                                               // set at chapter 8 — it's far out enough
-    ROOT.children.forEach(function(ch, idx){
-      var w = Math.pow(Math.max(ch._leaves, 1), 0.6);
-      var span = Math.max(SPIRAL.minSpan, Math.min(SPIRAL.maxSpan, w * SPIRAL.apw));
-      var a0 = cursor, a1 = cursor + span, mid = (a0 + a1) / 2;
-      var theta = mid - SPIRAL.start;                                  // angle travelled from the 1.1.1 spoke
-      var over  = Math.max(0, theta - (2*Math.PI - SPIRAL.ramp));      // 0 for the first full turn, then climbs
-      if (idx === 7) overCap = over;                                   // chapter 8 sets the "far enough" radius
-      // Past chapter 8, grow the radius MUCH slower (tail) so chapters 9-12 ring in
-      // close to chapter 8 instead of flinging ever further out.
-      var overEff = (overCap != null && idx > 7 && over > overCap)
-        ? overCap + (over - overCap) * SPIRAL.tail
-        : over;
-      var radius = SPIRAL.r0 + SPIRAL.grow * overEff;                  // concentric rings → spiral → plateau after ch 8
-      place(ch, mid, radius);
-      fanChildren(ch, a0, a1);
-      cursor = a1 + SPIRAL.gap;
+    ROOTS.forEach(function(RT, di){
+      var dom = DOMAINS[di], c = dom.center || { x:0, y:0 };
+      _LCX = c.x; _LCY = c.y;
+      countLeaves(RT);
+      place(RT, SPIRAL.start, 0);              // this domain's core at its own center
+      var cursor = SPIRAL.start, overCap = null, maxR = SPIRAL.r0;
+      RT.children.forEach(function(ch, idx){
+        var w = Math.pow(Math.max(ch._leaves, 1), 0.6);
+        var span = Math.max(SPIRAL.minSpan, Math.min(SPIRAL.maxSpan, w * SPIRAL.apw));
+        var a0 = cursor, a1 = cursor + span, mid = (a0 + a1) / 2;
+        var theta = mid - SPIRAL.start;
+        var over  = Math.max(0, theta - (2*Math.PI - SPIRAL.ramp));
+        if (idx === 7) overCap = over;
+        // small maps (Precalc, 12 ch) plateau after ch.8 so late chapters ring in close;
+        // big maps (Biology, 47 ch) keep growing so the spiral simply loops outward.
+        var overEff = (dom.plateau && overCap != null && idx > 7 && over > overCap)
+          ? overCap + (over - overCap) * SPIRAL.tail
+          : over;
+        var radius = SPIRAL.r0 + SPIRAL.grow * overEff;
+        place(ch, mid, radius);
+        fanChildren(ch, a0, a1);
+        cursor = a1 + SPIRAL.gap;
+        if (radius > maxR) maxR = radius;
+      });
+      RT._maxR = maxR + stepAt(2) + stepAt(3);   // outer extent for framing
     });
   }
   // shallow→deep paint order; only changes when nodes are added, so cache it
@@ -1100,15 +1113,15 @@
       if (!qNode && nd.children.length && rad < 13 && rad > 3){
         ctx.lineWidth=1.5; ctx.strokeStyle=hexA(col,.5); ctx.beginPath(); ctx.arc(sc[0],sc[1], rad+3, 0, 7); ctx.stroke();
       }
-      // label
-      var lblA = Math.max(0, Math.min(1, (rad-9)/10)) * va2;
+      // label — domain cores always show theirs (so each subject's name is on the map at any zoom)
+      var lblA = (nd.depthLevel===0 ? 1 : Math.max(0, Math.min(1, (rad-9)/10))) * va2;
       if (lblA > 0.03){
         ctx.globalAlpha = lblA;
-        ctx.fillStyle = "#f3f5fc";
-        var fs = Math.max(11, Math.min(18, rad*0.62));
+        ctx.fillStyle = nd.depthLevel===0 ? "#ffe6a8" : "#f3f5fc";
+        var fs = nd.depthLevel===0 ? Math.max(14, Math.min(22, rad*0.7)) : Math.max(11, Math.min(18, rad*0.62));
         ctx.font = (nd.depthLevel<=1?"700 ":"600 ")+fs+"px system-ui";
         ctx.textAlign="center"; ctx.textBaseline="middle";
-        var txt = nd.title, maxw = Math.max(90, rad*4.2);
+        var txt = nd.title, maxw = nd.depthLevel===0 ? 260 : Math.max(90, rad*4.2);
         ctx.fillText(fit(txt, maxw, fs), sc[0], sc[1] + (rad>26? 0 : rad+fs*0.9));
       }
       ctx.globalAlpha = 1;
@@ -1125,7 +1138,7 @@
   function targetScaleFor(n){
     // the core frames the whole set of concentric rings out to the question ring; deeper
     // nodes frame their own ring of children (pan / zoom to roam the rings)
-    var childR = n.depthLevel===0 ? (SPIRAL.r0 + stepAt(2) + stepAt(3) + 140)
+    var childR = n.depthLevel===0 ? ((n._maxR || (SPIRAL.r0 + stepAt(2) + stepAt(3))) + 160)
                : n.children.length ? stepAt(n.depthLevel+1) : 320;
     var want = Math.min(W,H) * 0.42 / Math.max(childR, 120);
     return Math.max(0.03, Math.min(4.5, want));
@@ -1135,10 +1148,10 @@
     HL = (n.depthLevel >= 1) ? subtreeIds(n) : null;   // light the pathway under a chapter/section
     camT.s = targetScaleFor(n);
     // aim a touch past the node (toward its children) so they sit in view
-    var aimR = (n._r || 0) + (n.children.length ? stepAt(n.depthLevel+1) * 0.5 : 0);
-    camT.x = Math.cos(n.angle||0) * aimR;
-    camT.y = Math.sin(n.angle||0) * aimR;
-    if (n.depthLevel===0){ camT.x=0; camT.y=0; }   // the core sits at the center of the spiral
+    var push = (n.children.length ? stepAt(n.depthLevel+1) * 0.5 : 0);
+    camT.x = n.x + Math.cos(n.angle||0) * push;
+    camT.y = n.y + Math.sin(n.angle||0) * push;
+    if (n.depthLevel===0){ camT.x = n.x; camT.y = n.y; }   // a domain core sits at its own center
     updateCard(n); updateCrumb(n);
   }
 
@@ -1298,7 +1311,7 @@
 
   document.getElementById("zin").onclick=function(){ zoomAt(W/2,H/2,1.5); };
   document.getElementById("zout").onclick=function(){ zoomAt(W/2,H/2,1/1.5); };
-  document.getElementById("home").onclick=function(){ focusNode(ROOT); };
+  document.getElementById("home").onclick=function(){ frameAll(); };
   // switch to the 3D spiral — in-app asks the panel to swap the Mind surface, standalone navigates
   document.getElementById("to3d").onclick=function(){
     if (window.parent && window.parent !== window){ try { window.parent.postMessage({ type:"inkling-open-graph", mode:"3d" }, "*"); return; } catch(_){} }
@@ -1310,8 +1323,20 @@
     location.href = "/";
   };
 
-  // start focused on the whole subject
-  focusNode(ROOT);
+  // frame BOTH domain cores so every subject's yellow orb is on the map
+  function frameAll(){
+    // frame the cores themselves (+ a ring of breathing room) so both yellow orbs
+    // sit on screen WITH their subject labels; the spiral arms run off-screen to explore.
+    var xs=ROOTS.map(function(r){return r.x;}), ys=ROOTS.map(function(r){return r.y;});
+    var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
+    var miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys);
+    var pad=SPIRAL.r0*1.4;
+    cam.x=camT.x=(minx+maxx)/2; cam.y=camT.y=(miny+maxy)/2;
+    var s=Math.min(W/((maxx-minx)+pad*2), H/((maxy-miny)+pad*2));
+    cam.s=camT.s=Math.max(0.03, Math.min(0.6, s));
+    focusId=null; HL=null; updateCard(ROOTS[0]); updateCrumb(ROOTS[0]);
+  }
+  frameAll();
 })();
 </script>
 </body>
