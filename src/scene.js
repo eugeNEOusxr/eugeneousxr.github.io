@@ -9,6 +9,7 @@ import {
   logVisualTiming,
   particleBudget
 } from "./utils/perfFlags.js";
+import { createCylinderBackdrop } from "./calendar/CylinderBackdrop.js";
 
 function createNebulaBackground() {
   const canvas = document.createElement("canvas");
@@ -43,7 +44,12 @@ export function createScene(canvas) {
   // Phase visual hook support.
   // Rollback: remove setter methods below and related defaults map.
   const scene = new THREE.Scene();
-  scene.background = createNebulaBackground();
+  // The calendar lives INSIDE a cylinder ("prism"): a dark base color shows through
+  // the open top, and the cylinder's inner wall is the wraparound environment.
+  scene.background = new THREE.Color(0x04050a);
+  const cylinderBackdrop = createCylinderBackdrop({ radius: 74, height: 120, segments: 60 });
+  scene.add(cylinderBackdrop);
+  scene.cylinderBackdrop = cylinderBackdrop; // host can swap its wall to the open day's image
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
