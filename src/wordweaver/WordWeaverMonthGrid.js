@@ -1119,11 +1119,13 @@ export function createDayView(scene, dayIso, opts = {}) {
     const monthIndex = (parseInt(dayIso.split("-")[1], 10) || 1) - 1;
     const url = monthSceneUrl(monthIndex, theme === "night" ? "night" : "day");
     if (url) {
-      const mat = new THREE.MeshBasicMaterial({ color: 0x141b2a, toneMapped: false });
-      bgPhoto = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x141b2a, toneMapped: false, side: THREE.BackSide, depthWrite: false });
+      // The day's photo wrapped into a CYLINDER you stand inside (was a flat plane).
+      // Radius > the day-view camera distance (~19–40) so the camera is inside the tube
+      // and the photo curves all the way around behind the notes.
+      bgPhoto = new THREE.Mesh(new THREE.CylinderGeometry(55, 55, 80, 80, 1, true), mat);
       bgPhoto.name = "ww-day-photo-bg";
-      bgPhoto.scale.set(100, 70, 1);
-      bgPhoto.position.set(0, 0, -12);
+      bgPhoto.position.set(0, 0, 0);
       bgPhoto.renderOrder = -10;
       bgPhoto.layers.set(1);
       group.add(bgPhoto);
@@ -1131,6 +1133,7 @@ export function createDayView(scene, dayIso, opts = {}) {
       img.crossOrigin = "anonymous";
       img.onload = () => {
         const tex = buildDayBackdropTexture(img, { grayscale: theme === "bw", scrim: theme === "night" ? 0.15 : 0.22 });
+        tex.wrapS = THREE.RepeatWrapping;   // wrap the photo around the cylinder's inner wall
         mat.map = tex;
         mat.color.set(0xffffff);
         mat.needsUpdate = true;
