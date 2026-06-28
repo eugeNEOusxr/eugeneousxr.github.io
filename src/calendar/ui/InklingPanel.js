@@ -597,7 +597,7 @@ export class InklingPanel {
   /** Explain that I build the graph as we talk, then show the current read. */
   async _postMindReflection() {
     this._appendBubble("inkling",
-      escapeHtml("As we talk I'm quietly building your Mind — I turn the concepts you mention into nodes and draw connections between the ones that come up together. Here's what I'm seeing so far:"),
+      escapeHtml("As we talk, I keep a simple map of the topics you mention and how they connect. Here's what I have so far:"),
       "inkling-msg--proactive");
     try {
       const ins = await mindInsights();
@@ -614,13 +614,13 @@ export class InklingPanel {
   /** Calendar ↔ memory: explain the link, then weave recent calendar into the graph. */
   async _postCalendarLink() {
     this._appendBubble("inkling",
-      escapeHtml("Your calendar and your Mind are the same memory seen two ways: when you add notes, events or alerts, I weave their topics into the graph — and you can link them to anything else. Let me pull your recent calendar in now…"),
+      escapeHtml("I can also pull the topics from your calendar into that map, so your plans and your notes link up. Let me grab your recent calendar now…"),
       "inkling-msg--proactive");
     try {
       const r = await ingestCalendar();
       const msg = r.added?.length
-        ? `Done — pulled ${r.count} item${r.count === 1 ? "" : "s"} from your calendar and added ${this._humanList(r.added.slice(0, 5))}${r.added.length > 5 ? ` +${r.added.length - 5} more` : ""} to your Mind.`
-        : `I checked ${r.count} calendar item${r.count === 1 ? "" : "s"}. As you log notes with real topics, the overlaps with our chats will show up in your Mind.`;
+        ? `Done — pulled ${r.count} item${r.count === 1 ? "" : "s"} from your calendar and added ${this._humanList(r.added.slice(0, 5))}${r.added.length > 5 ? ` +${r.added.length - 5} more` : ""} to your map.`
+        : `I checked ${r.count} calendar item${r.count === 1 ? "" : "s"}. As you log notes with real topics, the overlaps with our chats will show up in your map.`;
       this._appendBubble("inkling", escapeHtml(msg), "inkling-msg--proactive");
     } catch { /* ignore */ }
     this._appendBubble("inkling",
