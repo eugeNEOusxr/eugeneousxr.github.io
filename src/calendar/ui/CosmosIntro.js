@@ -93,7 +93,7 @@ export class CosmosIntro {
     greet.innerHTML =
       `<div style="font:800 clamp(34px,8vw,64px) system-ui;letter-spacing:1px;` +
       `background:linear-gradient(90deg,#c7d2fe,#a5b4fc,#f0abfc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">✦ Inkling</div>` +
-      `<div id="cosmos-intro-tap" style="margin-top:26px;font:900 15px system-ui;letter-spacing:.6px;color:#c4b5fd;-webkit-text-stroke:0.6px rgba(255,255,255,.85);text-stroke:0.6px rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.85);animation:cosmos-pulse 2s ease-in-out infinite">Tap anywhere to open your calendar</div>`;
+      `<div id="cosmos-intro-tap" style="margin-top:26px;font:900 15px system-ui;letter-spacing:.6px;color:#c4b5fd;-webkit-text-stroke:0.6px rgba(255,255,255,.85);text-stroke:0.6px rgba(255,255,255,.85);text-shadow:0 1px 2px rgba(0,0,0,.85);animation:cosmos-pulse 2s ease-in-out infinite">Tap anywhere to start</div>`;
     el.appendChild(greet);
 
     // A tap anywhere on the backdrop opens the 3D calendar in one go.
