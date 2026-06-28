@@ -1,11 +1,13 @@
 {
   "name": "Inkling",
   "short_name": "Inkling",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#05060a",
   "theme_color": "#111217",
-  "description": "Inkling — 3D calendar, notes, appointments, and WordWeaver thought-weaving.",
+  "description": "Turn your homework and textbook into graded practice. Inkling gives you instantly-scored flashcards with hints and step-by-step explanations, plus a calendar with reminders and a visual map of what you're learning.",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -22,9 +24,16 @@
   ],
   "shortcuts": [
     {
+      "name": "Flashcards",
+      "short_name": "Study",
+      "description": "Open your graded practice decks",
+      "url": "/quiz.html",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
       "name": "WordWeaver",
       "short_name": "WordWeaver",
-      "description": "Enter your 3D thought-weaving space",
+      "description": "Explore your knowledge map",
       "url": "/index.html?tab=wordweaver",
       "icons": [{ "src": "/icons/wordweaver.svg", "sizes": "96x96" }]
     }
