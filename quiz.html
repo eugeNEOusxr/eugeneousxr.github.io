@@ -2281,15 +2281,81 @@
         callExplain("");       // came after hints → don't cache (it may reference them)
       }
     }
+    /* ── Real-World Relevance Engine ─────────────────────────────────────────
+       DATA-DRIVEN registry: a concept/topic → the careers, industries, and
+       everyday uses it powers. Extensible — add a { match, text, careers } row
+       (or a domain fallback) and every matching question gains relevance, no AI
+       call needed. Foundation for the future career graph. ───────────────────*/
+    var RELEVANCE = {
+      topics: [
+        // — Mathematics —
+        { match:/\bslope|linear function|rate of change|point-slope|y\s*=\s*mx\b/i, careers:["Surveyor","Civil Engineer","Game Developer","Data Scientist"],
+          text:"This same idea shows up when <b>surveyors</b> calculate land elevation, <b>civil engineers</b> design road grades, and <b>game developers</b> decide how objects move across terrain." },
+        { match:/\bfactor|polynomial|quadratic|greatest common\b/i, careers:["Cryptographer","Structural Engineer","Software Developer"],
+          text:"Factoring underlies how <b>cryptographers</b> secure data, <b>engineers</b> solve for unknown loads, and <b>programmers</b> simplify and optimize code." },
+        { match:/\bfunction|domain|range|composition\b/i, careers:["Economist","Pharmacist","Systems Engineer","Data Scientist"],
+          text:"Functions model cause-and-effect everywhere — <b>economists</b> predict prices, <b>pharmacists</b> dose by body weight, and <b>engineers</b> model how systems respond to inputs." },
+        { match:/\bderivative|limit|calculus|instantaneous\b/i, careers:["Physicist","Quant Analyst","ML Engineer"],
+          text:"Rates of change power <b>physics</b> (velocity & acceleration), <b>finance</b> (marginal cost), <b>medicine</b> (drug clearance), and <b>machine learning</b> (gradient descent)." },
+        { match:/\btrig|sine|cosine|angle|radian\b/i, careers:["Architect","Pilot","Carpenter","Graphics Programmer"],
+          text:"Trigonometry guides <b>architects</b>, <b>pilots</b> navigating headings, <b>carpenters</b> cutting angles, and <b>graphics engines</b> rotating objects." },
+        // — Psychology —
+        { match:/\bconditioning|reinforcement|punishment|\blearning\b/i, careers:["Teacher","Marketer","Therapist","UX Designer"],
+          text:"Conditioning is used by <b>teachers</b> shaping behavior, <b>marketers</b> building habits, <b>therapists</b> treating phobias, and <b>UX designers</b> encouraging healthy engagement." },
+        { match:/\bmemory|encoding|retrieval|forgetting\b/i, careers:["Educator","UX Designer","Cognitive Scientist"],
+          text:"Memory research informs <b>educators</b> (spaced practice), <b>UX designers</b>, <b>expert witnesses</b> on eyewitness reliability, and <b>advertisers</b>." },
+        { match:/\bpsycholog|behavior|cognition|\bsocial\b|personality|disorder|therapy\b/i, careers:["Counselor","HR Specialist","Marketer","UX Researcher"],
+          text:"Psychology applies directly to <b>parenting</b>, <b>marketing</b>, <b>leadership</b>, <b>human resources</b>, <b>counseling</b>, <b>sales</b>, and <b>user experience</b>." },
+        // — Biology / Chemistry / Physics —
+        { match:/\bcell|dna|gene|enzyme|protein|mitosis|allele\b/i, careers:["Physician","Biotechnologist","Genetic Counselor"],
+          text:"Molecular biology drives <b>medicine</b>, <b>biotech</b>, <b>pharmacology</b>, <b>genetic counseling</b>, and modern <b>agriculture</b>." },
+        { match:/\batom|molecule|reaction|\bbond\b|acid|mole\b|stoichiom/i, careers:["Pharmacist","Materials Engineer","Chemical Engineer"],
+          text:"Chemistry powers <b>pharmacists</b>, <b>materials engineers</b>, <b>food scientists</b>, <b>environmental analysts</b>, and <b>chemical engineers</b>." },
+        { match:/\bforce|motion|energy|velocity|circuit|momentum|voltage\b/i, careers:["Mechanical Engineer","Aerospace Engineer","Medical Physicist"],
+          text:"Physics underlies <b>mechanical & electrical engineering</b>, <b>aerospace</b>, <b>renewable energy</b>, and <b>medical imaging</b>." },
+        // — AI / CS —
+        { match:/\bneural|machine learning|\bagent\b|algorithm|search|reinforcement learning|transformer\b/i, careers:["ML Engineer","Robotics Engineer","Data Scientist","AI Researcher"],
+          text:"These ideas run <b>self-driving cars</b>, <b>recommendation systems</b>, <b>medical diagnosis</b>, <b>robotics</b>, and <b>fraud detection</b>." }
+      ],
+      domain: {
+        precalc:{ careers:["Engineer","Data Scientist","Financial Analyst","Programmer"], text:"Math like this shows up across <b>engineering</b>, <b>finance</b>, <b>data science</b>, <b>construction</b>, and <b>programming</b>." },
+        biology:{ careers:["Physician","Nurse","Biotechnologist"], text:"Biology underpins <b>medicine</b>, <b>healthcare</b>, <b>biotech</b>, <b>environmental science</b>, and <b>agriculture</b>." },
+        chemistry:{ careers:["Pharmacist","Chemical Engineer","Food Scientist"], text:"Chemistry is central to <b>medicine</b>, <b>manufacturing</b>, <b>energy</b>, and <b>food science</b>." },
+        physics:{ careers:["Engineer","Physicist","Aerospace Engineer"], text:"Physics drives <b>engineering</b>, <b>aerospace</b>, <b>electronics</b>, and <b>medical imaging</b>." },
+        ai:{ careers:["ML Engineer","Data Scientist","Robotics Engineer"], text:"AI powers <b>autonomous vehicles</b>, <b>healthcare</b>, <b>finance</b>, <b>robotics</b>, and <b>software</b>." },
+        psychology:{ careers:["Counselor","HR Specialist","UX Researcher","Marketer"], text:"Psychology applies to <b>parenting</b>, <b>marketing</b>, <b>HR</b>, <b>counseling</b>, <b>sales</b>, <b>UX</b>, and <b>healthcare</b>." }
+      }
+    };
+    function relevanceFor(deckId, title, prompt){
+      var hay = ((title||"") + " " + (prompt||"")).toLowerCase();
+      for (var i=0;i<RELEVANCE.topics.length;i++){ if (RELEVANCE.topics[i].match.test(hay)) return RELEVANCE.topics[i]; }
+      var d = String(deckId||"");
+      var dom = /^bio\s/i.test(d)?"biology":/^chem\s/i.test(d)?"chemistry":/^phys\s/i.test(d)?"physics":/^ai\s/i.test(d)?"ai":/^psych\s/i.test(d)?"psychology":"precalc";
+      return RELEVANCE.domain[dom] || null;
+    }
+    function showRelevance(){
+      if (!explainBody || document.getElementById("relevanceSection")) return;   // once per question
+      var rel = relevanceFor(DECKS[curDeck].id, DECKS[curDeck].title, sessionQA && sessionQA.prompt);
+      if (!rel) return;
+      var d = document.createElement("div");
+      d.id = "relevanceSection";
+      d.style.cssText = "background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.30);border-radius:12px;padding:11px 13px;font:500 13.5px/1.55 system-ui;color:var(--text)";
+      d.innerHTML = '<div style="font:800 12px system-ui;color:#38bdf8;margin-bottom:5px;letter-spacing:.3px">🌍 WHERE THIS IS USED</div>' + rel.text +
+        (rel.careers && rel.careers.length ? '<div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:6px">' +
+          rel.careers.map(function(c){ return '<span style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.35);border-radius:999px;padding:3px 10px;font:700 11px system-ui;color:#7dd3fc">'+c+'</span>'; }).join("") + '</div>' : "");
+      explainBody.insertBefore(d, explainBody.firstChild);
+    }
     function openExplain(){
       ensureSession();
       explainPanel.classList.remove("hidden");
+      showRelevance();
       showFull();
       explainInput.focus();
     }
     function requestHint(){
       ensureSession();
       explainPanel.classList.remove("hidden");
+      showRelevance();
       if (fullShown || explainBusy){ explainInput.focus(); return; }
       var qa=sessionQA;
       if (hintLevel===0){
