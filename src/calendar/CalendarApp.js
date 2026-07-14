@@ -593,6 +593,12 @@ export class CalendarApp {
   }
 
   async enterCalendarMaxLayer() {
+    // Idempotent: if the calendar-max layer is already open (or a concurrent
+    // enter is in flight), don't open/render it a second time — that showed the
+    // 3D calendar loading twice and stacking over the cosmos surface.
+    if (this._enteringCalendarMax || this.layerManager.isOpen("calendar-max")) return;
+    this._enteringCalendarMax = true;
+    try {
     if (this.viewMode === "notification-wall") {
       await this.exitNotificationWall();
     }
@@ -610,6 +616,9 @@ export class CalendarApp {
     this.bottomNav?.setActiveTab("calendar");
     document.body.classList.add("inkling-stage-open", "inkling-tab-calendar");
     beginAppTabSurface("calendar");
+    } finally {
+      this._enteringCalendarMax = false;
+    }
   }
 
   exitCalendarMaxLayer() {
