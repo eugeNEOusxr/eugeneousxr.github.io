@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#05060a",
   "theme_color": "#111217",
-  "description": "Turn your homework and textbook into graded practice. Inkling gives you instantly-scored flashcards with hints and step-by-step explanations, plus a calendar with reminders and a visual map of what you're learning.",
+  "description": "Inkling is a study and note-taking app that makes what you learn stick. Practice graded flashcards across real college subjects — Precalculus, Biology, Chemistry, Physics, and AI — jot notes and appointments that land on a living map of your ideas, and ask an AI study partner for explanations, hints, and worked solutions.",
   "categories": ["education", "productivity"],
   "icons": [
     {
@@ -31,9 +31,9 @@
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "WordWeaver",
-      "short_name": "WordWeaver",
-      "description": "Explore your knowledge map",
+      "name": "Study Map",
+      "short_name": "Map",
+      "description": "Your notes and study topics, connected",
       "url": "/index.html?tab=wordweaver",
       "icons": [{ "src": "/icons/wordweaver.svg", "sizes": "96x96" }]
     }
