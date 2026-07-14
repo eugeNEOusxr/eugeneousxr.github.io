@@ -65,7 +65,7 @@ export class StudyMapPanel {
       const r = await generateStudyMap(topic);
       if (r.ok) { this._renderMap(r.map.id); return; }
       btn.textContent = "Build"; btn.disabled = false; input.disabled = false;
-      const msg = { signin: "Sign in to build study maps.", capped: "Daily study-map limit reached — try tomorrow.", offline: "Couldn't reach the server. Try again.", empty: "Couldn't build that one — try a more specific topic." }[r.reason] || "Couldn't build that.";
+      const msg = { signin: "Sign in to build study maps.", capped: "That's today's free AI study maps — Inkling Premium (coming soon) lifts the limit. Resets tomorrow.", offline: "Couldn't reach the server. Try again.", empty: "Couldn't build that one — try a more specific topic." }[r.reason] || "Couldn't build that.";
       note.textContent = msg; note.style.display = "block";
     };
     btn.addEventListener("click", doGen);

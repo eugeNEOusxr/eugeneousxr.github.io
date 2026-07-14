@@ -59,7 +59,7 @@ export class FlashcardsPanel {
       const r = await generateFlashcards({ topic });
       if (r.ok) return this._renderSet(r.set.id);
       btn.textContent = "Make"; btn.disabled = false; input.disabled = false;
-      note.textContent = { signin: "Sign in to make flashcards.", capped: "Daily flashcard limit reached.", offline: "Couldn't reach the server.", empty: "Couldn't make cards — try a clearer topic." }[r.reason] || "Couldn't make cards.";
+      note.textContent = { signin: "Sign in to make flashcards.", capped: "That's today's free AI flashcards — Inkling Premium (coming soon) lifts the limit. Resets tomorrow.", offline: "Couldn't reach the server.", empty: "Couldn't make cards — try a clearer topic." }[r.reason] || "Couldn't make cards.";
       note.style.display = "block";
     };
     btn.addEventListener("click", doGen);
