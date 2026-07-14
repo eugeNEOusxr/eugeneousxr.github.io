@@ -110,7 +110,11 @@ export class CosmosIntro {
    *  precede the graph once the note-onboarding flow is built). */
   _enter() {
     this.hide();
-    try { this.app?._handleBottomNavTab?.("mind", { toggle: false }); } catch { /* ignore */ }
+    try {
+      // First-run: a one-card guided welcome takes over (leads into jotting a note).
+      if (this.app?._maybeStartOnboarding?.()) return;
+      this.app?._handleBottomNavTab?.("mind", { toggle: false });
+    } catch { /* ignore */ }
   }
 
   show() {

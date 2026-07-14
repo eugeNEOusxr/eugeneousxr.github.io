@@ -1279,7 +1279,22 @@
     try { localStorage.setItem("inkling-timeline-v1", JSON.stringify(arr)); localStorage.setItem("inkling-has-user-notes","true"); } catch(_){ return false; }
     buildNoteClusters(); buildNoteLegend(); frameNotes();
     if (window.parent && window.parent!==window){ try { window.parent.postMessage({ type:"inkling-note-added" }, "*"); } catch(_){} }
+    if (localStorage.getItem("inkling-onboarding-active")){
+      try { localStorage.removeItem("inkling-onboarding-active"); } catch(_){}
+      showOnboardToast("✨ Nice — that's on your map. Keep adding, and Inkling links what belongs together.", true);
+    }
     return true;
+  }
+  // First-run guided hint toast (top-center) shown during onboarding.
+  function showOnboardToast(msg, autoHide){
+    var t=document.getElementById("wwOnboardToast");
+    if(!t){ t=document.createElement("div"); t.id="wwOnboardToast";
+      t.style.cssText="position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9;max-width:88vw;"+
+        "background:rgba(20,16,40,.96);border:1px solid rgba(124,92,255,.55);border-radius:14px;padding:11px 16px;"+
+        "color:#e8ecfb;font:600 13px/1.4 system-ui;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)";
+      document.body.appendChild(t); }
+    t.textContent=msg; t.style.display="block";
+    if(autoHide) setTimeout(function(){ if(t) t.style.display="none"; }, 6500);
   }
   // Floating "jot a note" button + panel (built in JS so no HTML edits needed).
   (function noteUI(){
@@ -1316,6 +1331,15 @@
   })();
 
   buildNoteClusters(); buildNoteLegend();
+  // First-run onboarding: pop the note box open + a guiding hint so the very first
+  // thing the user does is jot a note that lands on the map.
+  if (localStorage.getItem("inkling-onboarding-active")){
+    setTimeout(function(){
+      var fab=document.getElementById("noteFab"), panel=document.getElementById("notePanel");
+      if (fab && panel && panel.style.display!=="flex") fab.click();
+      showOnboardToast("✍️ Type anything — a topic, a task, a thought. Watch it land on your map.");
+    }, 550);
+  }
   // (opening view is set at the frameAll() call near the end — notes take it when present)
   window.addEventListener("storage", function(e){ if (!e.key || e.key==="inkling-timeline-v1"){ buildNoteClusters(); buildNoteLegend(); } });
   window.addEventListener("message", function(e){ if (e.data && (e.data.type==="inkling-refresh-progress"||e.data.type==="inkling-refresh-notes")){ buildNoteClusters(); buildNoteLegend(); } });

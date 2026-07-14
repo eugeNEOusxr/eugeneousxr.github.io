@@ -985,6 +985,51 @@ export class CalendarApp {
     try { window.dispatchEvent(new Event("inkling:ready")); } catch { /* ignore */ }
   }
 
+  /** First-run only: after the cosmos tap, run a one-card guided welcome that leads
+   *  the user into jotting their first note. Returns true if it took over (so the
+   *  caller skips the normal open). Shows exactly once (inkling-onboarded-v1). */
+  _maybeStartOnboarding() {
+    try { if (localStorage.getItem("inkling-onboarded-v1")) return false; } catch { return false; }
+    this._showOnboardingCard();
+    return true;
+  }
+
+  _showOnboardingCard() {
+    try { localStorage.setItem("inkling-onboarded-v1", "1"); } catch { /* ignore */ }
+    if (document.getElementById("inkling-onboard-card")) return;
+    const wrap = document.createElement("div");
+    wrap.id = "inkling-onboard-card";
+    wrap.style.cssText =
+      "position:fixed;inset:0;z-index:11005;display:flex;align-items:center;justify-content:center;" +
+      "padding:24px;background:rgba(2,3,8,0.74);backdrop-filter:blur(6px)";
+    wrap.innerHTML =
+      '<div style="max-width:340px;width:100%;background:rgba(12,17,30,0.97);border:1px solid rgba(124,92,255,0.5);' +
+        'border-radius:20px;padding:24px 22px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.6)">' +
+        '<div style="font:800 clamp(24px,7vw,32px) system-ui;background:linear-gradient(90deg,#c7d2fe,#a5b4fc,#f0abfc);' +
+          '-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Welcome to Inkling</div>' +
+        '<p style="margin:14px 0 20px;font:500 15px/1.55 system-ui;color:#c9d0e6">Your study map. Jot notes, run ' +
+          'flashcards, and watch Inkling connect your ideas over time.<br><br>Let’s start with your first note.</p>' +
+        '<button id="inkling-onboard-go" style="width:100%;border:none;border-radius:12px;padding:13px;' +
+          'font:800 15px system-ui;color:#fff;background:linear-gradient(180deg,#8b7bff,#6d57d6);cursor:pointer">' +
+          'Jot my first note →</button>' +
+        '<button id="inkling-onboard-skip" style="margin-top:10px;background:none;border:none;color:#8b93ad;' +
+          'font:600 12px system-ui;cursor:pointer">Skip for now</button>' +
+      '</div>';
+    document.body.appendChild(wrap);
+    const go = wrap.querySelector("#inkling-onboard-go");
+    const skip = wrap.querySelector("#inkling-onboard-skip");
+    go?.addEventListener("click", () => {
+      try { localStorage.setItem("inkling-onboarding-active", "1"); } catch { /* ignore */ }
+      wrap.remove();
+      void this._handleBottomNavTab("mind", { toggle: false });
+    });
+    skip?.addEventListener("click", () => {
+      try { localStorage.removeItem("inkling-onboarding-active"); } catch { /* ignore */ }
+      wrap.remove();
+      void this._handleBottomNavTab("mind", { toggle: false });
+    });
+  }
+
   /** Default launch: WordWeaver first — Inkling does not auto-open. */
   _openWordWeaverStartup() {
     this.windowManager?.closeAllPanels();
