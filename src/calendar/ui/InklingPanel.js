@@ -27,6 +27,17 @@ import { createAlert, addAlert, AlertPriority } from "../alerts/alertsModel.js";
 import { recomputeSchedule } from "../alerts/alertsScheduler.js";
 const INKLING_CRON_KEY = "calendar3d-inkling-cron-v1";
 
+// Cache-buster for the embedded canvas HTML (wordweaver / wordweaver3d / quiz).
+// The Mind/Flashcards iframe is created once and reused for the whole session, and
+// GitHub Pages serves these files with a 10-minute cache — so without a version
+// stamp a content change only showed up after a manual HARD reset. BUMP THIS
+// whenever wordweaver.html, wordweaver3d.html, or quiz.html changes, and the next
+// normal app load fetches the fresh file. */
+const CANVAS_VERSION = "20260714b";
+function withCanvasVersion(path) {
+  return path + (path.includes("?") ? "&" : "?") + "v=" + CANVAS_VERSION;
+}
+
 /**
  * Inkling — floating calendar assistant (hybrid NL, not rigid commands).
  */
@@ -116,7 +127,7 @@ export class InklingPanel {
       else if (m.type === "inkling-close-flashcard") { if (this._quizOverlay) this._quizOverlay.style.display = "none"; }
       else if (m.type === "inkling-open-graph") {
         if (this._quizOverlay) this._quizOverlay.style.display = "none";   // leave the flashcards
-        this._openCanvasOverlay(m.mode === "3d" ? "/wordweaver3d.html" : "/wordweaver.html", "Mind — knowledge graph", "_mindOverlay", true);
+        this._openCanvasOverlay(withCanvasVersion(m.mode === "3d" ? "/wordweaver3d.html" : "/wordweaver.html"), "Mind — knowledge graph", "_mindOverlay", true);
       }
       else if (m.type === "inkling-close-graph") { if (this._mindOverlay) this._mindOverlay.style.display = "none"; }
     });
@@ -509,7 +520,7 @@ export class InklingPanel {
 
   /** Open the Mind surface — the WordWeaver knowledge canvas (zoomable node graph). */
   showMind(/* opts */) {
-    this._openCanvasOverlay("/wordweaver.html", "Mind — knowledge canvas", "_mindOverlay", true);
+    this._openCanvasOverlay(withCanvasVersion("/wordweaver.html"), "Mind — knowledge canvas", "_mindOverlay", true);
   }
 
   /** Open the Study Maps surface — Haiku-built study paths with mastery tracking. */
@@ -520,7 +531,7 @@ export class InklingPanel {
 
   /** Open the quiz deck (full-screen overlay). Pass a question id ("1.2.11") to deep-link. */
   showFlashcards(q) {
-    const src = "/quiz.html" + (q ? "?q=" + encodeURIComponent(q) : "");
+    const src = withCanvasVersion("/quiz.html") + (q ? "&q=" + encodeURIComponent(q) : "");
     // z 12010 keeps the flashcards ABOVE the Mind overlay (z 12000) — otherwise,
     // tapping a node's flashcard opens it hidden BEHIND the knowledge graph (looks
     // like nothing happens) whenever the quiz overlay was created before the Mind one.
