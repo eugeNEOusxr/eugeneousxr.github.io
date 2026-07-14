@@ -52,6 +52,7 @@ import { startAlertsScheduler } from "./alerts/alertsScheduler.js";
 import { syncAlertsBadge } from "./alerts/alertsModel.js";
 import { getCosmosBackdrop } from "./ui/CosmosBackdrop.js";
 import { showIdleSurface, beginAppTabSurface } from "./ui/shellSurfaces.js";
+import { CosmosIntro } from "./ui/CosmosIntro.js";
 import { consumeWebGLFallbackNotice } from "../wordweaver/calendarMode.js";
 import { closeAlertsDropdown } from "./alerts/AlertsDropdown.js";
 import { WordWeaverEmbed } from "../wordweaver/WordWeaverEmbed.js";
@@ -959,15 +960,20 @@ export class CalendarApp {
     this._alarmClock.show();
   }
 
-  /** Land on the cosmos backdrop with the entry-portal intro. */
-  async _showCosmosIntro() {
+  /** Land on the cosmos backdrop with the entry-portal intro. Runs SYNCHRONOUSLY
+   *  (CosmosIntro is statically imported, not dynamically loaded) so the opaque
+   *  cosmos overlay + shooting stars are on screen before the very first paint —
+   *  otherwise the revealed 3D calendar layout flashed through during the module
+   *  fetch before the intro appeared. Signals inkling:ready so the boot loader
+   *  hands off straight onto the cosmos, never onto the calendar. */
+  _showCosmosIntro() {
     this.windowManager?.closeAllPanels();
     showIdleSurface(); // JWST cosmos backdrop
     if (!this._cosmosIntro) {
-      const { CosmosIntro } = await import("./ui/CosmosIntro.js");
       this._cosmosIntro = new CosmosIntro(this);
     }
     this._cosmosIntro.show();
+    try { window.dispatchEvent(new Event("inkling:ready")); } catch { /* ignore */ }
   }
 
   /** Default launch: WordWeaver first — Inkling does not auto-open. */

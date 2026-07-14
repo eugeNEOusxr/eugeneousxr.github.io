@@ -8,7 +8,11 @@ import { openPanel } from "./calendar/ui/AppLauncher.js";
  */
 export function bootWordWeaverFirst() {
   const startTab = new URLSearchParams(window.location.search).get("tab");
-  if (startTab && !["wordweaver", "wall"].includes(startTab) && startTab !== "") {
+  // Only auto-open WordWeaver for an EXPLICIT ?tab=wordweaver (or wall) deep link.
+  // The normal launch (no tab) must rest on the cosmos welcome intro instead — this
+  // used to fire on the default boot too, which hid the cosmos intro ~150ms in and
+  // jumped straight to WordWeaver.
+  if (startTab !== "wordweaver" && startTab !== "wall") {
     return;
   }
 
