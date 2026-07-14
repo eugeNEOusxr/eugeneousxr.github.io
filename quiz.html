@@ -2426,17 +2426,244 @@
           rel.careers.map(function(c){ return '<span style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.35);border-radius:999px;padding:3px 10px;font:700 11px system-ui;color:#7dd3fc">'+c+'</span>'; }).join("") + '</div>' : "");
       explainBody.insertBefore(d, explainBody.firstChild);
     }
+    /* ── Knowledge Graph: concepts as NODES, relationships as FIRST-CLASS EDGES ──
+       The flashcard is an ENTRY POINT into this graph, not the final object. A
+       concept resolves from (deckId,title,prompt) the same way RELEVANCE does
+       (topic-regex → domain fallback); its six-question "portal" is ASSEMBLED
+       from nodes + typed edges — never hardcoded per card. Every edge carries a
+       confidence + verification status (the connection-quality system), so an
+       AI-suggested link is visibly distinct from a human-verified one. New
+       relationship TYPES only need a row in KG_TYPES, so the graph can grow
+       without rewriting the renderer. Success = the richness of these edges. ──*/
+    var KG_TYPES = {   // order = the order sections render in "how it connects"
+      prerequisite:{ label:"Prerequisites", concept:true },
+      next:{ label:"Leads to", concept:true },
+      related:{ label:"Related concepts", icon:"🔗", concept:true },
+      career:{ label:"Careers", icon:"💼" },
+      industry:{ label:"Industries", icon:"🏭" },
+      project:{ label:"Projects", icon:"🛠" },
+      history:{ label:"History", icon:"📜" }
+    };
+    var KG = {
+      concepts: {
+        "functions": { title:"Functions", subject:"precalc", difficulty:2,
+          definition:"A rule that assigns exactly one output to every input.",
+          explanation:"A function is a dependable machine: put a value in and get exactly one value out. It captures how one quantity depends on another as a formula, table, or graph.",
+          analogy:"A vending machine — each button (input) always dispenses one specific snack (output).",
+          example:"f(x)=2x+1, so f(3)=7. Every input has a single, predictable output.",
+          why:"Almost everything that changes or depends on something else — cost, speed, population, risk — is a function. Master this and every model you meet later is 'just a function.'" },
+        "factoring": { title:"Factoring", subject:"precalc", difficulty:2,
+          definition:"Rewriting an expression as a product of simpler factors.",
+          explanation:"Factoring reverses multiplication: it breaks a polynomial into the pieces that multiply to make it, which reveals its roots and simplifies everything built on top of it.",
+          analogy:"Like breaking 12 into 2×2×3 — the prime pieces make the number easy to work with.",
+          example:"x²+5x+6 = (x+2)(x+3), so the roots are x=−2 and x=−3.",
+          why:"Factoring is the key that unlocks solving quadratics, simplifying rational expressions, and later integrating in calculus." },
+        "quadratics": { title:"Quadratic Equations", subject:"precalc", difficulty:3,
+          definition:"Equations of the form ax²+bx+c=0, whose graph is a parabola.",
+          explanation:"A quadratic models anything that rises then falls — the highest power is 2, so the graph curves once. We solve by factoring, completing the square, or the quadratic formula.",
+          analogy:"The arc of a thrown ball: up, peak, back down — that curve is a parabola.",
+          example:"x²−5x+6=0 factors to (x−2)(x−3)=0 → x=2 or x=3.",
+          why:"Projectile motion, optimization (max profit / min cost), and areas all reduce to quadratics." },
+        "derivatives": { title:"Derivatives", subject:"precalc", difficulty:4,
+          definition:"The instantaneous rate of change of a function.",
+          explanation:"A derivative measures how fast a function changes at a single instant — the slope of the curve at one point. It is the foundation of calculus.",
+          analogy:"Your car's speedometer: not the trip's average speed, but exactly how fast you're going right now.",
+          example:"If position is s(t)=t², the derivative 2t gives the velocity at any moment t.",
+          why:"Rates of change run physics, economics, and the gradient descent that trains every neural network." },
+        "trigonometry": { title:"Trigonometry", subject:"precalc", difficulty:3,
+          definition:"The study of the relationships between angles and side lengths.",
+          explanation:"Trig ties angles to ratios of triangle sides (sine, cosine, tangent), turning directions and rotations into numbers we can compute with.",
+          analogy:"A clock hand: as it sweeps, the tip's height and sideways position trace sine and cosine.",
+          example:"In a right triangle, sin(θ) = opposite / hypotenuse.",
+          why:"Anything that rotates, oscillates, or points somewhere — waves, GPS, 3D graphics — runs on trig." },
+        "intro-psychology": { title:"What Is Psychology?", subject:"psychology", difficulty:1,
+          definition:"The scientific study of mind and behavior.",
+          explanation:"Psychology uses systematic evidence — not intuition — to describe, explain, predict, and influence how people think, feel, and act.",
+          analogy:"A detective for behavior: gathering evidence to explain why people do what they do.",
+          example:"Running a controlled test of whether sleep deprivation lowers memory performance.",
+          why:"Understanding why people behave as they do improves teaching, health, relationships, marketing, and design." },
+        "conditioning": { title:"Conditioning (Learning)", subject:"psychology", difficulty:2,
+          definition:"Learning associations between stimuli, or between actions and their consequences.",
+          explanation:"Classical conditioning links two stimuli; operant conditioning links a behavior to reward or punishment. Both explain how experience reshapes behavior.",
+          analogy:"A dog that drools at a bell, or a child who tidies up to earn a sticker.",
+          example:"Pavlov's dogs salivating at a bell that had been paired with food.",
+          why:"Conditioning underlies habits, phobia therapy, marketing, and classroom management." }
+      },
+      // First-class relationship edges. `to` is a concept slug for concept-typed
+      // relations, otherwise a free-text label. confidence 0..1; status verified|ai.
+      edges: [
+        { from:"functions", type:"prerequisite", to:"variables",         confidence:.95, status:"verified" },
+        { from:"functions", type:"prerequisite", to:"coordinate-plane",  confidence:.85, status:"verified" },
+        { from:"functions", type:"next",         to:"transformations",   confidence:.9,  status:"verified" },
+        { from:"functions", type:"next",         to:"quadratics",        confidence:.8,  status:"verified" },
+        { from:"functions", type:"related",      to:"linear-equations",  confidence:.85, status:"verified" },
+        { from:"functions", type:"career",       to:"Data Scientist",    confidence:.8,  status:"ai", reason:"A trained model is a function mapping inputs to predictions." },
+        { from:"functions", type:"project",      to:"Build a unit-price / tip calculator", confidence:.7, status:"ai" },
+        { from:"functions", type:"history",      to:"Leibniz introduced the term “function” (1673)", confidence:.9, status:"verified" },
+
+        { from:"factoring",  type:"prerequisite", to:"distributive-property", confidence:.95, status:"verified" },
+        { from:"factoring",  type:"prerequisite", to:"gcf",                   confidence:.9,  status:"verified" },
+        { from:"factoring",  type:"next",         to:"quadratics",           confidence:.9,  status:"verified" },
+        { from:"factoring",  type:"related",      to:"polynomials",          confidence:.85, status:"verified" },
+        { from:"factoring",  type:"career",       to:"Cryptographer",        confidence:.6,  status:"ai", reason:"Integer factoring is the hard problem behind RSA encryption." },
+
+        { from:"quadratics", type:"prerequisite", to:"factoring",            confidence:.9,  status:"verified" },
+        { from:"quadratics", type:"next",         to:"derivatives",          confidence:.7,  status:"ai", reason:"Optimizing a quadratic is a first taste of finding maxima and minima." },
+        { from:"quadratics", type:"related",      to:"projectile-motion",    confidence:.9,  status:"verified" },
+        { from:"quadratics", type:"industry",     to:"Engineering",          confidence:.85, status:"verified" },
+        { from:"quadratics", type:"project",      to:"Simulate a thrown ball's arc", confidence:.8, status:"ai" },
+
+        { from:"derivatives", type:"prerequisite", to:"functions",          confidence:.9,  status:"verified" },
+        { from:"derivatives", type:"prerequisite", to:"limits",             confidence:.9,  status:"verified" },
+        { from:"derivatives", type:"next",         to:"integrals",          confidence:.9,  status:"verified" },
+        { from:"derivatives", type:"career",       to:"ML Engineer",        confidence:.85, status:"verified", reason:"Gradient descent trains models by following derivatives." },
+        { from:"derivatives", type:"industry",     to:"Robotics",           confidence:.7,  status:"ai" },
+
+        { from:"trigonometry", type:"prerequisite", to:"functions",           confidence:.75, status:"verified" },
+        { from:"trigonometry", type:"next",         to:"periodic-functions",  confidence:.85, status:"verified" },
+        { from:"trigonometry", type:"career",       to:"Graphics Programmer", confidence:.8,  status:"ai", reason:"Rotations, lighting, and camera math are all trigonometry." },
+        { from:"trigonometry", type:"related",      to:"vectors",             confidence:.7,  status:"ai" },
+
+        { from:"intro-psychology", type:"next",    to:"research-methods", confidence:.9,  status:"verified" },
+        { from:"intro-psychology", type:"related", to:"conditioning",     confidence:.6,  status:"verified" },
+        { from:"intro-psychology", type:"career",  to:"Counselor",        confidence:.8,  status:"verified" },
+
+        { from:"conditioning", type:"prerequisite", to:"intro-psychology", confidence:.7,  status:"verified" },
+        { from:"conditioning", type:"next",         to:"memory",           confidence:.6,  status:"ai" },
+        { from:"conditioning", type:"career",       to:"UX Designer",      confidence:.7,  status:"ai", reason:"Habit-forming products lean on reinforcement schedules." },
+        { from:"conditioning", type:"related",      to:"behaviorism",      confidence:.85, status:"verified" }
+      ],
+      match: [   // topic-regex → concept slug (checked before the domain fallback)
+        { re:/\bfactor|greatest common|gcf\b/i,                          slug:"factoring" },
+        { re:/\bquadratic|parabola|ax\^?2\b/i,                           slug:"quadratics" },
+        { re:/\bderivative|instantaneous|rate of change|calculus\b/i,    slug:"derivatives" },
+        { re:/\btrig|sine|cosine|tangent|radian|angle\b/i,               slug:"trigonometry" },
+        { re:/\bfunction|domain|range|composition\b/i,                   slug:"functions" },
+        { re:/\bconditioning|reinforcement|pavlov|operant|punishment\b/i, slug:"conditioning" },
+        { re:/\bpsycholog|behavior|cognition|\bmind\b/i,                 slug:"intro-psychology" }
+      ],
+      // Domain → a default concept, so EVERY card opens at least a partial portal.
+      domainDefault: { precalc:"functions", psychology:"intro-psychology", biology:null, chemistry:null, physics:null, ai:null }
+    };
+    function kgEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+    function kgPretty(slug){ return String(slug||"").replace(/-/g," ").replace(/\b\w/g,function(c){ return c.toUpperCase(); }); }
+    // Concept slugs prettify to a title; free-text labels (careers, projects,
+    // history) are kept verbatim so real phrases aren't Title-Cased into nonsense.
+    function kgLabel(to){
+      if (KG.concepts[to]) return KG.concepts[to].title;
+      var s=String(to||"");
+      return /^[a-z0-9-]+$/.test(s) ? kgPretty(s) : s;
+    }
+    function kgSlugFor(deckId, title, prompt){
+      var hay=((title||"")+" "+(prompt||"")).toLowerCase();
+      for (var i=0;i<KG.match.length;i++){ if (KG.match[i].re.test(hay)) return KG.match[i].slug; }
+      var d=String(deckId||"");
+      var dom=/^bio\s/i.test(d)?"biology":/^chem\s/i.test(d)?"chemistry":/^phys\s/i.test(d)?"physics":/^ai\s/i.test(d)?"ai":/^psych\s/i.test(d)?"psychology":"precalc";
+      return KG.domainDefault[dom]||null;
+    }
+    function kgEdges(slug, type){ return KG.edges.filter(function(e){ return e.from===slug && e.type===type; }); }
+    // Follow the first prereq/next each level to build a short path chain of titles.
+    function kgChain(slug, type, depth){
+      var chain=[slug], seen={}; seen[slug]=1; var cur=slug;
+      for (var i=0;i<(depth||3);i++){
+        var es=kgEdges(cur,type); if(!es.length) break;
+        var nx=es[0].to; if(seen[nx]) break; seen[nx]=1;
+        if (type==="prerequisite") chain.unshift(nx); else chain.push(nx);
+        cur=nx;
+      }
+      return chain;
+    }
+    function kgConfBadge(e){
+      if (e.status==="verified")
+        return '<span title="Human-verified connection" style="background:rgba(52,211,153,.16);border:1px solid rgba(52,211,153,.4);color:#6ee7b7;border-radius:999px;padding:1px 7px;font:800 9.5px system-ui;margin-left:6px;white-space:nowrap">✓ verified</span>';
+      var lvl=e.confidence>=.8?"High":e.confidence>=.5?"Med":"Low";
+      return '<span title="'+kgEsc(e.reason||"AI-suggested connection — not yet human-verified")+'" style="background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#fcd34d;border-radius:999px;padding:1px 7px;font:800 9.5px system-ui;margin-left:6px;white-space:nowrap">✨ AI · '+lvl+'</span>';
+    }
+    // Render the six-question portal ONCE per question at the top of the panel.
+    function showKnowledgePortal(){
+      if (!explainBody || document.getElementById("kgPortal")) return;
+      var slug=kgSlugFor(DECKS[curDeck].id, DECKS[curDeck].title, sessionQA && sessionQA.prompt);
+      var c=slug && KG.concepts[slug];
+      var rel=relevanceFor(DECKS[curDeck].id, DECKS[curDeck].title, sessionQA && sessionQA.prompt);
+      var secHead=function(n,label,color){ return '<div style="font:800 11px system-ui;color:'+color+';letter-spacing:.4px;margin:13px 0 5px">'+n+' · '+label+'</div>'; };
+      var html='';
+
+      // 1 — What is it?
+      html+=secHead("①","WHAT IS IT?","#a5b4fc");
+      if (c){
+        html+='<div style="font:700 14px system-ui;color:var(--text);margin-bottom:3px">'+kgEsc(c.title)+'</div>';
+        html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)"><b>'+kgEsc(c.definition)+'</b><br>'+kgEsc(c.explanation)+'</div>';
+        if (c.analogy) html+='<div style="margin-top:7px;font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">🔎 <i>'+kgEsc(c.analogy)+'</i></div>';
+        if (c.example) html+='<div style="margin-top:6px;font:600 12.5px/1.5 ui-monospace,monospace;color:#7dd3fc;background:rgba(56,189,248,.08);border-radius:8px;padding:6px 9px">'+kgEsc(c.example)+'</div>';
+      } else {
+        html+='<div style="font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">This card is an entry point — the concept graph for this topic is still being mapped.</div>';
+      }
+
+      // 2 — Why does it matter?
+      if (c && c.why){ html+=secHead("②","WHY IT MATTERS","#f0abfc"); html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)">'+kgEsc(c.why)+'</div>'; }
+
+      // 3 — Where is it used? (reuses the Relevance Engine)
+      if (rel){
+        html+=secHead("③","WHERE IT'S USED","#38bdf8");
+        html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)">'+rel.text+'</div>';
+        if (rel.careers && rel.careers.length)
+          html+='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">'+rel.careers.map(function(x){ return '<span style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.35);border-radius:999px;padding:3px 10px;font:700 11px system-ui;color:#7dd3fc">'+kgEsc(x)+'</span>'; }).join("")+'</div>';
+      }
+
+      // 4 & 5 — knowledge path (before ↑ / after ↓), an arrow chain of titles.
+      if (c){
+        var arrow=function(chain,hereIdx){
+          return '<div style="font:600 13px/1.7 system-ui">'+chain.map(function(s,i){
+            var here=i===hereIdx;
+            var node='<span style="'+(here?'background:rgba(165,180,252,.22);border:1px solid rgba(165,180,252,.5);color:#c7d2fe;font-weight:800;':'color:var(--text);')+'border-radius:7px;padding:2px 9px;display:inline-block">'+kgEsc(kgLabel(s))+'</span>';
+            return node+(i<chain.length-1?'<div style="color:#64748b;font-size:12px;line-height:1.1">↓</div>':'');
+          }).join("")+'</div>';
+        };
+        var pre=kgChain(slug,"prerequisite",3);
+        html+=secHead("④","WHAT TO KNOW FIRST","#fca5a5");
+        html+= pre.length>1 ? arrow(pre, pre.length-1)
+             : '<div style="font:500 13px system-ui;color:var(--muted,#9aa3bd)">Foundational — no prerequisites to worry about.</div>';
+        var nxt=kgChain(slug,"next",3);
+        html+=secHead("⑤","WHAT IT LEADS TO","#86efac");
+        html+= nxt.length>1 ? arrow(nxt, 0)
+             : '<div style="font:500 13px system-ui;color:var(--muted,#9aa3bd)">You\'re near the frontier of this track.</div>';
+      }
+
+      // 6 — How does it connect? (typed relationship chips, by KG_TYPES order)
+      if (c){
+        var connectTypes=["related","career","industry","project","history"], rows="";
+        connectTypes.forEach(function(t){
+          var es=kgEdges(slug,t); if(!es.length) return;
+          var meta=KG_TYPES[t]||{label:t};
+          rows+='<div style="margin-top:8px"><div style="font:800 10.5px system-ui;color:var(--muted,#9aa3bd);letter-spacing:.3px;margin-bottom:4px">'+(meta.icon?meta.icon+" ":"")+kgEsc((meta.label||t).toUpperCase())+'</div>';
+          rows+='<div style="display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center">'+es.map(function(e){
+            return '<span style="display:inline-flex;align-items:center;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.28);border-radius:999px;padding:3px 9px;font:700 11.5px system-ui;color:var(--text)">'+kgEsc(kgLabel(e.to))+kgConfBadge(e)+'</span>';
+          }).join("")+'</div></div>';
+        });
+        if (rows){
+          html+=secHead("⑥","HOW IT CONNECTS","#fdba74");
+          html+='<div style="font:500 11px system-ui;color:var(--muted,#9aa3bd);margin:-2px 0 2px">Each link shows whether it is human-verified or an AI suggestion (with confidence).</div>'+rows;
+        }
+      }
+
+      var d=document.createElement("div");
+      d.id="kgPortal";
+      d.style.cssText="background:linear-gradient(180deg,rgba(99,102,241,.08),rgba(56,189,248,.05));border:1px solid rgba(129,140,248,.30);border-radius:14px;padding:12px 14px 14px;margin-bottom:6px";
+      d.innerHTML='<div style="font:900 12.5px system-ui;color:#c7d2fe;letter-spacing:.5px;display:flex;align-items:center;gap:6px">🚪 KNOWLEDGE PORTAL'+
+        (c?'<span style="font:700 11px system-ui;color:var(--muted,#9aa3bd)">· '+kgEsc(c.title)+(c.difficulty?' · difficulty '+c.difficulty+'/5':'')+'</span>':'')+'</div>'+html;
+      explainBody.insertBefore(d, explainBody.firstChild);
+    }
     function openExplain(){
       ensureSession();
       explainPanel.classList.remove("hidden");
-      showRelevance();
+      showKnowledgePortal();
       showFull();
       explainInput.focus();
     }
     function requestHint(){
       ensureSession();
       explainPanel.classList.remove("hidden");
-      showRelevance();
+      showKnowledgePortal();
       if (fullShown || explainBusy){ explainInput.focus(); return; }
       var qa=sessionQA;
       if (hintLevel===0){
