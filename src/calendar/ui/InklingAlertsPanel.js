@@ -110,28 +110,28 @@ export class InklingAlerts {
   // --- badge over the orb ---
 
   _buildBadge() {
-    if (!this.orb || this._badge) return;
-    // Oval count pill that sits JUST OUTSIDE the orb's top-right circumference
-    // (orb is overflow:visible) so it's never clipped. A short grey leader dash
-    // ties it to the orb. Tap the pill to open Alerts directly; tapping the orb
-    // opens the menu (which also has Alerts).
-    const b = document.createElement("span");
-    b.id = "inkling-alert-badge";
-    b.style.cssText =
-      "position:absolute;top:-9px;right:-16px;min-width:22px;height:21px;padding:0 8px;border-radius:11px;" +
-      "background:linear-gradient(180deg,#f87171,#dc2626);color:#fff;font:800 12px system-ui;" +
-      "display:none;align-items:center;justify-content:center;box-shadow:0 3px 9px rgba(0,0,0,.5);" +
-      "border:1.5px solid rgba(255,255,255,.9);z-index:4;cursor:pointer;pointer-events:auto;white-space:nowrap";
-    // grey leader dash between orb edge and the pill
-    const dash = document.createElement("span");
-    dash.style.cssText =
-      "position:absolute;top:6px;right:-7px;width:8px;height:2px;border-radius:1px;background:rgba(148,163,184,.85);z-index:3;pointer-events:none";
-    // Don't let a badge tap start an orb drag / open the orb menu.
-    b.addEventListener("pointerdown", (e) => { e.stopPropagation(); e.preventDefault(); this.toggle(); });
-    this.orb.appendChild(dash);
-    this.orb.appendChild(b);
-    this._badge = b;
-    this._badgeDash = dash;
+    // Alerts now badge the bottom-nav Alerts bell (🔔) — see _buildNavBadge. The
+    // main orb (#inkling-fab) is reserved for the UNREAD-CHAT count (InklingPanel),
+    // so the alerts pill no longer sits on the orb.
+    this._buildNavBadge();
+  }
+
+  /** A matching count pill on the bottom-nav Alerts bell (🔔) so the number is
+   *  visible even when the orb is hidden / a different surface is open. */
+  _buildNavBadge() {
+    if (this._navBadge) return;
+    const icon = document.querySelector('.inkling-bottom-nav__btn[data-tab="alerts"] .inkling-bottom-nav__icon');
+    if (!icon) return;
+    icon.style.position = "relative";
+    const nb = document.createElement("span");
+    nb.id = "nav-alert-badge";
+    nb.style.cssText =
+      "position:absolute;top:-7px;right:-13px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;" +
+      "background:linear-gradient(180deg,#f87171,#dc2626);color:#fff;font:800 10px system-ui;" +
+      "display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5);" +
+      "border:1px solid rgba(255,255,255,.85);z-index:2;pointer-events:none;white-space:nowrap";
+    icon.appendChild(nb);
+    this._navBadge = nb;
   }
 
   _refresh() {
@@ -149,6 +149,11 @@ export class InklingAlerts {
       this._badge.textContent = soon > 9 ? "9+" : String(soon);
       this._badge.style.display = soon > 0 ? "flex" : "none";
       if (this._badgeDash) this._badgeDash.style.display = soon > 0 ? "block" : "none";
+    }
+    if (!this._navBadge) this._buildNavBadge();   // nav may have mounted after construction
+    if (this._navBadge) {
+      this._navBadge.textContent = soon > 9 ? "9+" : String(soon);
+      this._navBadge.style.display = soon > 0 ? "flex" : "none";
     }
     if (this._panel && this._panel.style.display !== "none") this._render();
   }

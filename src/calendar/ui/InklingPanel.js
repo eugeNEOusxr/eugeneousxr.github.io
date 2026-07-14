@@ -268,12 +268,19 @@ export class InklingPanel {
     this._renderChatBadge();
   }
 
-  /** Paint the unread count onto the 💬 Chat icon in the orb fan. */
+  /** Paint the unread count onto BOTH the 💬 Chat icon in the orb fan AND the main
+   *  orb itself (so the number is visible at a glance without opening the fan). */
   _renderChatBadge() {
-    if (!this._chatBadge) return;
     const n = this._unread || 0;
-    this._chatBadge.textContent = n > 9 ? "9+" : String(n);
-    this._chatBadge.style.display = n > 0 ? "flex" : "none";
+    const txt = n > 9 ? "9+" : String(n);
+    if (this._chatBadge) {
+      this._chatBadge.textContent = txt;
+      this._chatBadge.style.display = n > 0 ? "flex" : "none";
+    }
+    if (this._orbChatBadge) {
+      this._orbChatBadge.textContent = txt;
+      this._orbChatBadge.style.display = n > 0 ? "flex" : "none";
+    }
   }
 
   expand() {
@@ -312,9 +319,18 @@ export class InklingPanel {
     const orb = document.getElementById("inkling-fab");
     if (!orb) return;
     this._orb = orb;
-    // Unread Inkling-message count lives on the 💬 Chat icon in the orb fan (see
-    // _buildOrbMenu), NOT on the main orb — the main orb keeps only the red Alerts
-    // badge (note/calendar alerts) in its top-right quadrant.
+    // Unread-chat count pill on the MAIN orb (top-right) so it's visible at a glance
+    // without opening the fan menu. Blue = chat; alerts now live on the Alerts bell
+    // (🔔), so the orb is no longer shared. (The fan 💬 icon still mirrors it too.)
+    const ocb = document.createElement("span");
+    ocb.id = "orb-chat-badge";
+    ocb.style.cssText =
+      "position:absolute;top:-8px;right:-14px;min-width:20px;height:20px;padding:0 7px;border-radius:10px;" +
+      "background:linear-gradient(180deg,#60a5fa,#2563eb);color:#fff;font:800 11px system-ui;" +
+      "display:none;align-items:center;justify-content:center;box-shadow:0 3px 9px rgba(0,0,0,.5);" +
+      "border:1.5px solid rgba(255,255,255,.9);z-index:4;pointer-events:none;white-space:nowrap";
+    orb.appendChild(ocb);
+    this._orbChatBadge = ocb;
     this._unread = 0;
     try {
       const pos = JSON.parse(localStorage.getItem("inkling-orb-pos") || "null");
