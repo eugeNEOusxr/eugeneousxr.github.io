@@ -1152,11 +1152,104 @@
       }
       ctx.globalAlpha = 1;
     }
-
+    drawNotes();   // the user's jotted notes, pooled by month over the study map
   }
   function offscreen(s, m){ m=m||0; return s[0]< -m || s[0]>W+m || s[1]< -m || s[1]>H+m; }
   function hexA(hex, a){ var n=parseInt(hex.slice(1),16); return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"; }
   function fit(t, maxw, fs){ if (ctx.measureText(t).width<=maxw) return t; while(t.length>1 && ctx.measureText(t+"…").width>maxw) t=t.slice(0,-1); return t+"…"; }
+  /* ─────────────────────────────────────────────────────────────────────────
+     NOTES on the map — the user's jotted timeline notes (localStorage
+     "inkling-timeline-v1", shared same-origin with the app). Rendered as a
+     SEPARATE overlay pass (never touches the study-node system): notes pool into
+     per-MONTH circular clusters, colored by category, alike categories grouped
+     adjacently, with an on-screen colour legend. This is "jot it onto the Mind
+     background" — the graph now shows your notes, organized by date not order.
+  ───────────────────────────────────────────────────────────────────────── */
+  var NOTE_COLORS = { health:"#FF4D4D", study:"#4DFF88", work:"#FFD24D", personal:"#4DA6FF",
+    creative:"#B84DFF", errands:"#FF884D", errand:"#FF884D", finance:"#4DFFD2",
+    appointment:"#FF4DA6", deadline:"#FF3333", reminder:"#66CCFF", alarm:"#FF66AA", "default":"#94A3B8" };
+  function noteColor(cat){ var k=String(cat||"default").toLowerCase().trim(); return NOTE_COLORS[k]||NOTE_COLORS["default"]; }
+  // keyword fallback when a note has no category set (auto-categorize on device)
+  var NOTE_KEYWORDS = [
+    ["health", /\b(gym|run|workout|doctor|dentist|med|health|sleep|water|diet|yoga|walk)\b/i],
+    ["work", /\b(work|meeting|email|boss|client|project|report|office|shift|call)\b/i],
+    ["study", /\b(study|read|homework|exam|quiz|class|lecture|chapter|math|science|essay|test)\b/i],
+    ["finance", /\b(pay|bill|rent|budget|money|bank|invoice|tax|salary|save|buy)\b/i],
+    ["errands", /\b(grocery|store|pick up|drop off|errand|shop|mail|clean|laundry)\b/i],
+    ["appointment", /\b(appointment|appt|book|reservation|visit)\b/i],
+    ["deadline", /\b(deadline|due|submit|turn in)\b/i],
+    ["creative", /\b(draw|paint|write|song|music|design|idea|art|create|build)\b/i]
+  ];
+  function inferCategory(n){
+    if (n.category) return n.category;
+    var t = (n.text||"") + " " + (n.label||"");
+    for (var i=0;i<NOTE_KEYWORDS.length;i++){ if (NOTE_KEYWORDS[i][1].test(t)) return NOTE_KEYWORDS[i][0]; }
+    return "personal";
+  }
+  function loadTimelineNotes(){ try { var a=JSON.parse(localStorage.getItem("inkling-timeline-v1")||"[]"); return Array.isArray(a)?a:[]; } catch(_){ return []; } }
+  var MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var NOTE_CLUSTERS = [];
+  // notes sit ABOVE the study core so the two zones never collide; months ring around this center
+  var NOTES_CENTER = { x:0, y:-5200 }, NOTES_RING = 2600, NOTE_HUB_R = 620;
+  function buildNoteClusters(){
+    var raw = loadTimelineNotes(), byMonth = {};
+    raw.forEach(function(n){
+      var date = n.date || (typeof n.time==="string" && /^\d{4}-\d{2}-\d{2}/.test(n.time) ? n.time.slice(0,10) : "");
+      var key = String(date).slice(0,7); if (!/^\d{4}-\d{2}$/.test(key)) return;
+      (byMonth[key] = byMonth[key] || []).push(n);
+    });
+    var keys = Object.keys(byMonth).sort(), m = keys.length;
+    NOTE_CLUSTERS = [];
+    keys.forEach(function(key, i){
+      var ang = m>1 ? (-Math.PI/2 + i/m*Math.PI*2) : -Math.PI/2;
+      var cx = NOTES_CENTER.x + Math.cos(ang)*(m>1?NOTES_RING:0);
+      var cy = NOTES_CENTER.y + Math.sin(ang)*(m>1?NOTES_RING:0);
+      var label = MONTH_NAMES[(+key.slice(5,7))-1] + " " + key.slice(0,4);
+      var notes = byMonth[key].map(function(n){ var cat=inferCategory(n); return { text:String(n.text||n.label||"").trim(), cat:cat, color:noteColor(cat), time:n.time||"" }; });
+      notes.sort(function(a,b){ return a.cat<b.cat?-1:a.cat>b.cat?1:(a.time<b.time?-1:1); });  // alike categories adjacent
+      var cnt = notes.length;
+      notes.forEach(function(nn, j){ var na = cnt>1?(j/cnt)*Math.PI*2:0, rr = NOTE_HUB_R*(0.55+0.45*((j%3)/2)); nn.x=cx+Math.cos(na)*rr; nn.y=cy+Math.sin(na)*rr; });
+      NOTE_CLUSTERS.push({ key:key, label:label, cx:cx, cy:cy, r:NOTE_HUB_R, notes:notes });
+    });
+  }
+  function drawNotes(){
+    if (!NOTE_CLUSTERS.length) return;
+    for (var c=0;c<NOTE_CLUSTERS.length;c++){
+      var cl = NOTE_CLUSTERS[c], hub = w2s(cl.cx, cl.cy), ringR = cl.r*cam.s*1.18;
+      if (ringR > 6 && !offscreen(hub, ringR+60)){ ctx.strokeStyle="rgba(200,214,255,0.16)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(hub[0],hub[1],ringR,0,7); ctx.stroke(); }
+      for (var k=0;k<cl.notes.length;k++){
+        var nt = cl.notes[k], sp = w2s(nt.x, nt.y); if (offscreen(sp, 30)) continue;
+        var rad = Math.max(2.2, 7*cam.s + 1.5);
+        ctx.strokeStyle = hexA(nt.color, 0.22); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hub[0],hub[1]); ctx.lineTo(sp[0],sp[1]); ctx.stroke();
+        if (rad > 3){ var gg=ctx.createRadialGradient(sp[0],sp[1],0,sp[0],sp[1],rad*2.4); gg.addColorStop(0,hexA(nt.color,0.4)); gg.addColorStop(1,hexA(nt.color,0)); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(sp[0],sp[1],rad*2.4,0,7); ctx.fill(); }
+        ctx.fillStyle = hexA(nt.color, 0.95); ctx.beginPath(); ctx.arc(sp[0],sp[1],rad,0,7); ctx.fill();
+        if (cam.s > 0.24 && nt.text){ ctx.globalAlpha=Math.min(1,(cam.s-0.24)*5); ctx.fillStyle="#e8ecfb"; ctx.font="600 "+Math.max(10,Math.min(15,9*cam.s+6))+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(fit(nt.text,150,12), sp[0], sp[1]+rad+9); ctx.globalAlpha=1; }
+      }
+      if (!offscreen(hub, 80)){ ctx.fillStyle="#ffe6a8"; ctx.font="700 "+Math.max(13,Math.min(26,cl.r*cam.s*0.5))+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cl.label, hub[0], hub[1]); }
+    }
+  }
+  function frameNotes(){
+    if (!NOTE_CLUSTERS.length) return false;
+    var xs=[], ys=[]; NOTE_CLUSTERS.forEach(function(c){ xs.push(c.cx-c.r,c.cx+c.r); ys.push(c.cy-c.r,c.cy+c.r); });
+    var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs), miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys), pad=1100;
+    cam.x=camT.x=(minx+maxx)/2; cam.y=camT.y=(miny+maxy)/2;
+    var s=Math.min(W/((maxx-minx)+pad*2), H/((maxy-miny)+pad*2));
+    cam.s=camT.s=Math.max(0.03, Math.min(0.5, s)); return true;
+  }
+  function buildNoteLegend(){
+    var cats={}; NOTE_CLUSTERS.forEach(function(c){ c.notes.forEach(function(n){ cats[n.cat]=n.color; }); });
+    var keys=Object.keys(cats).sort(), el=document.getElementById("noteLegend");
+    if (!keys.length){ if (el) el.style.display="none"; return; }
+    if (!el){ el=document.createElement("div"); el.id="noteLegend"; el.style.cssText="position:fixed;left:12px;bottom:14px;z-index:6;background:rgba(12,17,30,0.74);border:.5px solid #222b46;border-radius:12px;padding:8px 12px;font:600 12px system-ui;color:#e6ebff;display:flex;flex-direction:column;gap:5px;max-width:46vw;pointer-events:none"; document.body.appendChild(el); }
+    el.style.display="flex";
+    el.innerHTML = '<div style="font:800 10px system-ui;color:#9aa3bd;letter-spacing:.6px">NOTE COLOURS</div>' +
+      keys.map(function(k){ return '<div style="display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:'+cats[k]+';flex:0 0 auto"></span><span style="text-transform:capitalize">'+k+'</span></div>'; }).join("");
+  }
+  buildNoteClusters(); buildNoteLegend();
+  // (opening view is set at the frameAll() call near the end — notes take it when present)
+  window.addEventListener("storage", function(e){ if (!e.key || e.key==="inkling-timeline-v1"){ buildNoteClusters(); buildNoteLegend(); } });
+  window.addEventListener("message", function(e){ if (e.data && (e.data.type==="inkling-refresh-progress"||e.data.type==="inkling-refresh-notes")){ buildNoteClusters(); buildNoteLegend(); } });
+
   // resilient render loop — one thrown frame (e.g. a transient 0-size viewport) must not kill the animation
   (function frame(){ try { if (W>1 && H>1) draw(); } catch(e){} requestAnimationFrame(frame); })();
 
@@ -1354,6 +1447,7 @@
     // frame the cores themselves (+ a ring of breathing room) so both yellow orbs
     // sit on screen WITH their subject labels; the spiral arms run off-screen to explore.
     var xs=ROOTS.map(function(r){return r.x;}), ys=ROOTS.map(function(r){return r.y;});
+    NOTE_CLUSTERS.forEach(function(c){ xs.push(c.cx); ys.push(c.cy); });   // include the notes zone so "home" shows both
     var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
     var miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys);
     var pad=SPIRAL.r0*1.4;
@@ -1362,7 +1456,8 @@
     cam.s=camT.s=Math.max(0.03, Math.min(0.6, s));
     focusId=null; HL=null; updateCard(ROOTS[0]); updateCrumb(ROOTS[0]);
   }
-  frameAll();
+  // Open on the user's own notes when they have any (their content first); else the study map.
+  if (NOTE_CLUSTERS.length) frameNotes(); else frameAll();
 })();
 </script>
 </body>
