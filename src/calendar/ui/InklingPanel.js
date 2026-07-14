@@ -33,7 +33,7 @@ const INKLING_CRON_KEY = "calendar3d-inkling-cron-v1";
 // stamp a content change only showed up after a manual HARD reset. BUMP THIS
 // whenever wordweaver.html, wordweaver3d.html, or quiz.html changes, and the next
 // normal app load fetches the fresh file. */
-const CANVAS_VERSION = "20260714h";
+const CANVAS_VERSION = "20260714i";
 function withCanvasVersion(path) {
   return path + (path.includes("?") ? "&" : "?") + "v=" + CANVAS_VERSION;
 }
@@ -130,6 +130,17 @@ export class InklingPanel {
         this._openCanvasOverlay(withCanvasVersion(m.mode === "3d" ? "/wordweaver3d.html" : "/wordweaver.html"), "Mind — knowledge graph", "_mindOverlay", true);
       }
       else if (m.type === "inkling-close-graph") { if (this._mindOverlay) this._mindOverlay.style.display = "none"; }
+      else if (m.type === "inkling-highlight-schedule") {
+        // Onboarding stage 2: glow the Schedule (writer) bottom-nav tab so a user
+        // who feels lost on the graph sees where to add more notes/appointments.
+        const btn = document.querySelector('.inkling-bottom-nav__btn[data-tab="writer"]');
+        if (btn) {
+          btn.style.transition = "box-shadow .3s";
+          btn.style.borderRadius = "12px";
+          btn.style.boxShadow = "0 0 0 2px #7c5cff, 0 0 16px 4px rgba(124,92,255,.75)";
+          setTimeout(() => { btn.style.boxShadow = ""; }, 13000);
+        }
+      }
     });
     this._startCron();
 

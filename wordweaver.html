@@ -1282,8 +1282,28 @@
     if (localStorage.getItem("inkling-onboarding-active")){
       try { localStorage.removeItem("inkling-onboarding-active"); } catch(_){}
       showOnboardToast("✨ Nice — that's on your map. Keep adding, and Inkling links what belongs together.", true);
+      // Stage 2 (once): after they've seen the note land, point them to 3D + Schedule.
+      if (!localStorage.getItem("inkling-onboarding-stage2")){
+        try { localStorage.setItem("inkling-onboarding-stage2","1"); } catch(_){}
+        setTimeout(showStage2Hint, 7200);
+      }
     }
     return true;
+  }
+  // Stage-2 onboarding: highlight the 3D toggle + tell them Schedule (in the app's
+  // bottom nav) is where more notes/appointments go — a lifeline for anyone who
+  // feels lost on the graph.
+  function showStage2Hint(){
+    if (!document.getElementById("wwPulseStyle")){
+      var st=document.createElement("style"); st.id="wwPulseStyle";
+      st.textContent="@keyframes wwPulse{0%,100%{box-shadow:0 0 0 2px #7c5cff,0 0 10px 2px rgba(124,92,255,.5)}50%{box-shadow:0 0 0 3px #a78bfa,0 0 22px 6px rgba(124,92,255,.9)}}";
+      document.head.appendChild(st);
+    }
+    var to3d=document.getElementById("to3d");
+    if (to3d){ to3d.style.borderRadius="10px"; to3d.style.animation="wwPulse 1.5s ease-in-out infinite"; }
+    showOnboardToast("👀 View your map in 3D with the 🌀 button above — or tap 🕐 Schedule at the bottom to add more notes & appointments.", false);
+    if (window.parent && window.parent!==window){ try { window.parent.postMessage({ type:"inkling-highlight-schedule" }, "*"); } catch(_){} }
+    setTimeout(function(){ var t=document.getElementById("wwOnboardToast"); if(t) t.style.display="none"; if(to3d) to3d.style.animation=""; }, 13000);
   }
   // First-run guided hint toast (top-center) shown during onboarding.
   function showOnboardToast(msg, autoHide){
