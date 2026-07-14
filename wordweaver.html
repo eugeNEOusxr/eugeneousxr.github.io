@@ -1187,6 +1187,18 @@
     return "personal";
   }
   function loadTimelineNotes(){ try { var a=JSON.parse(localStorage.getItem("inkling-timeline-v1")||"[]"); return Array.isArray(a)?a:[]; } catch(_){ return []; } }
+  // The app stores notes as StoredTimelineEvent {body, startTime(ISO), category,
+  // _wwRender.date}. Normalize BOTH that shape and the simpler {text,date,time}.
+  function noteFields(n){
+    var wr = n._wwRender || {};
+    var text = n.body || n.text || n.title || wr.label || "";
+    var date = wr.date || n.date ||
+      (typeof n.startTime==="string" && /^\d{4}-\d{2}-\d{2}/.test(n.startTime) ? n.startTime.slice(0,10) : "") ||
+      (typeof n.time==="string" && /^\d{4}-\d{2}-\d{2}/.test(n.time) ? n.time.slice(0,10) : "");
+    var time = (typeof n.startTime==="string" && n.startTime.length>=16) ? n.startTime.slice(11,16)
+             : (typeof n.time==="string" && /^\d{1,2}:\d{2}/.test(n.time) ? n.time : "");
+    return { text:String(text).trim(), date:String(date), time:String(time), category:n.category||wr.category||"" };
+  }
   var MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var NOTE_CLUSTERS = [];
   // notes sit ABOVE the study core so the two zones never collide; months ring around this center
@@ -1194,9 +1206,9 @@
   function buildNoteClusters(){
     var raw = loadTimelineNotes(), byMonth = {};
     raw.forEach(function(n){
-      var date = n.date || (typeof n.time==="string" && /^\d{4}-\d{2}-\d{2}/.test(n.time) ? n.time.slice(0,10) : "");
-      var key = String(date).slice(0,7); if (!/^\d{4}-\d{2}$/.test(key)) return;
-      (byMonth[key] = byMonth[key] || []).push(n);
+      var f = noteFields(n); if (!f.text) return;
+      var key = f.date.slice(0,7); if (!/^\d{4}-\d{2}$/.test(key)) return;
+      (byMonth[key] = byMonth[key] || []).push(f);
     });
     var keys = Object.keys(byMonth).sort(), m = keys.length;
     NOTE_CLUSTERS = [];
@@ -1205,7 +1217,7 @@
       var cx = NOTES_CENTER.x + Math.cos(ang)*(m>1?NOTES_RING:0);
       var cy = NOTES_CENTER.y + Math.sin(ang)*(m>1?NOTES_RING:0);
       var label = MONTH_NAMES[(+key.slice(5,7))-1] + " " + key.slice(0,4);
-      var notes = byMonth[key].map(function(n){ var cat=inferCategory(n); return { text:String(n.text||n.label||"").trim(), cat:cat, color:noteColor(cat), time:n.time||"" }; });
+      var notes = byMonth[key].map(function(f){ var cat=inferCategory(f); return { text:f.text, cat:cat, color:noteColor(cat), time:f.time||"" }; });
       notes.sort(function(a,b){ return a.cat<b.cat?-1:a.cat>b.cat?1:(a.time<b.time?-1:1); });  // alike categories adjacent
       var cnt = notes.length;
       notes.forEach(function(nn, j){ var na = cnt>1?(j/cnt)*Math.PI*2:0, rr = NOTE_HUB_R*(0.55+0.45*((j%3)/2)); nn.x=cx+Math.cos(na)*rr; nn.y=cy+Math.sin(na)*rr; });
@@ -1245,6 +1257,64 @@
     el.innerHTML = '<div style="font:800 10px system-ui;color:#9aa3bd;letter-spacing:.6px">NOTE COLOURS</div>' +
       keys.map(function(k){ return '<div style="display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:'+cats[k]+';flex:0 0 auto"></span><span style="text-transform:capitalize">'+k+'</span></div>'; }).join("");
   }
+  /* ── WRITE side: jot a note directly onto the map. Writes a StoredTimelineEvent
+     to "inkling-timeline-v1" (the app's own note store) so it shows here AND in
+     the Schedule tab, then re-clusters + frames so you watch it land. ── */
+  function _pad2(x){ return String(x).padStart(2,"0"); }
+  function _bucketOf(clock){ var h=parseInt((clock||"09:00").split(":")[0],10)||9; return h<5?"Late Night":h<8?"Dawn":h<12?"Morning":h<14?"Noon":h<18?"Afternoon":h<21?"Evening":"Night"; }
+  function jotNote(text, category){
+    text = String(text||"").trim(); if (!text) return false;
+    var now = new Date();
+    var dateIso = now.getFullYear()+"-"+_pad2(now.getMonth()+1)+"-"+_pad2(now.getDate());
+    var clock = _pad2(now.getHours())+":"+_pad2(now.getMinutes());
+    var startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes()).toISOString();
+    var cat = (category && category!=="auto") ? category : inferCategory({ text:text });
+    var ev = {
+      id: "ww_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
+      type:"note", title:text.slice(0,120), body:text, startTime:startTime, endTime:null,
+      category:cat, priority:1, alerts:[], createdAt:startTime, updatedAt:startTime,
+      _wwRender:{ label:"Note", timeBucket:_bucketOf(clock), color:"#e2e8f0", fontSize:0.26, weight:"normal", date:dateIso }
+    };
+    var arr = loadTimelineNotes(); arr.push(ev);
+    try { localStorage.setItem("inkling-timeline-v1", JSON.stringify(arr)); localStorage.setItem("inkling-has-user-notes","true"); } catch(_){ return false; }
+    buildNoteClusters(); buildNoteLegend(); frameNotes();
+    if (window.parent && window.parent!==window){ try { window.parent.postMessage({ type:"inkling-note-added" }, "*"); } catch(_){} }
+    return true;
+  }
+  // Floating "jot a note" button + panel (built in JS so no HTML edits needed).
+  (function noteUI(){
+    var CATS = ["auto","personal","work","study","health","finance","errands","creative","appointment","deadline","reminder"];
+    var fab = document.createElement("button");
+    fab.id="noteFab"; fab.type="button"; fab.textContent="✎ Note";
+    fab.style.cssText="position:fixed;right:14px;bottom:16px;z-index:7;border:.5px solid #7c5cff;background:rgba(20,16,40,.92);color:#cdbcff;font:800 14px system-ui;padding:11px 16px;border-radius:14px;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.45)";
+    var panel = document.createElement("div");
+    panel.id="notePanel";
+    panel.style.cssText="position:fixed;right:14px;bottom:66px;z-index:7;width:min(320px,86vw);display:none;flex-direction:column;gap:8px;background:rgba(12,17,30,.96);backdrop-filter:blur(10px);border:.5px solid #2a2350;border-radius:16px;padding:13px 14px;box-shadow:0 18px 50px rgba(0,0,0,.55)";
+    panel.innerHTML =
+      '<div style="font:800 13px system-ui;color:#c7d2fe">Jot a note onto your map</div>'+
+      '<textarea id="noteText" rows="3" placeholder="e.g. Dentist at 3pm, study AI ch.3, pay rent…" style="width:100%;box-sizing:border-box;resize:vertical;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:9px;padding:9px 10px;color:#eef1fa;font:600 13px system-ui;outline:none"></textarea>'+
+      '<div style="display:flex;gap:7px;align-items:center">'+
+        '<span style="font:600 11px system-ui;color:#9aa3bd">Colour</span>'+
+        '<select id="noteCat" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 8px;color:#eef1fa;font:600 12px system-ui">'+
+          CATS.map(function(c){ return '<option value="'+c+'">'+(c==="auto"?"Auto (from words)":c.charAt(0).toUpperCase()+c.slice(1))+'</option>'; }).join("")+
+        '</select>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;justify-content:flex-end">'+
+        '<button id="noteCancel" type="button" style="border:none;background:#1a2236;color:#9aa3bd;font:700 12px system-ui;padding:8px 12px;border-radius:9px;cursor:pointer">Cancel</button>'+
+        '<button id="noteAdd" type="button" style="border:none;background:#7c5cff;color:#fff;font:800 12px system-ui;padding:8px 15px;border-radius:9px;cursor:pointer">Add to map</button>'+
+      '</div>';
+    document.body.appendChild(fab); document.body.appendChild(panel);
+    function open(){ panel.style.display="flex"; var t=document.getElementById("noteText"); t.value=""; setTimeout(function(){ t.focus(); },30); }
+    function close(){ panel.style.display="none"; }
+    fab.onclick=function(){ panel.style.display==="flex"?close():open(); };
+    panel.querySelector("#noteCancel").onclick=close;
+    panel.querySelector("#noteAdd").onclick=function(){
+      var txt=document.getElementById("noteText").value, cat=document.getElementById("noteCat").value;
+      if (jotNote(txt, cat)) close();
+    };
+    document.getElementById("noteText") && document.getElementById("noteText").addEventListener("keydown", function(e){ if((e.metaKey||e.ctrlKey)&&e.key==="Enter"){ if(jotNote(this.value, document.getElementById("noteCat").value)) close(); } });
+  })();
+
   buildNoteClusters(); buildNoteLegend();
   // (opening view is set at the frameAll() call near the end — notes take it when present)
   window.addEventListener("storage", function(e){ if (!e.key || e.key==="inkling-timeline-v1"){ buildNoteClusters(); buildNoteLegend(); } });
