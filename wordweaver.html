@@ -1189,16 +1189,25 @@
   function loadTimelineNotes(){ try { var a=JSON.parse(localStorage.getItem("inkling-timeline-v1")||"[]"); return Array.isArray(a)?a:[]; } catch(_){ return []; } }
   // The app stores notes as StoredTimelineEvent {body, startTime(ISO), category,
   // _wwRender.date}. Normalize BOTH that shape and the simpler {text,date,time}.
+  function pad2n(x){ return String(x).padStart(2,"0"); }
   function noteFields(n){
     var wr = n._wwRender || {};
     var text = n.body || n.text || n.title || wr.label || "";
-    var date = wr.date || n.date ||
-      (typeof n.startTime==="string" && /^\d{4}-\d{2}-\d{2}/.test(n.startTime) ? n.startTime.slice(0,10) : "") ||
-      (typeof n.time==="string" && /^\d{4}-\d{2}-\d{2}/.test(n.time) ? n.time.slice(0,10) : "");
-    var time = (typeof n.startTime==="string" && n.startTime.length>=16) ? n.startTime.slice(11,16)
-             : (typeof n.time==="string" && /^\d{1,2}:\d{2}/.test(n.time) ? n.time : "");
+    var date = wr.date || n.date || "";
+    var time = (typeof n.time==="string" && /^\d{1,2}:\d{2}/.test(n.time)) ? n.time : "";
+    // startTime is a UTC ISO — parse it to a Date and read LOCAL h:m (slicing the
+    // ISO string gave UTC, which shifted a 1:30pm note to the wrong clock time).
+    if (typeof n.startTime==="string"){
+      var d = new Date(n.startTime);
+      if (!isNaN(d.getTime())){
+        if (!date) date = d.getFullYear()+"-"+pad2n(d.getMonth()+1)+"-"+pad2n(d.getDate());
+        if (!time) time = pad2n(d.getHours())+":"+pad2n(d.getMinutes());
+      }
+    }
     return { text:String(text).trim(), date:String(date), time:String(time), category:n.category||wr.category||"" };
   }
+  // "HH:MM" → minutes since midnight (for clock placement); null if no time.
+  function clockMinutes(t){ var m=/^(\d{1,2}):(\d{2})/.exec(t||""); return m ? (+m[1]*60 + +m[2]) : null; }
   var MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   var NOTE_CLUSTERS = [];
   // notes sit ABOVE the study core so the two zones never collide; months ring around this center
@@ -1220,7 +1229,16 @@
       var notes = byMonth[key].map(function(f){ var cat=inferCategory(f); return { text:f.text, cat:cat, color:noteColor(cat), time:f.time||"" }; });
       notes.sort(function(a,b){ return a.cat<b.cat?-1:a.cat>b.cat?1:(a.time<b.time?-1:1); });  // alike categories adjacent
       var cnt = notes.length;
-      notes.forEach(function(nn, j){ var na = cnt>1?(j/cnt)*Math.PI*2:0, rr = NOTE_HUB_R*(0.55+0.45*((j%3)/2)); nn.x=cx+Math.cos(na)*rr; nn.y=cy+Math.sin(na)*rr; });
+      // Place each note at its TIME on a 12-hour clock face (12 at top, clockwise) —
+      // a 1:30 note sits at the 1:30 position. Notes with no time fall back to an
+      // even spread. A tiny radial stagger keeps near-time notes from fully stacking.
+      notes.forEach(function(nn, j){
+        var mins = clockMinutes(nn.time);
+        var frac = (mins!=null) ? (((mins/60) % 12) / 12) : (j/Math.max(1,cnt));
+        var na = -Math.PI/2 + frac*Math.PI*2;
+        var rr = NOTE_HUB_R*(0.62 + 0.30*((j%3)/2));
+        nn.x=cx+Math.cos(na)*rr; nn.y=cy+Math.sin(na)*rr;
+      });
       NOTE_CLUSTERS.push({ key:key, label:label, cx:cx, cy:cy, r:NOTE_HUB_R, notes:notes });
     });
   }
@@ -1228,7 +1246,24 @@
     if (!NOTE_CLUSTERS.length) return;
     for (var c=0;c<NOTE_CLUSTERS.length;c++){
       var cl = NOTE_CLUSTERS[c], hub = w2s(cl.cx, cl.cy), ringR = cl.r*cam.s*1.18;
-      if (ringR > 6 && !offscreen(hub, ringR+60)){ ctx.strokeStyle="rgba(200,214,255,0.16)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(hub[0],hub[1],ringR,0,7); ctx.stroke(); }
+      if (ringR > 6 && !offscreen(hub, ringR+60)){
+        ctx.strokeStyle="rgba(200,214,255,0.16)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(hub[0],hub[1],ringR,0,7); ctx.stroke();
+        // Clock face: 12 tick marks (cardinal ones bolder) + 12/3/6/9 numerals, so
+        // the month ring reads as a clock and notes visibly sit at their time.
+        if (ringR > 34){
+          for (var tk=0; tk<12; tk++){
+            var ta=-Math.PI/2+(tk/12)*Math.PI*2, big=(tk%3===0);
+            ctx.strokeStyle="rgba(200,214,255,"+(big?0.42:0.20)+")"; ctx.lineWidth=big?1.6:0.8;
+            ctx.beginPath();
+            ctx.moveTo(hub[0]+Math.cos(ta)*ringR*(big?0.9:0.94), hub[1]+Math.sin(ta)*ringR*(big?0.9:0.94));
+            ctx.lineTo(hub[0]+Math.cos(ta)*ringR, hub[1]+Math.sin(ta)*ringR); ctx.stroke();
+          }
+          if (ringR > 62){
+            ctx.fillStyle="rgba(200,214,255,0.5)"; ctx.font="700 "+Math.min(13,ringR*0.09)+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle";
+            [["12",-Math.PI/2],["3",0],["6",Math.PI/2],["9",Math.PI]].forEach(function(p){ ctx.fillText(p[0], hub[0]+Math.cos(p[1])*ringR*0.8, hub[1]+Math.sin(p[1])*ringR*0.8); });
+          }
+        }
+      }
       for (var k=0;k<cl.notes.length;k++){
         var nt = cl.notes[k], sp = w2s(nt.x, nt.y); if (offscreen(sp, 30)) continue;
         var rad = Math.max(2.2, 7*cam.s + 1.5);
