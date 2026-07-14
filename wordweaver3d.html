@@ -3,74 +3,49 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>WordWeaver — Knowledge Spiral (3D)</title>
+<title>WordWeaver — Knowledge Skyline (3D)</title>
 <style>
   :root{ --accent:#7c5cff; --text:#eef1fa; --muted:#9aa3bd; --panel:rgba(12,17,30,.92); --line:#222b46; }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;overflow:hidden;background:#04050d;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-user-select:none;user-select:none}
   #app{position:fixed;inset:0}
   canvas{display:block}
-  /* CSS2D node labels */
-  .nlabel{font:600 11px system-ui;color:#eaf0ff;background:rgba(10,14,26,.55);padding:2px 7px;border-radius:8px;border:.5px solid rgba(255,255,255,.12);white-space:nowrap;pointer-events:none;transform:translateY(-2px);text-shadow:0 1px 3px #000}
-  .nlabel .badge{display:inline-block;min-width:14px;text-align:center;border-radius:7px;padding:0 3px;margin-left:4px;font-weight:800;font-size:10px}
-  .nlabel .bp{background:#2ec27e;color:#04140c} .nlabel .bf{background:#ff5a5a;color:#1a0606}
-  .summit{font:800 13px system-ui;color:#ffe6a8;background:rgba(20,16,8,.6);padding:4px 11px;border-radius:10px;border:.5px solid rgba(255,210,140,.4);white-space:nowrap;text-shadow:0 1px 4px #000;pointer-events:none}
-  /* HUD */
   .hud{position:fixed;z-index:5}
   #top{top:10px;left:10px;right:10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-  #secTabs{display:flex;gap:4px;flex-wrap:wrap}
-  .tab{pointer-events:auto;border:.5px solid var(--line);background:rgba(12,17,30,.8);color:var(--text);font-size:13px;font-weight:600;padding:6px 10px;border-radius:999px;cursor:pointer}
-  .tab.on{border-color:transparent}
-  #chapSel{pointer-events:auto;background:rgba(12,17,30,.85);color:var(--text);border:.5px solid var(--line);border-radius:9px;padding:6px 8px;font-size:13px}
-  #title{margin-left:auto;font-weight:700;opacity:.85;font-size:14px}
+  #title{font-weight:700;opacity:.9;font-size:14px}
   #title small{color:var(--muted);font-weight:500}
-  #hint{left:50%;bottom:12px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:rgba(12,17,30,.6);padding:5px 12px;border-radius:999px;white-space:nowrap}
-  #ew{bottom:54px;left:0;right:0;display:flex;justify-content:space-between;padding:0 10px;pointer-events:none}
-  #ew button{pointer-events:auto;width:46px;height:46px;border-radius:50%;border:.5px solid var(--line);background:rgba(12,17,30,.85);color:var(--text);font-size:20px;cursor:pointer}
-  #climb,#fly{right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:6}
-  #climb button,#fly button{pointer-events:auto;width:50px;height:50px;border-radius:14px;border:.5px solid var(--accent);background:rgba(12,17,30,.9);color:#cdbcff;font-size:22px;font-weight:800;cursor:pointer}
-  #climb button:active,#fly button:active{background:var(--accent);color:#fff}
-  /* free-flight joystick (only shown in Free mode) */
-  #joy{left:18px;bottom:24px;width:118px;height:118px;border-radius:50%;border:.5px solid var(--line);background:rgba(12,17,30,.55);touch-action:none;pointer-events:auto;z-index:6}
-  #joyknob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:radial-gradient(circle at 40% 35%, #b6a4ff, #6e57d6);border:.5px solid rgba(255,255,255,.3);box-shadow:0 4px 14px rgba(0,0,0,.4)}
-  /* question panel */
-  #qpanel{position:fixed;left:12px;right:12px;bottom:12px;z-index:6;max-width:420px;margin:0 auto;background:var(--panel);backdrop-filter:blur(10px);border:.5px solid var(--line);border-radius:16px;padding:14px 15px;box-shadow:0 18px 50px rgba(0,0,0,.5);transform:translateY(150%);transition:transform .28s cubic-bezier(.2,.8,.2,1)}
-  #qpanel.show{transform:translateY(0)}
-  #qpanel .qk{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
-  #qpanel h2{margin:3px 0 7px;font-size:17px}
-  #qpanel p{margin:0 0 12px;font-size:13.5px;line-height:1.5;color:#c9d0e6}
-  #qpanel .tally{font-size:12px;margin:-6px 0 10px}
-  #qpanel .row{display:flex;gap:8px}
-  .btn{pointer-events:auto;border:none;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer;background:#1a2236;color:var(--text)}
-  .btn.acc{background:var(--accent);color:#fff}
-  #qclose{background:none;border:none;color:var(--muted);font-size:18px;position:absolute;top:10px;right:12px;cursor:pointer}
+  .tab{pointer-events:auto;border:.5px solid var(--line);background:rgba(12,17,30,.8);color:var(--text);font-size:13px;font-weight:600;padding:6px 10px;border-radius:999px;cursor:pointer;text-decoration:none}
+  #spacer{flex:1}
+  #hint{left:50%;bottom:14px;transform:translateX(-50%);font-size:12px;color:var(--muted);background:rgba(12,17,30,.6);padding:5px 12px;border-radius:999px;white-space:nowrap}
+  #legend{left:12px;bottom:14px;display:flex;flex-direction:column;gap:5px;background:rgba(12,17,30,.72);border:.5px solid var(--line);border-radius:12px;padding:8px 12px;font-size:12px}
+  #legend .row{display:flex;align-items:center;gap:7px}
+  #legend .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .clabel{font:800 13px system-ui;color:#eef1fa;background:rgba(10,14,26,.6);padding:3px 10px;border-radius:10px;border:.5px solid rgba(255,255,255,.15);white-space:nowrap;text-shadow:0 1px 4px #000;pointer-events:none}
+  #tip{position:fixed;left:50%;bottom:70px;transform:translate(-50%,0);z-index:6;max-width:340px;width:88vw;background:var(--panel);backdrop-filter:blur(10px);border:.5px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease}
+  #tip.show{opacity:1;pointer-events:auto;transform:translate(-50%,-6px)}
+  #tip .tk{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+  #tip h2{margin:3px 0 6px;font-size:16px}
+  #tip .m{font-size:13px;color:#c9d0e6}
+  #tipClose{background:none;border:none;color:var(--muted);font-size:17px;position:absolute;top:8px;right:10px;cursor:pointer}
   #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;z-index:9;background:#04050d}
 </style>
 </head>
 <body>
 <div id="app"></div>
-<div id="loading">Weaving the spiral…</div>
+<div id="loading">Raising the towers…</div>
 <div id="top" class="hud">
-  <div id="secTabs"></div>
-  <select id="chapSel" title="Jump to a chapter"></select>
-  <div id="title">Knowledge <span style="color:var(--accent)">Spiral</span> <small id="secName"></small></div>
-  <button class="tab" id="mode" style="pointer-events:auto" title="Switch between guided platform view and free-flight">🕹 Free fly</button>
-  <button class="tab" id="miss" style="pointer-events:auto;border-color:#ff5a5a;color:#ff8a8a" title="Fly through what you keep missing">🔴 Missing</button>
-  <a href="wordweaver.html" class="tab" id="to2d" style="pointer-events:auto;text-decoration:none">🗺 2D</a>
-  <button class="tab" id="exit3d" style="pointer-events:auto;border-color:rgba(255,90,90,.55);color:#ff7a7a;font-weight:700" title="Exit the knowledge spiral">✕</button>
+  <div id="title">Knowledge <span style="color:var(--accent)">Skyline</span> <small>— every subject, at a glance</small></div>
+  <div id="spacer"></div>
+  <a href="wordweaver.html" class="tab" id="to2d">🗺 2D</a>
+  <button class="tab" id="exit3d" style="border-color:rgba(255,90,90,.55);color:#ff7a7a;font-weight:700" title="Exit the knowledge skyline">✕</button>
 </div>
-<div id="ew" class="hud"><button id="west" title="Previous section">‹</button><button id="east" title="Next section">›</button></div>
-<div id="climb" class="hud"><button id="up" title="Climb to next question">▲</button><button id="down" title="Back down a step">▼</button></div>
-<div id="fly" class="hud" style="display:none"><button id="flyup" title="Fly up">⤒</button><button id="flydn" title="Descend">⤓</button></div>
-<div id="joy" class="hud" style="display:none"><div id="joyknob"></div></div>
-<div id="hint" class="hud">Drag to look · ▲ climb step-by-step · ‹ › jump sections · tap a step for its question</div>
-<div id="qpanel">
-  <button id="qclose" aria-label="Close">✕</button>
-  <div class="qk" id="qk"></div>
-  <h2 id="qt"></h2>
-  <div class="tally" id="qtally"></div>
-  <p id="qp"></p>
-  <div class="row"><button class="btn acc" id="qopen">📇 Open flashcard →</button></div>
+<div id="legend" class="hud"></div>
+<div id="hint" class="hud">Drag to orbit · scroll to zoom · click a tower for its chapter</div>
+<div id="tip">
+  <button id="tipClose" aria-label="Close">✕</button>
+  <div class="tk" id="tipDomain"></div>
+  <h2 id="tipTitle"></h2>
+  <div class="m" id="tipMastery"></div>
 </div>
 
 <script type="importmap">
@@ -87,390 +62,254 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 
-const DATA = {"1.1":{"title":"Functions & Notation","q":[{"n":"1.1.1","t":"Evaluate","p":"The amount of garbage, G, produced by a city with population p is given by G = f(p). G is measured in tons per week, and p is measured in thousands of people. The town of Tola h…"},{"n":"1.1.2","t":"Function?","p":"Select all of the following graphs which represent y as a function of x."},{"n":"1.1.3","t":"Table","p":"Select all of the following tables which represent y as a function of x."},{"n":"1.1.4","t":"One-to-one","p":"Select all of the following tables which represent y as a function of x and are one-to-one."},{"n":"1.1.5","t":"One-to-one","p":"Select all of the following graphs which are one-to-one functions."},{"n":"1.1.6","t":"Read graph","p":"The plot below represents the function f(x):"},{"n":"1.1.7","t":"Table","p":"Based on the table below,"},{"n":"1.1.8","t":"Read graph","p":"The plot below represents the function f(x):"},{"n":"1.1.9","t":"Evaluate","p":"Given the function f(x) = 3x² − 7x + 3. Calculate the following values:"},{"n":"1.1.10","t":"Evaluate","p":"Suppose f(x) = −x² − x + 8. Compute the following:"},{"n":"1.1.11","t":"Match","p":"Match each function name with its equation."},{"n":"1.1.12","t":"Match","p":"Match each graph with its equation."},{"n":"1.1.13","t":"Match","p":"Match each table with its equation."},{"n":"1.1.14","t":"Match","p":"Match each table with its equation."},{"n":"1.1.15","t":"Match","p":"Match each graph with its table."},{"n":"1.1.16","t":"Evaluate","p":"Given the function f(x) = 7x + 6, evaluate and simplify the expressions below. Simplify fully — expand and collect like terms (e.g. 3x + x → 4x)."},{"n":"1.1.17","t":"Evaluate","p":"For the function f(x) = 3x² + 2x, evaluate and simplify."},{"n":"1.1.18","t":"Evaluate","p":"For the function f(x) = −5x² + x + 5, evaluate and fully simplify each of the following."},{"n":"1.1.19","t":"Diff quotient","p":"For the function f(x) = −2x + 8, evaluate and simplify the difference quotient."},{"n":"1.1.20","t":"Evaluate","p":"Given the function f(x) = 7 + 7x², calculate the following values:"}]},"1.2":{"title":"Domain & Range","q":[{"n":"1.2.1","t":"Interval","p":"Enter the interval equivalent to 2 < x ≤ 5 or x > 7."},{"n":"1.2.2","t":"Domain","p":"Find the domain of f(x) = 2/(x − 3)."},{"n":"1.2.3","t":"Domain","p":"What is the domain of f(x) = √(x + 6)/(x − 1)?"},{"n":"1.2.4","t":"Domain","p":"Find the domain of f(x) = (x − 4)/(x² + 5x − 50)."},{"n":"1.2.5","t":"Read graph","p":"Write the domain of the function graphed below in interval notation."},{"n":"1.2.6","t":"Dom & range","p":"A toy submarine released underwater ascends; the graph models its depth d vs time t. Give the domain and range."},{"n":"1.2.7","t":"Dom & range","p":"Find the domain and range of the function graphed below. Use interval notation."},{"n":"1.2.8","t":"Domain","p":"A graph is the segment from (1, 15) to (8, 8) (d horizontal, g vertical). What is the domain?"},{"n":"1.2.9","t":"Piecewise","p":"Given f(x) = { 9x + 6 if x < 0; 9x + 12 if x ≥ 0 }, calculate each value."},{"n":"1.2.10","t":"Piecewise","p":"Complete the piecewise function graphed below — use interval notation for each interval."},{"n":"1.2.11","t":"Piecewise","p":"Complete the piecewise function graphed below — write each piece's formula."},{"n":"1.2.12","t":"Sketch","p":"Sketch f(x) = { −0.5x − 4 if x ≤ −4; −1 if −4 < x ≤ 2; 1.5x − 4 if x > 2 }."},{"n":"1.2.13","t":"Sketch","p":"Sketch f(x) = { 0 if x ≤ −1; −x − 1 if −1 < x ≤ 1; 0 if x > 1 }."},{"n":"1.2.14","t":"Domain","p":"Find the domain of f(x) = x² − 1. Write your answer in interval notation."},{"n":"1.2.15","t":"Domain","p":"Find the domain of f(x) = (x + 1)/(2 − x). Interval notation."},{"n":"1.2.16","t":"Domain","p":"Find the domain of f(x) = √(7 − x). Interval notation."},{"n":"1.2.17","t":"Domain","p":"Find the domain of f(x) = 3/(x − 2). Interval notation."},{"n":"1.2.18","t":"Domain","p":"Find the domain of f(x) = √(4 − 3x). Interval notation."},{"n":"1.2.19","t":"Domain","p":"Find the domain of f(x) = 1/(x² − x − 6). Interval notation."},{"n":"1.2.20","t":"Domain","p":"Find the domain of f(x) = (2x + 1)/√(5 − x). Interval notation."},{"n":"1.2.21","t":"Domain","p":"Find the domain of f(x) = √x / x. Interval notation."},{"n":"1.2.22","t":"Interval","p":"Write the set {x | 1 ≤ x ≤ 3 or x > 5} in interval notation."},{"n":"1.2.23","t":"Domain","p":"What is the domain of f(x) = √x ?"},{"n":"1.2.24","t":"Piecewise","p":"For f(x) = { x + 1 if x < −2; −2x − 3 if x ≥ −2 }, find each value."},{"n":"1.2.25","t":"Piecewise","p":"For f(x) = { 7x + 3 if x < 0; 7x + 6 if x ≥ 0 }, find each value."},{"n":"1.2.26","t":"Piecewise","p":"For f(x) = { 5x if x < 0; 3 if 0 ≤ x ≤ 3; x² if x > 3 }, find each value."},{"n":"1.2.27","t":"Domain","p":"Find the domain and range of f(x) = 2/(x + 1). Interval notation."},{"n":"1.2.28","t":"Domain","p":"Find the domain and range of f(x) = 2√(x + 4). Interval notation."},{"n":"1.2.29","t":"Domain","p":"Find the domain and range of f(x) = −√(2 − x). Interval notation."},{"n":"1.2.30","t":"Domain","p":"Find the domain of f(x) = (x − 3)/(x² + 9x − 22). Interval notation."},{"n":"1.2.31","t":"Domain","p":"Find the domain of f(x) = √(x − 6)/(x − 4). Interval notation."},{"n":"1.2.32","t":"Domain","p":"What is the domain of f(x) = ∛x (cube root)?"},{"n":"1.2.33","t":"Concept","p":"A company's cost to produce x items is C(x) = 10x + 500 dollars."}]},"1.3":{"title":"Rates of Change","q":[{"n":"1.3.1","t":"Rate of change","p":"Find the average rate of change of f(x) = x² − 1 on the interval [2, 4]."},{"n":"1.3.2","t":"Rate of change","p":"Find the average rate of change of f(x) = 3x + 2 on the interval [1, 5]."},{"n":"1.3.3","t":"Rate of change","p":"Find the average rate of change of f(x) = x² on the interval [1, 3]."},{"n":"1.3.4","t":"Rate of change","p":"Find the average rate of change of f(x) = 1/x on the interval [1, 4]. A fraction is fine."},{"n":"1.3.5","t":"Rate of change","p":"Use the table to find the average rate of change of f on the interval [1, 3]."},{"n":"1.3.6","t":"Rate of change","p":"Find the average rate of change of f(x) = x² + 3x + 1 on [0, a]. Simplify in terms of a."},{"n":"1.3.7","t":"Increasing","p":"Use the graph of f below. On what interval(s) is f increasing?"},{"n":"1.3.8","t":"Decreasing","p":"Use the same graph. On what interval is f decreasing?"},{"n":"1.3.9","t":"Local max","p":"From the graph, identify the local maximum."},{"n":"1.3.10","t":"Local min","p":"From the graph, identify the local minimum."},{"n":"1.3.11","t":"Abs extrema","p":"From the graph of f(x) = x² − 4, identify the absolute minimum."},{"n":"1.3.12","t":"Rate of change","p":"Using the graph, find the average rate of change of f on the interval [−2, 2]."},{"n":"1.3.13","t":"Concept","p":"How many local extrema (turning points) does the graph have?"},{"n":"1.3.14","t":"Rate of change","p":"The average rate of change of a function over [a, b] equals:"},{"n":"1.3.15","t":"Local max","p":"A local maximum occurs at a point where the function changes from:"},{"n":"1.3.16","t":"Increasing","p":"A function is increasing on an interval when, as x increases, the output f(x):"},{"n":"1.3.17","t":"Concept","p":"Over 6 hours, a car's distance from home goes from 10 miles to 292 miles. Find the average speed."},{"n":"1.3.18","t":"Rate of change","p":"A plant grows from 4 cm to 22 cm over 6 days. Find the average rate of change."},{"n":"1.3.19","t":"Rate of change","p":"Find the average rate of change of f(x) = x³ on the interval [0, 2]."},{"n":"1.3.20","t":"Rate of change","p":"Find the average rate of change of f(x) = 4x² − 7 on the interval [1, 3]."}]},"1.4":{"title":"Composition","q":[{"n":"1.4.1","t":"Evaluate","p":"Let f(x) = 2x + 1 and g(x) = 3x − 2. Find the sum (f + g)(x). Write your answer in simplest form."},{"n":"1.4.2","t":"Evaluate","p":"With f(x) = 2x + 1 and g(x) = 3x − 2, find the difference (f − g)(x)."},{"n":"1.4.3","t":"Evaluate","p":"With f(x) = 2x + 1 and g(x) = 3x − 2, find (g − f)(x)."},{"n":"1.4.4","t":"Evaluate","p":"With f(x) = 2x + 1 and g(x) = 3x − 2, find the product (fg)(x) and expand fully. (Use ^ for exponents, e.g. x^2.)"},{"n":"1.4.5","t":"Domain","p":"For the quotient (f/g)(x) with g(x) = 3x − 2, which value of x must be excluded from the domain?"},{"n":"1.4.6","t":"Composition","p":"Let f(x) = x² + 1 and g(x) = x − 3. Find the composition f(g(x)) and expand fully."},{"n":"1.4.7","t":"Evaluate","p":"With f(x) = x² + 1 and g(x) = x − 3, find g(f(x))."},{"n":"1.4.8","t":"Composition","p":"With f(x) = x² + 1 and g(x) = x − 3, evaluate f(g(5))."},{"n":"1.4.9","t":"Evaluate","p":"With f(x) = x² + 1 and g(x) = x − 3, evaluate g(f(4))."},{"n":"1.4.10","t":"Composition","p":"With f(x) = x² + 1 and g(x) = x − 3, evaluate f(g(0))."},{"n":"1.4.11","t":"Table","p":"Use the table of values below."},{"n":"1.4.12","t":"Table","p":"Use the same table."},{"n":"1.4.13","t":"Table","p":"Use the same table."},{"n":"1.4.14","t":"Table","p":"Use the same table."},{"n":"1.4.15","t":"Composition","p":"Let f(x) = √x and g(x) = x − 4. State the domain of (f ∘ g)(x) = √(x − 4) in interval notation."},{"n":"1.4.16","t":"Composition","p":"Let f(x) = 1/x and g(x) = x + 3. State the domain of (f ∘ g)(x) = 1/(x + 3) in interval notation."},{"n":"1.4.17","t":"Decomposition","p":"Which decomposition expresses h(x) = (x + 1)³ as f(g(x))?"},{"n":"1.4.18","t":"Decomposition","p":"Which decomposition expresses h(x) = √(3x − 2) as f(g(x))?"},{"n":"1.4.19","t":"Decomposition","p":"Which decomposition expresses h(x) = 5 / (x² + 4) as f(g(x))?"},{"n":"1.4.20","t":"Composition","p":"The composition (f ∘ g)(x) means:"},{"n":"1.4.21","t":"Table","p":"The table below gives the annual sales (in millions) of a product."},{"n":"1.4.22","t":"Rate of change","p":"Based on the graph above, estimate (to one decimal place) the average rate of change from x = 1 to x = 5."},{"n":"1.4.23","t":"Rate of change","p":"Find the average rate of change of g(x) = 4x³ + 4 from x = −2 to x = 3."},{"n":"1.4.24","t":"Rate of change","p":"Find the average rate of change of g(x) = 4x² + 5/x⁴ on the interval [−4, 1]."},{"n":"1.4.25","t":"Rate of change","p":"Find the average rate of change of f(x) = 6x² − 3 on the interval [2, b]. Your answer will be an expression involving b."},{"n":"1.4.26","t":"Rate of change","p":"Given f(x) = 1/(x + 4), find the average rate of change of f(x) on the interval [7, 7 + h]. Your answer will be an expression involving h."},{"n":"1.4.27","t":"Increasing","p":"For the graph below, determine if it represents a function that is increasing or decreasing."},{"n":"1.4.28","t":"Increasing","p":"The function graphed above is increasing on some interval(s) and decreasing on others. Use the graph to state each in interval notation."},{"n":"1.4.29","t":"Local max","p":"The function f(x) = 2x³ − 33x² + 168x + 10 has one local minimum and one local maximum. Use a graph of the function to estimate these local extrema."},{"n":"1.4.30","t":"Read graph","p":"Consider the function graphed at right."},{"n":"1.4.31","t":"Abs extrema","p":"Find the absolute maximum and minimum for the given graph. Give your answer as an ordered pair."},{"n":"1.4.32","t":"Read graph","p":"Consider the function in the graph below."}]},"1.5":{"title":"Transformations","q":[{"n":"1.5.1","t":"Transform","p":"If g(x) = f(x) + 3, the graph of g is the graph of f shifted:"},{"n":"1.5.2","t":"Transform","p":"The graph of g(x) = f(x − 2) is the graph of f shifted:"},{"n":"1.5.3","t":"Transform","p":"The graph of g(x) = f(x + 4) is the graph of f shifted:"},{"n":"1.5.4","t":"Transform","p":"Write the equation for g, the graph of f(x) = x² shifted up 5 units."},{"n":"1.5.5","t":"Transform","p":"Write the equation for g, the graph of f(x) = x² shifted right 3 units."},{"n":"1.5.6","t":"Transform","p":"Which function is f(x) = |x| shifted left 2 units and down 1 unit?"},{"n":"1.5.7","t":"Transform","p":"The graph of g(x) = −f(x) is the graph of f reflected about the:"},{"n":"1.5.8","t":"Transform","p":"The graph of g(x) = f(−x) is the graph of f reflected about the:"},{"n":"1.5.9","t":"Transform","p":"Write the equation for the reflection of f(x) = x³ about the x-axis."},{"n":"1.5.10","t":"Transform","p":"Write the equation for the reflection of f(x) = 2x + 1 about the y-axis (replace x with −x and simplify)."},{"n":"1.5.11","t":"Transform","p":"The transformation g(x) = 3f(x) represents a:"},{"n":"1.5.12","t":"Transform","p":"The transformation g(x) = ½ f(x) represents a:"},{"n":"1.5.13","t":"Transform","p":"The transformation g(x) = f(2x) represents a:"},{"n":"1.5.14","t":"Transform","p":"Write g(x): reflect f(x) = x² about the x-axis, then shift the result up 2 units."},{"n":"1.5.15","t":"Concept","p":"A function whose graph is symmetric about the y-axis is:"},{"n":"1.5.16","t":"Concept","p":"A function whose graph is symmetric about the origin is:"},{"n":"1.5.17","t":"Even/odd","p":"Is f(x) = x² − 4 even, odd, or neither? (Test f(−x).)"},{"n":"1.5.18","t":"Even/odd","p":"Is f(x) = x³ − x even, odd, or neither? (Test f(−x).)"},{"n":"1.5.19","t":"Even/odd","p":"Is f(x) = x³ + 2 even, odd, or neither? (Test f(−x).)"},{"n":"1.5.20","t":"Transform","p":"The point (2, 5) lies on y = f(x). Give the corresponding point on each transformed graph, as an ordered pair."}]},"1.6":{"title":"Absolute Value","q":[{"n":"1.6.1","t":"Evaluate","p":"Evaluate |−7|."},{"n":"1.6.2","t":"Evaluate","p":"Evaluate |3 − 8|."},{"n":"1.6.3","t":"Evaluate","p":"Evaluate |12| + |−4|."},{"n":"1.6.4","t":"Abs value","p":"The absolute value |x| is best described as:"},{"n":"1.6.5","t":"Concept","p":"The expression |x − 5| represents the distance between x and:"},{"n":"1.6.6","t":"Abs value","p":"The graph of f(x) = |x| is shaped like a:"},{"n":"1.6.7","t":"Abs value","p":"The graph of f(x) = −|x| is:"},{"n":"1.6.8","t":"Evaluate","p":"The vertex of f(x) = |x − 2| + 3 is the point (x, y). Find each coordinate."},{"n":"1.6.9","t":"Concept","p":"The vertex of g(x) = |x + 4| − 1 is the point (x, y). Find each coordinate."},{"n":"1.6.10","t":"Transform","p":"f(x) = |x| + 5 is the graph of f(x) = |x| shifted:"},{"n":"1.6.11","t":"Transform","p":"f(x) = |x − 3| is the graph of f(x) = |x| shifted:"},{"n":"1.6.12","t":"Abs value","p":"Which absolute value function has its vertex at (−2, 1)?"},{"n":"1.6.13","t":"Domain","p":"From the graph of f(x) = |x| below, state the domain and range in interval notation."},{"n":"1.6.14","t":"Interval","p":"State the range of f(x) = −|x| + 3 in interval notation. (It opens downward with a maximum value of 3.)"},{"n":"1.6.15","t":"Abs value","p":"The range of f(x) = |x| + 2 is:"},{"n":"1.6.16","t":"Abs value","p":"Solve |x| = 6. (There are two solutions.)"},{"n":"1.6.17","t":"Concept","p":"Solve |x − 3| = 5. (Use x − 3 = ±5.)"},{"n":"1.6.18","t":"Concept","p":"Solve |2x + 1| = 9. (Use 2x + 1 = ±9.)"},{"n":"1.6.19","t":"Interval","p":"Solve the inequality |x| < 4. Write the solution set in interval notation."},{"n":"1.6.20","t":"Interval","p":"Solve the inequality |x| ≥ 3. Write the solution set in interval notation."}]},"1.7":{"title":"Inverse Functions","q":[{"n":"1.7.1","t":"Inverse","p":"A function has an inverse that is also a function if and only if the function is:"},{"n":"1.7.2","t":"One-to-one","p":"Which graphical test determines whether a function is one-to-one (and therefore invertible)?"},{"n":"1.7.3","t":"Composition","p":"If f and g are inverse functions, then f(g(x)) ="},{"n":"1.7.4","t":"Transform","p":"The graph of f−1 is the graph of f reflected over the line:"},{"n":"1.7.5","t":"Evaluate","p":"If f(3) = 7, find f−1(7)."},{"n":"1.7.6","t":"Evaluate","p":"If f(−2) = 5, find f−1(5)."},{"n":"1.7.7","t":"Table","p":"Use the table of values below."},{"n":"1.7.8","t":"Table","p":"Use the same table."},{"n":"1.7.9","t":"Inverse","p":"Find the inverse of f(x) = x + 4. (Swap x and y, then solve for y.)"},{"n":"1.7.10","t":"Inverse","p":"Find the inverse of f(x) = 2x."},{"n":"1.7.11","t":"Inverse","p":"Find the inverse of f(x) = 2x − 6."},{"n":"1.7.12","t":"Inverse","p":"Find the inverse of f(x) = 3x + 1."},{"n":"1.7.13","t":"Inverse","p":"Find the inverse of f(x) = (x − 5)/2."},{"n":"1.7.14","t":"Inverse","p":"To verify that f and g are inverse functions, you must show that:"},{"n":"1.7.15","t":"Domain","p":"The domain of f−1 is equal to the ______ of f."},{"n":"1.7.16","t":"Domain","p":"Why does f(x) = x² (with all real numbers as its domain) NOT have an inverse function?"},{"n":"1.7.17","t":"Domain","p":"To make f(x) = x² invertible, you can restrict its domain to:"},{"n":"1.7.18","t":"Inverse","p":"The inverse of f(x) = x³ is:"},{"n":"1.7.19","t":"Evaluate","p":"Given f(x) = x + 7, find f−1(10)."},{"n":"1.7.20","t":"Inverse","p":"Which pair of functions are inverses of each other?"}]},"2.1":{"title":"Linear Functions","q":[{"n":"2.1.1","t":"Linear function","p":"A function whose graph is a straight line — a constant rate of change, f(x) = mx + b."},{"n":"2.1.2","t":"Slope = rate of change","p":"Slope m = rise/run = Δy/Δx: how much the output changes per unit of input."},{"n":"2.1.3","t":"Slope-intercept form","p":"y = mx + b, where m is the slope and b is the y-intercept (the value at x = 0)."},{"n":"2.1.4","t":"Point-slope form","p":"y − y₁ = m(x − x₁): build a line from one point and the slope."},{"n":"2.1.5","t":"Increasing / decreasing / constant","p":"m > 0 rises, m < 0 falls, m = 0 is a horizontal line."},{"n":"2.1.6","t":"Line through two points","p":"Compute m = (y₂ − y₁)/(x₂ − x₁), then use point-slope to write the equation."}]},"2.2":{"title":"Graphs of Linear Functions","q":[{"n":"2.2.1","t":"Graph from slope-intercept","p":"Plot the y-intercept b, then step by the slope (rise over run) to a second point."},{"n":"2.2.2","t":"x- and y-intercepts","p":"y-intercept: set x = 0. x-intercept: set y = 0 and solve for x."},{"n":"2.2.3","t":"Horizontal & vertical lines","p":"y = c is horizontal (slope 0); x = c is vertical (slope undefined)."},{"n":"2.2.4","t":"Parallel lines","p":"Two lines are parallel exactly when they share the same slope."},{"n":"2.2.5","t":"Perpendicular lines","p":"Slopes are negative reciprocals: m₁ · m₂ = −1."},{"n":"2.2.6","t":"Equation from a graph","p":"Read the y-intercept and a clear lattice point to recover slope, then write y = mx + b."},{"n":"2.2.7","t":"Transformations of f(x)=x","p":"Stretch (slope) and shift (intercept) the parent line y = x."}]},"2.3":{"title":"Modeling with Linear Functions","q":[{"n":"2.3.1","t":"Identify slope & intercept in context","p":"The starting amount is b; the per-unit change is m."},{"n":"2.3.2","t":"Model from a description","p":"Translate a verbal rate-and-start situation into f(x) = mx + b."},{"n":"2.3.3","t":"Interpret slope as a rate","p":"Slope carries units — dollars per month, miles per hour — read it in context."},{"n":"2.3.4","t":"Predict with the model","p":"Evaluate the model inside the data (interpolate) to estimate a value."},{"n":"2.3.5","t":"Systems / break-even","p":"Set two linear models equal to find where cost meets revenue."}]},"2.4":{"title":"Fitting Linear Models to Data","q":[{"n":"2.4.1","t":"Scatter plots","p":"Plot paired data to see whether a linear trend is reasonable."},{"n":"2.4.2","t":"Correlation","p":"Positive, negative, or none — the direction the cloud of points leans."},{"n":"2.4.3","t":"Line of best fit (eyeball)","p":"Draw a line that balances the points above and below it."},{"n":"2.4.4","t":"Least-squares regression","p":"The line that minimizes the sum of squared vertical distances to the points."},{"n":"2.4.5","t":"Correlation coefficient r","p":"r ranges −1 to 1; nearer ±1 means a tighter linear fit."},{"n":"2.4.6","t":"Interpolation vs extrapolation","p":"Predicting inside the data is safer than predicting beyond it."}]},"3.1":{"title":"Complex Numbers","q":[{"n":"3.1.1","t":"1 Imaginary unit","p":"The imaginary unit i is defined so that i² equals:"},{"n":"3.1.2","t":"2 √(−1)","p":"Which expression is equal to √(−1)?"},{"n":"3.1.3","t":"3 Powers of i","p":"Simplify i⁴."},{"n":"3.1.4","t":"4 Powers of i","p":"Simplify i³."},{"n":"3.1.5","t":"5 Powers of i","p":"Simplify i²⁶. (The powers of i repeat every 4.)"},{"n":"3.1.6","t":"6 Powers of i","p":"Simplify i⁴⁵."},{"n":"3.1.7","t":"7 √ of a negative","p":"Write √(−49) as a pure imaginary number bi. Enter the value of b."},{"n":"3.1.8","t":"8 Add","p":"(3 + 5i) + (4 + 2i) = a + bi. Find a and b."},{"n":"3.1.9","t":"9 Subtract","p":"(6 + 3i) − (2 + 7i) = a + bi."},{"n":"3.1.10","t":"10 Scalar multiply","p":"3(2 + 4i) = a + bi."},{"n":"3.1.11","t":"11 Multiply","p":"(2 + 3i)(1 + 4i) = a + bi. (Use i² = −1.)"},{"n":"3.1.12","t":"12 Conjugate product","p":"(5 + 2i)(5 − 2i) = a + bi."},{"n":"3.1.13","t":"13 Conjugate","p":"The complex conjugate of 3 − 7i is:"},{"n":"3.1.14","t":"14 Conjugate","p":"The conjugate of −4 + 9i is a + bi."},{"n":"3.1.15","t":"15 Square it","p":"Expand and simplify (1 + i)². Write as a + bi."},{"n":"3.1.16","t":"16 Divide","p":"Write 10 / (1 + 3i) as a + bi. (Multiply by the conjugate.)"},{"n":"3.1.17","t":"17 Divide","p":"Write (5 + 5i) / (2 + i) as a + bi."},{"n":"3.1.18","t":"18 Modulus","p":"The modulus |a + bi| equals:"},{"n":"3.1.19","t":"19 Modulus","p":"Find the modulus |3 + 4i|."},{"n":"3.1.20","t":"20 Modulus","p":"Find the modulus |−5 + 12i|."},{"n":"3.1.21","t":"21 Parts of z","p":"Let z = 4 + 3i. Fill in Re(z), Im(z), |z|, Re(z̄), Im(z̄)."}]},"3.2":{"title":"Quadratic Functions","q":[{"n":"3.2.1","t":"Standard & vertex form","p":"f(x) = ax² + bx + c (standard) vs f(x) = a(x − h)² + k (vertex form, vertex at (h, k))."},{"n":"3.2.2","t":"Axis of symmetry & vertex","p":"Axis x = −b/(2a); the vertex is the point on it — a maximum if a < 0, minimum if a > 0."},{"n":"3.2.3","t":"x-intercepts (roots)","p":"Solve ax² + bx + c = 0 by factoring, the quadratic formula, or the square root."},{"n":"3.2.4","t":"Completing the square","p":"Rewrite standard form into vertex form to read off the vertex directly."},{"n":"3.2.5","t":"Modeling with quadratics","p":"Maximize area/revenue or model projectile height with the vertex."}]},"3.3":{"title":"Power & Polynomial Functions","q":[{"n":"3.3.1","t":"Power function","p":"f(x) = k·xⁿ — a single power of x; its shape is set by whether n is even/odd, +/−."},{"n":"3.3.2","t":"Polynomial form & degree","p":"A sum of power terms; the degree is the highest exponent, the leading term dominates."},{"n":"3.3.3","t":"End behavior","p":"Set by the leading term: even degree both ends agree, odd degree ends oppose; sign from the leading coefficient."},{"n":"3.3.4","t":"Turning points","p":"A degree-n polynomial has at most n − 1 turning points."}]},"3.4":{"title":"Graphs of Polynomial Functions","q":[{"n":"3.4.1","t":"Zeros from factors","p":"Each factor (x − r) gives a zero (x-intercept) at x = r."},{"n":"3.4.2","t":"Multiplicity: touch vs cross","p":"Odd multiplicity crosses the axis; even multiplicity touches and turns back."},{"n":"3.4.3","t":"Sign chart","p":"Use the zeros to split the line and test where the graph is above/below the axis."},{"n":"3.4.4","t":"Sketching","p":"Combine end behavior + zeros + multiplicities to draw the curve."},{"n":"3.4.5","t":"Intermediate Value Theorem","p":"A sign change between two x-values guarantees a real zero between them."}]},"3.5":{"title":"Dividing Polynomials","q":[{"n":"3.5.1","t":"Polynomial long division","p":"Divide term by term to get a quotient + remainder, just like numbers."},{"n":"3.5.2","t":"Synthetic division","p":"A fast shortcut for dividing by a linear factor (x − c)."},{"n":"3.5.3","t":"Division algorithm","p":"f(x) = (divisor)·(quotient) + remainder."}]},"3.6":{"title":"Zeros of Polynomial Functions","q":[{"n":"3.6.1","t":"Remainder Theorem","p":"The remainder of f(x) ÷ (x − c) equals f(c)."},{"n":"3.6.2","t":"Factor Theorem","p":"(x − c) is a factor exactly when f(c) = 0."},{"n":"3.6.3","t":"Rational Zero Theorem","p":"Possible rational zeros are ±(factor of constant)/(factor of leading coefficient)."},{"n":"3.6.4","t":"Fundamental Theorem of Algebra","p":"A degree-n polynomial has exactly n complex zeros (counting multiplicity)."},{"n":"3.6.5","t":"Complex & conjugate zeros","p":"Non-real zeros of a real polynomial come in conjugate pairs a ± bi."}]},"3.7":{"title":"Rational Functions","q":[{"n":"3.7.1","t":"Domain & excluded values","p":"Exclude x-values that make the denominator zero."},{"n":"3.7.2","t":"Vertical asymptotes & holes","p":"A leftover denominator zero → vertical asymptote; a cancelled factor → a hole."},{"n":"3.7.3","t":"Horizontal asymptote","p":"Compare degrees of top and bottom (0, ratio of leading coefficients, or none)."},{"n":"3.7.4","t":"Slant asymptote","p":"When the top's degree is exactly one more than the bottom's, divide to get a slant line."},{"n":"3.7.5","t":"Intercepts","p":"x-intercepts where the numerator is 0; y-intercept at f(0)."}]},"3.8":{"title":"Inverses & Radical Functions","q":[{"n":"3.8.1","t":"Finding an inverse","p":"Swap x and y, then solve for y; the inverse undoes the original."},{"n":"3.8.2","t":"Restricting the domain","p":"Limit the domain so a non-one-to-one function (like x²) becomes invertible."},{"n":"3.8.3","t":"Radical functions","p":"Square/cube roots — inverses of power functions on a restricted domain."},{"n":"3.8.4","t":"Domain of a radical","p":"Even roots need a non-negative radicand; odd roots accept all reals."}]},"3.9":{"title":"Modeling Using Variation","q":[{"n":"3.9.1","t":"Direct variation","p":"y = kx — y grows in proportion to x; k is the constant of variation."},{"n":"3.9.2","t":"Inverse variation","p":"y = k/x — y shrinks as x grows."},{"n":"3.9.3","t":"Joint / combined variation","p":"y varies with a product/quotient of several variables, e.g. y = kxz."},{"n":"3.9.4","t":"Solving variation problems","p":"Find k from a known case, then use the equation to predict another."}]},"4.1":{"title":"Exponential Functions","q":[{"n":"4.1.1","t":"Exponential form","p":"f(x) = a·bˣ — a constant percent change per step; b is the base."},{"n":"4.1.2","t":"Growth vs decay","p":"b > 1 grows; 0 < b < 1 decays."},{"n":"4.1.3","t":"Compound interest","p":"A = P(1 + r/n)^(nt) for n compounds; A = Pe^(rt) when compounded continuously."},{"n":"4.1.4","t":"The number e","p":"e ≈ 2.718 — the natural base for continuous growth."}]},"4.2":{"title":"Graphs of Exponential Functions","q":[{"n":"4.2.1","t":"Parent graph & asymptote","p":"y = bˣ passes through (0, 1) with a horizontal asymptote y = 0."},{"n":"4.2.2","t":"Transformations","p":"Shifts/reflections/stretches move the curve and its asymptote."},{"n":"4.2.3","t":"Domain & range","p":"Domain all reals; range y > 0 (shifted by any vertical translation)."}]},"4.3":{"title":"Logarithmic Functions","q":[{"n":"4.3.1","t":"Definition of a log","p":"log_b(x) = y means bʸ = x — the exponent you raise b to."},{"n":"4.3.2","t":"Convert log ↔ exponential","p":"Rewrite between the two forms to evaluate or solve."},{"n":"4.3.3","t":"Common & natural log","p":"log = log₁₀; ln = log_e."},{"n":"4.3.4","t":"Evaluating logs","p":"Ask 'b to what power gives x?' for exact values."}]},"4.4":{"title":"Graphs of Logarithmic Functions","q":[{"n":"4.4.1","t":"Parent graph & asymptote","p":"y = log_b(x) passes through (1, 0) with a vertical asymptote x = 0."},{"n":"4.4.2","t":"Transformations","p":"Shifts/reflections move the curve and its asymptote."},{"n":"4.4.3","t":"Domain & range","p":"Domain x > 0 (the argument must be positive); range all reals."}]},"4.5":{"title":"Logarithmic Properties","q":[{"n":"4.5.1","t":"Product rule","p":"log_b(MN) = log_b M + log_b N."},{"n":"4.5.2","t":"Quotient rule","p":"log_b(M/N) = log_b M − log_b N."},{"n":"4.5.3","t":"Power rule","p":"log_b(Mᵖ) = p·log_b M."},{"n":"4.5.4","t":"Change of base","p":"log_b(x) = ln x / ln b (or log/log)."},{"n":"4.5.5","t":"Expand & condense","p":"Use the rules to break apart or combine log expressions."}]},"4.6":{"title":"Exponential & Log Equations","q":[{"n":"4.6.1","t":"Like bases","p":"If bˣ = bʸ then x = y."},{"n":"4.6.2","t":"Take a log of both sides","p":"When bases differ, log both sides and use the power rule."},{"n":"4.6.3","t":"Log equations","p":"Condense to one log, rewrite as exponential, then solve."},{"n":"4.6.4","t":"Extraneous solutions","p":"Reject answers that make a log's argument ≤ 0."}]},"4.7":{"title":"Exponential & Log Models","q":[{"n":"4.7.1","t":"Growth & decay","p":"A = A₀e^(kt): k > 0 grows, k < 0 decays."},{"n":"4.7.2","t":"Half-life & doubling time","p":"Solve for the time when the amount halves or doubles."},{"n":"4.7.3","t":"Logistic growth","p":"Growth that levels off at a carrying capacity."},{"n":"4.7.4","t":"Newton's law of cooling","p":"Temperature decays exponentially toward the surroundings."}]},"4.8":{"title":"Fitting Exponential Models to Data","q":[{"n":"4.8.1","t":"Exponential regression","p":"Fit y = a·bˣ to data with technology."},{"n":"4.8.2","t":"Choosing a model","p":"Decide between linear, exponential, logarithmic, or logistic from the data's shape."}]},"5.1":{"title":"Angles","q":[{"n":"5.1.1","t":"Degrees & radians","p":"180° = π radians; convert by multiplying by π/180 or 180/π."},{"n":"5.1.2","t":"Coterminal angles","p":"Add/subtract full turns (360° or 2π) to land on the same ray."},{"n":"5.1.3","t":"Reference angle","p":"The acute angle to the x-axis — gives the size of the trig value."},{"n":"5.1.4","t":"Arc length & sector area","p":"s = rθ and A = ½r²θ with θ in radians."},{"n":"5.1.5","t":"Angular & linear speed","p":"ω = θ/t (angular); v = rω (linear)."}]},"5.2":{"title":"Unit Circle: Sine & Cosine","q":[{"n":"5.2.1","t":"Unit-circle definition","p":"On the unit circle, cos θ = x and sin θ = y of the point at angle θ."},{"n":"5.2.2","t":"Special angles","p":"Know 0, 30, 45, 60, 90° (and π multiples) by heart."},{"n":"5.2.3","t":"Signs by quadrant","p":"ASTC: All, Sine, Tangent, Cosine positive in quadrants I–IV."},{"n":"5.2.4","t":"Pythagorean identity","p":"sin²θ + cos²θ = 1."}]},"5.3":{"title":"Other Trig Functions","q":[{"n":"5.3.1","t":"Definitions","p":"tan = sin/cos, cot = cos/sin, sec = 1/cos, csc = 1/sin."},{"n":"5.3.2","t":"Special-angle values","p":"Read them off sine and cosine at the special angles."},{"n":"5.3.3","t":"Even/odd & reciprocal identities","p":"cos and sec are even; sin, tan, csc, cot are odd."}]},"5.4":{"title":"Right Triangle Trig","q":[{"n":"5.4.1","t":"SOHCAHTOA","p":"sin = opp/hyp, cos = adj/hyp, tan = opp/adj."},{"n":"5.4.2","t":"Solving right triangles","p":"Find missing sides/angles from one side + one acute angle (or two sides)."},{"n":"5.4.3","t":"Elevation & depression","p":"Angles measured up from / down from the horizontal in word problems."},{"n":"5.4.4","t":"Cofunctions","p":"sin θ = cos(90° − θ): cofunctions of complementary angles are equal."}]},"6.1":{"title":"Graphs of Sine & Cosine","q":[{"n":"6.1.1","t":"Amplitude","p":"|a| in y = a·sin(...) — half the height from peak to trough."},{"n":"6.1.2","t":"Period","p":"Period = 2π/|b| for y = sin(bx): b stretches/squeezes horizontally."},{"n":"6.1.3","t":"Phase & vertical shift","p":"y = a·sin(b(x − c)) + d shifts right by c and up by d."},{"n":"6.1.4","t":"Modeling","p":"Fit a sinusoid to tides, daylight, temperature, and other cycles."}]},"6.2":{"title":"Graphs of Other Trig Functions","q":[{"n":"6.2.1","t":"Tangent & cotangent","p":"Period π, with vertical asymptotes where the function is undefined."},{"n":"6.2.2","t":"Secant & cosecant","p":"Reciprocal graphs with U-shapes between asymptotes."},{"n":"6.2.3","t":"Asymptotes & period","p":"Asymptotes occur where the reciprocal's base function is zero."}]},"6.3":{"title":"Inverse Trig Functions","q":[{"n":"6.3.1","t":"Definitions & ranges","p":"arcsin/arccos/arctan undo sin/cos/tan on restricted ranges so they're functions."},{"n":"6.3.2","t":"Evaluating","p":"Give the one angle in the allowed range whose trig value matches."},{"n":"6.3.3","t":"Compositions","p":"Simplify sin(arccos x) etc. using a reference triangle."}]},"7.1":{"title":"Solving with Identities","q":[{"n":"7.1.1","t":"Pythagorean identities","p":"sin²+cos²=1, 1+tan²=sec², 1+cot²=csc²."},{"n":"7.1.2","t":"Reciprocal & quotient identities","p":"sec=1/cos, csc=1/sin, cot=1/tan; tan=sin/cos, cot=cos/sin."},{"n":"7.1.3","t":"Simplifying expressions","p":"Rewrite everything in sin/cos and reduce."},{"n":"7.1.4","t":"Proving identities","p":"Work one side until it matches the other."}]},"7.2":{"title":"Sum & Difference Identities","q":[{"n":"7.2.1","t":"cos(A ± B)","p":"cos A cos B ∓ sin A sin B."},{"n":"7.2.2","t":"sin(A ± B)","p":"sin A cos B ± cos A sin B."},{"n":"7.2.3","t":"tan(A ± B)","p":"(tan A ± tan B)/(1 ∓ tan A tan B)."},{"n":"7.2.4","t":"Exact values","p":"Split angles like 15° = 45° − 30° to get exact trig values."}]},"7.3":{"title":"Double, Half-Angle & Reduction","q":[{"n":"7.3.1","t":"Double-angle formulas","p":"sin 2θ = 2 sinθ cosθ; cos 2θ has three forms; tan 2θ formula."},{"n":"7.3.2","t":"Half-angle formulas","p":"sin(θ/2), cos(θ/2), tan(θ/2) with a ± from the quadrant."},{"n":"7.3.3","t":"Power-reduction","p":"Rewrite sin²/cos² in terms of cos 2θ."}]},"7.4":{"title":"Sum-to-Product & Product-to-Sum","q":[{"n":"7.4.1","t":"Product-to-sum","p":"Turn a product of sines/cosines into a sum."},{"n":"7.4.2","t":"Sum-to-product","p":"Turn a sum/difference of sines/cosines into a product."}]},"7.5":{"title":"Solving Trig Equations","q":[{"n":"7.5.1","t":"Linear & quadratic in a trig function","p":"Isolate or factor (treat sinθ like a variable)."},{"n":"7.5.2","t":"Using identities","p":"Rewrite so the equation has a single trig function."},{"n":"7.5.3","t":"General solutions","p":"Add the period (e.g. +2πk) to capture all solutions."}]},"7.6":{"title":"Modeling with Trig Functions","q":[{"n":"7.6.1","t":"Sinusoidal models","p":"Pick amplitude, period, shift to fit a repeating phenomenon."},{"n":"7.6.2","t":"From data","p":"Read max/min and timing to set the parameters."}]},"8.1":{"title":"Law of Sines","q":[{"n":"8.1.1","t":"The law","p":"sin A / a = sin B / b = sin C / c."},{"n":"8.1.2","t":"AAS / ASA","p":"Two angles + a side determine the triangle uniquely."},{"n":"8.1.3","t":"Ambiguous case (SSA)","p":"Two sides + a non-included angle can give 0, 1, or 2 triangles."},{"n":"8.1.4","t":"Area","p":"Area = ½ab sin C."}]},"8.2":{"title":"Law of Cosines","q":[{"n":"8.2.1","t":"The law","p":"c² = a² + b² − 2ab cos C (a generalized Pythagorean theorem)."},{"n":"8.2.2","t":"SAS / SSS","p":"Use it when you know two sides + the included angle, or all three sides."},{"n":"8.2.3","t":"Heron's formula","p":"Area from the three side lengths via the semi-perimeter."}]},"8.3":{"title":"Polar Coordinates","q":[{"n":"8.3.1","t":"Polar ↔ rectangular","p":"x = r cosθ, y = r sinθ; r² = x²+y², tanθ = y/x."},{"n":"8.3.2","t":"Plotting points","p":"Go out r along the angle θ (r can be negative)."},{"n":"8.3.3","t":"Multiple representations","p":"The same point has many (r, θ) names."}]},"8.4":{"title":"Polar Graphs","q":[{"n":"8.4.1","t":"Circles & lines","p":"r = a, r = a cosθ, θ = c give basic polar shapes."},{"n":"8.4.2","t":"Cardioids & limaçons","p":"r = a ± b cosθ / a ± b sinθ — heart and looped shapes."},{"n":"8.4.3","t":"Rose curves","p":"r = a cos(nθ) makes petals (n or 2n of them)."},{"n":"8.4.4","t":"Symmetry","p":"Test symmetry about the axes/pole to graph faster."}]},"8.5":{"title":"Polar Form of Complex Numbers","q":[{"n":"8.5.1","t":"Modulus & argument","p":"r = |z|, θ = arg z; z = r(cosθ + i sinθ)."},{"n":"8.5.2","t":"Multiply & divide","p":"Multiply moduli and add arguments (divide → subtract)."},{"n":"8.5.3","t":"De Moivre's theorem","p":"zⁿ = rⁿ(cos nθ + i sin nθ)."},{"n":"8.5.4","t":"Roots","p":"The n nth-roots are spaced evenly around a circle."}]},"8.6":{"title":"Parametric Equations","q":[{"n":"8.6.1","t":"Parametrizing","p":"Let a parameter t drive both x and y."},{"n":"8.6.2","t":"Eliminating the parameter","p":"Solve for t (or use an identity) to get a relation in x and y."}]},"8.7":{"title":"Parametric Graphs","q":[{"n":"8.7.1","t":"Plotting & orientation","p":"Tracing t shows the direction of travel along the curve."},{"n":"8.7.2","t":"Projectile motion","p":"x and y as functions of time model a thrown object."}]},"8.8":{"title":"Vectors","q":[{"n":"8.8.1","t":"Components","p":"⟨x, y⟩ from magnitude and direction (or two points)."},{"n":"8.8.2","t":"Magnitude & direction","p":"|v| = √(x²+y²); direction angle from tanθ = y/x."},{"n":"8.8.3","t":"Operations","p":"Add/subtract componentwise; scalar multiply scales length."},{"n":"8.8.4","t":"Dot product","p":"u·v = |u||v|cosθ — tells you the angle (0 if perpendicular)."}]},"9.1":{"title":"Systems: Two Variables","q":[{"n":"9.1.1","t":"Substitution","p":"Solve one equation for a variable and plug into the other."},{"n":"9.1.2","t":"Elimination","p":"Add multiples of the equations to cancel a variable."},{"n":"9.1.3","t":"Solution types","p":"One solution, none (parallel), or infinitely many (same line)."}]},"9.2":{"title":"Systems: Three Variables","q":[{"n":"9.2.1","t":"Elimination to 2 variables","p":"Combine pairs to remove one variable, then solve the smaller system."},{"n":"9.2.2","t":"Back-substitution","p":"Work back up to find all three variables."},{"n":"9.2.3","t":"Dependent / inconsistent","p":"Recognize infinitely-many or no-solution outcomes."}]},"9.3":{"title":"Nonlinear Systems & Inequalities","q":[{"n":"9.3.1","t":"Solving nonlinear systems","p":"Substitution/elimination where at least one equation is nonlinear."},{"n":"9.3.2","t":"Graphing inequalities","p":"Shade the region that satisfies each inequality; the overlap is the solution."}]},"9.4":{"title":"Partial Fractions","q":[{"n":"9.4.1","t":"Distinct linear factors","p":"Split into A/(x−a) + B/(x−b) + …."},{"n":"9.4.2","t":"Repeated / quadratic factors","p":"Add terms for each power and for irreducible quadratics."}]},"9.5":{"title":"Matrices & Operations","q":[{"n":"9.5.1","t":"Matrix notation","p":"Rows × columns; entry aᵢⱼ at row i, column j."},{"n":"9.5.2","t":"Add & scalar multiply","p":"Add entrywise; scalar scales every entry."},{"n":"9.5.3","t":"Matrix multiplication","p":"Row · column dot products; sizes must match (n×m by m×p)."}]},"9.6":{"title":"Gaussian Elimination","q":[{"n":"9.6.1","t":"Augmented matrix","p":"Write the system's coefficients + constants as one matrix."},{"n":"9.6.2","t":"Row operations","p":"Swap, scale, and add rows to simplify."},{"n":"9.6.3","t":"Row-echelon form","p":"Reduce to read off the solution by back-substitution."}]},"9.7":{"title":"Solving with Inverses","q":[{"n":"9.7.1","t":"The inverse matrix","p":"A⁻¹ undoes A; exists only when det A ≠ 0."},{"n":"9.7.2","t":"Solve AX = B","p":"X = A⁻¹B."}]},"9.8":{"title":"Cramer's Rule","q":[{"n":"9.8.1","t":"Determinants","p":"2×2: ad − bc; 3×3 by expansion or the shortcut."},{"n":"9.8.2","t":"Cramer's rule","p":"Each variable = (replaced-column determinant)/(coefficient determinant)."}]},"10.1":{"title":"The Ellipse","q":[{"n":"10.1.1","t":"Standard form","p":"(x−h)²/a² + (y−k)²/b² = 1, centered at (h, k)."},{"n":"10.1.2","t":"Vertices & foci","p":"Major axis along the larger denominator; c² = a² − b² locates the foci."},{"n":"10.1.3","t":"Graphing","p":"Plot center, vertices, co-vertices, then sketch the oval."},{"n":"10.1.4","t":"Applications","p":"Orbits and whispering galleries."}]},"10.2":{"title":"The Hyperbola","q":[{"n":"10.2.1","t":"Standard form","p":"(x−h)²/a² − (y−k)²/b² = 1 opens left/right; swap for up/down."},{"n":"10.2.2","t":"Vertices & foci","p":"c² = a² + b² locates the foci along the transverse axis."},{"n":"10.2.3","t":"Asymptotes","p":"The branches approach lines through the center with slope ±b/a."},{"n":"10.2.4","t":"Graphing","p":"Box from a and b, draw the asymptotes, then the branches."}]},"10.3":{"title":"The Parabola","q":[{"n":"10.3.1","t":"Standard form","p":"(x−h)² = 4p(y−k) (and the sideways version)."},{"n":"10.3.2","t":"Focus & directrix","p":"p is the distance from the vertex to the focus (and to the directrix)."},{"n":"10.3.3","t":"Graphing","p":"Plot vertex, focus, and a couple of points using the focal width."}]},"10.4":{"title":"Rotation of Axes","q":[{"n":"10.4.1","t":"Rotating the axes","p":"An xy term means the conic is tilted; rotate to remove it."},{"n":"10.4.2","t":"Identify by discriminant","p":"B² − 4AC: < 0 ellipse, = 0 parabola, > 0 hyperbola."}]},"10.5":{"title":"Conics in Polar Coordinates","q":[{"n":"10.5.1","t":"Eccentricity","p":"e < 1 ellipse, e = 1 parabola, e > 1 hyperbola."},{"n":"10.5.2","t":"Polar form","p":"r = ep/(1 ± e cosθ) puts a focus at the pole."}]},"11.1":{"title":"Sequences & Their Notation","q":[{"n":"11.1.1","t":"Explicit formula","p":"aₙ given directly as a function of n."},{"n":"11.1.2","t":"Recursive formula","p":"Each term defined from the previous one(s)."},{"n":"11.1.3","t":"Factorial notation","p":"n! = n·(n−1)···2·1; 0! = 1."}]},"11.2":{"title":"Arithmetic Sequences","q":[{"n":"11.2.1","t":"Common difference","p":"Each term adds a constant d."},{"n":"11.2.2","t":"nth term","p":"aₙ = a₁ + (n − 1)d."},{"n":"11.2.3","t":"Sum (arithmetic series)","p":"Sₙ = n(a₁ + aₙ)/2."}]},"11.3":{"title":"Geometric Sequences","q":[{"n":"11.3.1","t":"Common ratio","p":"Each term multiplies by a constant r."},{"n":"11.3.2","t":"nth term","p":"aₙ = a₁·r^(n−1)."},{"n":"11.3.3","t":"Finite & infinite sums","p":"Sₙ = a₁(1 − rⁿ)/(1 − r); if |r| < 1, S = a₁/(1 − r)."}]},"11.4":{"title":"Series & Their Notation","q":[{"n":"11.4.1","t":"Summation (Σ) notation","p":"Σ adds terms over an index range."},{"n":"11.4.2","t":"Arithmetic & geometric series","p":"Apply the sum formulas in Σ form."},{"n":"11.4.3","t":"Infinite geometric series","p":"Converges to a₁/(1 − r) when |r| < 1."}]},"11.5":{"title":"Counting Principles","q":[{"n":"11.5.1","t":"Addition & multiplication rules","p":"OR adds choices; AND multiplies stages."},{"n":"11.5.2","t":"Permutations","p":"Order matters: nPr = n!/(n−r)!."},{"n":"11.5.3","t":"Combinations","p":"Order doesn't matter: nCr = n!/(r!(n−r)!)."}]},"11.6":{"title":"Binomial Theorem","q":[{"n":"11.6.1","t":"Pascal's triangle & coefficients","p":"Row n gives the binomial coefficients nCk."},{"n":"11.6.2","t":"Expansion","p":"(a + b)ⁿ = Σ nCk · a^(n−k) · bᵏ."},{"n":"11.6.3","t":"A specific term","p":"Find the kth term without expanding the whole thing."}]},"11.7":{"title":"Probability","q":[{"n":"11.7.1","t":"Sample space & events","p":"P(event) = favorable / total (equally likely)."},{"n":"11.7.2","t":"Complement","p":"P(not A) = 1 − P(A)."},{"n":"11.7.3","t":"Unions (OR)","p":"P(A or B) = P(A) + P(B) − P(A and B)."},{"n":"11.7.4","t":"Mutually exclusive","p":"Disjoint events can't both happen: P(A and B) = 0."}]},"12.1":{"title":"Finding Limits: Numerical & Graphical","q":[{"n":"12.1.1","t":"The limit idea","p":"The value f(x) heads toward as x approaches a (not f(a) itself)."},{"n":"12.1.2","t":"From a table","p":"Plug in x-values closing in from both sides."},{"n":"12.1.3","t":"One-sided limits","p":"Left and right limits; the two-sided limit exists only when they agree."},{"n":"12.1.4","t":"From a graph","p":"Read where the curve approaches near x = a."}]},"12.2":{"title":"Finding Limits: Properties","q":[{"n":"12.2.1","t":"Limit laws","p":"Limits of sums/products/quotients split apart."},{"n":"12.2.2","t":"Direct substitution","p":"For continuous functions, just plug in a."},{"n":"12.2.3","t":"Factoring & rationalizing","p":"Cancel the 0/0 trouble spot, then substitute."}]},"12.3":{"title":"Continuity","q":[{"n":"12.3.1","t":"Continuity at a point","p":"f(a) defined, the limit exists, and they're equal."},{"n":"12.3.2","t":"Types of discontinuity","p":"Removable (hole), jump, and infinite (asymptote)."},{"n":"12.3.3","t":"On an interval","p":"Continuous everywhere on the interval — drawable without lifting the pen."}]},"12.4":{"title":"Derivatives","q":[{"n":"12.4.1","t":"Average vs instantaneous rate","p":"Secant slope over an interval vs the slope at a single instant."},{"n":"12.4.2","t":"The derivative as a limit","p":"f′(x) = lim_{h→0} [f(x+h) − f(x)] / h."},{"n":"12.4.3","t":"Tangent line","p":"f′(a) is the slope of the tangent at x = a."},{"n":"12.4.4","t":"Basic rules","p":"Power, constant, sum rules for quick derivatives."}]}};
-const SECTIONS = ["1.1","1.2","1.3","1.4","1.5","1.6","1.7","2.1","2.2","2.3","2.4","3.1","3.2","3.3","3.4","3.5","3.6","3.7","3.8","3.9","4.1","4.2","4.3","4.4","4.5","4.6","4.7","4.8","5.1","5.2","5.3","5.4","6.1","6.2","6.3","7.1","7.2","7.3","7.4","7.5","7.6","8.1","8.2","8.3","8.4","8.5","8.6","8.7","8.8","9.1","9.2","9.3","9.4","9.5","9.6","9.7","9.8","10.1","10.2","10.3","10.4","10.5","11.1","11.2","11.3","11.4","11.5","11.6","11.7","12.1","12.2","12.3","12.4"];
-const HUE = {"1.1":28,"1.2":210,"1.3":170,"1.4":265,"1.5":320,"1.6":140,"1.7":48,"2.1":30,"2.2":30,"2.3":30,"2.4":30,"3.1":60,"3.2":60,"3.3":60,"3.4":60,"3.5":60,"3.6":60,"3.7":60,"3.8":60,"3.9":60,"4.1":90,"4.2":90,"4.3":90,"4.4":90,"4.5":90,"4.6":90,"4.7":90,"4.8":90,"5.1":120,"5.2":120,"5.3":120,"5.4":120,"6.1":150,"6.2":150,"6.3":150,"7.1":180,"7.2":180,"7.3":180,"7.4":180,"7.5":180,"7.6":180,"8.1":210,"8.2":210,"8.3":210,"8.4":210,"8.5":210,"8.6":210,"8.7":210,"8.8":210,"9.1":240,"9.2":240,"9.3":240,"9.4":240,"9.5":240,"9.6":240,"9.7":240,"9.8":240,"10.1":270,"10.2":270,"10.3":270,"10.4":270,"10.5":270,"11.1":300,"11.2":300,"11.3":300,"11.4":300,"11.5":300,"11.6":300,"11.7":300,"12.1":330,"12.2":330,"12.3":330,"12.4":330};
-const PRECALC_CHAPTERS = ["1 Functions","2 Linear Functions","3 Polynomial & Rational","4 Exponential & Log",
-  "5 Trig Functions","6 Periodic Functions","7 Trig Identities","8 Applied Trig","9 Systems","10 Analytic Geometry",
-  "11 Sequences & Probability","12 Intro to Calculus"];
+/* ── the five subjects, as skylines you view from a distance rather than fly through.
+   Tower height = mastery (answered/correct in that chapter's flashcards) — most towers
+   are short stubs today since content is thin outside Precalc Ch.1-3 and Biology Ch.1.
+   idPrefix is the localStorage section-id convention (quiz.html): Precalc sections are
+   bare "N.M", Biology is "bio N.M". Chemistry/Physics/AI have no decks yet, so "chem N.M" /
+   "phys N.M" / "ai N.M" are a forward-compatible guess matching Biology's pattern — once
+   those subjects get real flashcard content under those ids, their towers light up for free. */
+const DOMAINS = [
+  { key:"precalc", name:"Precalculus", emoji:"📐", hue:265, idPrefix:"", center:{x:0,z:0},
+    chapters:["Functions","Linear Functions","Polynomial & Rational Functions","Exponential & Logarithmic Functions",
+      "Trigonometric Functions","Periodic Functions","Trigonometric Identities and Equations","Further Applications of Trigonometry",
+      "Systems of Equations and Inequalities","Analytic Geometry","Sequences, Probability, and Counting Theory","Introduction to Calculus"] },
+  { key:"biology", name:"Biology", emoji:"🧬", hue:140, idPrefix:"bio ", center:{x:34,z:0},
+    chapters:["The Study of Life","The Chemical Foundation of Life","Biological Macromolecules","Cell Structure",
+      "Structure and Function of Plasma Membranes","Metabolism","Cellular Respiration","Photosynthesis","Cell Communication",
+      "Cell Reproduction","Meiosis and Sexual Reproduction","Mendel's Experiments and Heredity","Modern Understanding of Inheritance",
+      "DNA Structure and Function","Genes and Proteins","Gene Expression","Biotechnology and Genomics",
+      "Evolution and the Origin of Species","The Evolution of Populations","Phylogenies and the History of Life","Viruses",
+      "Prokaryotes: Bacteria and Archaea","Protists","Fungi","Seedless Plants","Seed Plants","Introduction to Animal Diversity",
+      "Invertebrates","Vertebrates","Plant Form and Physiology","Soil and Plant Nutrition","Plant Reproduction",
+      "The Animal Body: Basic Form and Function","Animal Nutrition and the Digestive System","The Nervous System",
+      "Sensory Systems","The Endocrine System","The Musculoskeletal System","The Respiratory System","The Circulatory System",
+      "Osmotic Regulation and Excretion","The Immune System","Animal Reproduction and Development","Ecology and the Biosphere",
+      "Population and Community Ecology","Ecosystems","Conservation Biology and Biodiversity"] },
+  { key:"chemistry", name:"Chemistry", emoji:"⚗️", hue:32, idPrefix:"chem ", center:{x:-34,z:0},
+    chapters:["Essential Ideas","Atoms, Molecules, and Ions","Composition of Substances and Solutions",
+      "Stoichiometry of Chemical Reactions","Thermochemistry","Electronic Structure and Periodic Properties of Elements",
+      "Chemical Bonding and Molecular Geometry","Advanced Theories of Covalent Bonding","Gases","Liquids and Solids",
+      "Solutions and Colloids","Kinetics","Fundamental Equilibrium Concepts","Acid-Base Equilibria",
+      "Equilibria of Other Reaction Classes","Thermodynamics","Electrochemistry",
+      "Representative Metals, Metalloids, and Nonmetals","Transition Metals and Coordination Chemistry",
+      "Organic Chemistry","Nuclear Chemistry"] },
+  { key:"physics", name:"Physics", emoji:"🌀", hue:194, idPrefix:"phys ", center:{x:0,z:-42},
+    chapters:["The Nature of Science and Physics","One-Dimensional Kinematics","Two-Dimensional Kinematics",
+      "Dynamics: Force and Newton's Laws of Motion","Further Applications of Newton's Laws: Friction, Drag, and Elasticity",
+      "Uniform Circular Motion and Gravitation","Work, Energy, and Energy Resources","Linear Momentum and Collisions",
+      "Statics and Torque","Rotational Motion and Angular Momentum","Fluid Statics",
+      "Fluid Dynamics and Its Biological and Medical Applications","Temperature, Kinetic Theory, and the Gas Laws",
+      "Heat and Heat Transfer Methods","Thermodynamics","Oscillatory Motion and Waves","Physics of Hearing",
+      "Electric Charge and Electric Field","Electric Potential and Electric Field","Electric Current, Resistance, and Ohm's Law",
+      "Circuits and DC Instruments","Magnetism","Electromagnetic Induction, AC Circuits, and Electrical Technologies",
+      "Electromagnetic Waves","Geometric Optics","Vision and Optical Instruments","Wave Optics","Special Relativity",
+      "Introduction to Quantum Physics","Atomic Physics","Radioactivity and Nuclear Physics",
+      "Medical Applications of Nuclear Physics","Particle Physics","Frontiers of Physics"] },
+  { key:"ai", name:"Artificial Intelligence", emoji:"🤖", hue:322, idPrefix:"ai ", center:{x:0,z:42},
+    chapters:["Introduction to AI","Intelligent Agents","Solving Problems by Searching","Beyond Classical Search",
+      "Adversarial Search and Games","Constraint Satisfaction Problems","Logical Agents","First-Order Logic",
+      "Inference in First-Order Logic","Knowledge Representation","Automated Planning","Quantifying Uncertainty",
+      "Probabilistic Reasoning","Making Simple Decisions","Making Complex Decisions","Machine Learning: Learning from Examples",
+      "Learning Probabilistic Models","Deep Learning","Reinforcement Learning","Natural Language Processing",
+      "Computer Vision","Robotics","Philosophy, Ethics, and Safety of AI"] }
+];
+const GAP = 3.1;          // spacing between neighboring towers in a cluster
+const MINH = 0.6, UNIT = 1.15, MAXADD = 8.2;   // height curve: stub → capped skyscraper
 
-/* ── stats / progress (shared with the flashcards) ── */
+/* ── stats (shared with the flashcards, same-origin localStorage) ── */
 function loadJSON(k){ try{ return JSON.parse(localStorage.getItem(k)||"{}")||{}; }catch(_){ return {}; } }
-function statOf(n){
-  const m=/^(\d+\.\d+)\.(\d+)$/.exec(n); if(!m) return {done:false,p:0,f:0};
-  const i=+m[2]-1, prog=loadJSON("inkling-quiz-progress")[m[1]], st=loadJSON("inkling-quiz-stats")[m[1]];
-  return { done: !!(prog && prog[i]!=null), p:(st&&st[i]&&st[i].p)||0, f:(st&&st[i]&&st[i].f)||0 };
+function masteryOf(prefix, chNum){
+  const stats = loadJSON("inkling-quiz-stats");
+  const re = new RegExp("^" + prefix + chNum + "\\.\\d+$");
+  let pass = 0, fail = 0;
+  Object.keys(stats).forEach(k => {
+    if (!re.test(k)) return;
+    (stats[k] || []).forEach(q => { if (q){ pass += q.p || 0; fail += q.f || 0; } });
+  });
+  return { pass, fail };
+}
+function heightFor(pass, fail){ return MINH + Math.min(MAXADD, Math.log2(1 + pass + fail) * UNIT); }
+function colorFor(hue, pass, fail){
+  const total = pass + fail;
+  if (!total) return { color:new THREE.Color().setHSL(hue/360, 0.22, 0.14), glow:0.05 };
+  const acc = pass / total;
+  return { color:new THREE.Color().setHSL(hue/360, 0.5+0.4*acc, 0.30+0.28*acc), glow:0.3+0.65*acc };
 }
 
 /* ── three.js scene ── */
 const app = document.getElementById("app");
 const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
-renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace; app.appendChild(renderer.domElement);
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(innerWidth, innerHeight);
-labelRenderer.domElement.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:4";
-document.body.appendChild(labelRenderer.domElement);
+labelRenderer.domElement.style.position = "fixed"; labelRenderer.domElement.style.top = "0";
+labelRenderer.domElement.style.pointerEvents = "none"; app.appendChild(labelRenderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x05060d, 0.012);
-const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, 0.1, 400);
-camera.position.set(0, 10, 26);
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 9, 0);
-controls.minDistance = 8; controls.maxDistance = 140;
+scene.fog = new THREE.FogExp2(0x05060d, 0.0075);
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(6, 58, 96);
 
-// bloom — glowing steps, badges, galaxy → a cinematic space feel
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 6, 0);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 32; controls.maxDistance = 155;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.autoRotate = true; controls.autoRotateSpeed = 0.35;
+controls.addEventListener("start", () => { controls.autoRotate = false; });
+
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.7, 0.5, 0.45);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.65, 0.55, 0.42);
 composer.addPass(bloom);
 
-scene.add(new THREE.AmbientLight(0x8899ff, 0.6));
-const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(8, 24, 12); scene.add(key);
-const rim = new THREE.PointLight(0x7c5cff, 60, 120); rim.position.set(-10, 16, -8); scene.add(rim);
+scene.add(new THREE.AmbientLight(0x8899ff, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(20, 60, 30); scene.add(key);
+const rim = new THREE.PointLight(0x7c5cff, 70, 160); rim.position.set(-20, 30, -20); scene.add(rim);
 
 /* galaxy dome sky */
 new THREE.TextureLoader().load("assets/wordweaver/galaxy.webp", (tex) => {
   tex.colorSpace = THREE.SRGBColorSpace;
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(150, 48, 32),
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(220, 48, 32),
     new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite:false }));
   scene.add(dome);
-}, undefined, () => {});
-/* starfield fallback / depth */
+  document.getElementById("loading").style.display = "none";
+});
+setTimeout(() => { document.getElementById("loading").style.display = "none"; }, 2500);
+
 (function(){ const g=new THREE.BufferGeometry(), n=1400, pos=new Float32Array(n*3);
-  for(let i=0;i<n;i++){ const r=120+Math.random()*25, t=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
-    pos[i*3]=r*Math.sin(ph)*Math.cos(t); pos[i*3+1]=r*Math.cos(ph); pos[i*3+2]=r*Math.sin(ph)*Math.sin(t); }
+  for (let i=0;i<n;i++){ const r=90+Math.random()*110, th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=Math.abs(r*Math.cos(ph)); pos[i*3+2]=r*Math.sin(ph)*Math.sin(th); }
   g.setAttribute("position", new THREE.BufferAttribute(pos,3));
   scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color:0xaab6ff, size:0.5, transparent:true, opacity:.7 })));
 })();
 
-/* reflective-ish floor */
-const floor = new THREE.Mesh(new THREE.CircleGeometry(60, 64),
-  new THREE.MeshStandardMaterial({ color:0x0a1020, metalness:0.9, roughness:0.35 }));
-floor.rotation.x = -Math.PI/2; floor.position.y = 0; scene.add(floor);
-const grid = new THREE.GridHelper(120, 60, 0x2a3560, 0x141c34); grid.position.y = 0.02; scene.add(grid);
+/* ground */
+const floor = new THREE.Mesh(new THREE.CircleGeometry(105, 64),
+  new THREE.MeshStandardMaterial({ color:0x0a1020, metalness:0.85, roughness:0.4 }));
+floor.rotation.x = -Math.PI/2; scene.add(floor);
+const grid = new THREE.GridHelper(210, 84, 0x2a3560, 0x141c34); grid.position.y = 0.02; scene.add(grid);
 
-/* the helix group (rebuilt per section) */
-const helix = new THREE.Group(); scene.add(helix);
-const boxGeo = new THREE.BoxGeometry(2.0, 1.5, 2.0);          // each step (a fighting block)
-const edgeGeo = new THREE.EdgesGeometry(boxGeo);              // glowing neon outline of each step
-const platGeo = new THREE.CylinderGeometry(3.0, 3.3, 0.45, 6); // the arena platform it stands on
-const pulseGeo = new THREE.SphereGeometry(0.22, 8, 8);        // energy that flows up the path
-const SHARED = new Set([boxGeo, edgeGeo, platGeo, pulseGeo]);
-function hueLerp(h1, h2, t){ const d = ((h2 - h1 + 540) % 360) - 180; return (h1 + d*t + 360) % 360; }   // shortest circular blend
-// halo that marks the step you're on (so you always know where you are)
-const focusRing = new THREE.Mesh(new THREE.TorusGeometry(2.9, 0.13, 8, 40),
-  new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.0 }));
-focusRing.visible = false; scene.add(focusRing);
-const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
-let pickables = [];
+/* ── towers ── */
+const unitBox = new THREE.BoxGeometry(1.7, 1, 1.7);
+const unitEdges = new THREE.EdgesGeometry(unitBox);
+const capGeo = new THREE.BoxGeometry(1.9, 0.12, 1.9);
+const towers = [];   // { mesh, hue, pass, fail, domainKey, domainName, chapterNum, chapterTitle }
 
-function disposeHelix(){
-  // remove EVERY label's DOM element (labels are nested inside cubes), then dispose + clear
-  helix.traverse(o => { if (o.element && o.element.remove) o.element.remove(); });
-  helix.traverse(o => { if (o.geometry && !SHARED.has(o.geometry)) o.geometry.dispose?.(); if (o.material) o.material.dispose?.(); });
-  helix.clear();
-  pickables = [];
-}
-function mkLabel(text, cls, y){ const d=document.createElement("div"); d.className=cls; d.innerHTML=text; const o=new CSS2DObject(d); o.position.y=y; return o; }
-
-/* ── ONE continuous stacked tower: every section's questions climb together,
-   so you feel the cumulative height as you ascend the whole chapter. ── */
-const R = 13, ANG = (Math.PI*2)/5.2, YST = 2.3;   // wide, gradual spiral — steps spread out & readable from above
-let nodes = [];            // flat tower: { mesh, q, sec, gi, pos }
-let towerTop = 0;
-const strugglers = new Set();   // cubes you keep missing (pulse red)
-let pathCurve = null, energy = [], lastFc = null;   // flowing energy + focus-highlight tracker
-
-function buildTower(){
-  disposeHelix(); nodes = []; strugglers.clear(); energy = []; lastFc = null;
-  let gi = 0; const pathPts = [];
-  SECTIONS.forEach((sec, si) => {
-    const list = DATA[sec].q, hue = HUE[sec], nextHue = HUE[SECTIONS[si+1]] || hue;
-    list.forEach((q, i) => {
-      const ang = gi*ANG, y = gi*YST + 4, x = R*Math.cos(ang), z = R*Math.sin(ang);
-      const s = statOf(q.n), miss = s.f > 0 && s.f >= Math.max(1, s.p);
-      // colour blends toward the next section near the top of each band (smooth transitions)
-      const frac = i / Math.max(1, list.length - 1);
-      const ch = hueLerp(hue, nextHue, Math.max(0, (frac - 0.66) / 0.34) * 0.6);
-      const base = new THREE.Color().setHSL(ch/360, 0.72, s.done ? 0.55 : 0.45);
-      const baseE = s.done ? 0.32 : 0.09;
-      // translucent glassy walls + glowing neon edges = a cool, inviting block
-      const cube = new THREE.Mesh(boxGeo, new THREE.MeshStandardMaterial({
-        color: base.clone().multiplyScalar(0.55), emissive: base, emissiveIntensity: baseE,
-        metalness:0.3, roughness:0.25, transparent:true, opacity:0.4, depthWrite:false }));
-      cube.position.set(x, y, z); cube.userData = { q, sec, gi, baseE };
-      const edges = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({
-        color: new THREE.Color().setHSL(ch/360, 0.9, 0.62), transparent:true, opacity:0.95 }));
-      cube.add(edges); helix.add(cube); pickables.push(cube);
-      // the arena platform this step stands on (the floor where fighters will face off)
-      const plat = new THREE.Mesh(platGeo, new THREE.MeshStandardMaterial({
-        color: base.clone().multiplyScalar(0.28), emissive: base, emissiveIntensity: 0.1, metalness:0.7, roughness:0.45 }));
-      plat.position.set(x, y - 1.2, z); plat.userData = { q, sec, gi }; helix.add(plat); pickables.push(plat);
-      if (miss){ cube.material.emissive.setHex(0xff3b3b); strugglers.add(cube); }   // red once; loop just pulses intensity
-      let badges=""; if(s.p) badges+=`<span class="badge bp">${s.p>99?"99":s.p}</span>`; if(s.f) badges+=`<span class="badge bf">${s.f>99?"99":s.f}</span>`;
-      const labBase = `${q.n} ${q.t}`;
-      const lab = mkLabel(labBase + badges, "nlabel", 1.6); cube.add(lab);
-      nodes.push({ mesh:cube, q, sec, gi, pos:cube.position.clone(), labEl:lab.element, labBase }); pathPts.push(cube.position.clone());
-      if (i===0) cube.add(mkLabel(`◆ ${sec} ${DATA[sec].title}`, "summit", 2.9));   // section band marker
-      gi++;
-    });
+DOMAINS.forEach(dom => {
+  const n = dom.chapters.length;
+  const cols = Math.ceil(Math.sqrt(n));
+  const rows = Math.ceil(n / cols);
+  const originX = dom.center.x - ((cols-1)*GAP)/2;
+  const originZ = dom.center.z - ((rows-1)*GAP)/2;
+  dom.chapters.forEach((title, idx) => {
+    const chNum = idx + 1;
+    const col = idx % cols, row = Math.floor(idx / cols);
+    const { pass, fail } = masteryOf(dom.idPrefix, chNum);
+    const h = heightFor(pass, fail);
+    const { color, glow } = colorFor(dom.hue, pass, fail);
+    const mesh = new THREE.Mesh(unitBox, new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: glow, metalness:0.55, roughness:0.35 }));
+    mesh.scale.set(1, h, 1);
+    mesh.position.set(originX + col*GAP, h/2, originZ + row*GAP);
+    const edges = new THREE.LineSegments(unitEdges, new THREE.LineBasicMaterial({
+      color: new THREE.Color().setHSL(dom.hue/360, 0.85, 0.68), transparent:true, opacity:0.85 }));
+    mesh.add(edges);
+    const cap = new THREE.Mesh(capGeo, new THREE.MeshStandardMaterial({
+      color: 0xffffff, emissive: color, emissiveIntensity: glow*1.3, metalness:0.4, roughness:0.25 }));
+    cap.position.set(0, 0.5, 0);
+    mesh.add(cap);
+    scene.add(mesh);
+    towers.push({ mesh, hue:dom.hue, pass, fail, domainKey:dom.key, domainName:dom.name, emoji:dom.emoji, chapterNum:chNum, chapterTitle:title });
   });
-  towerTop = gi*YST + 4;
-  if (pathPts.length>1){
-    pathCurve = new THREE.CatmullRomCurve3(pathPts);
-    helix.add(new THREE.Mesh(new THREE.TubeGeometry(pathCurve, pathPts.length*6, 0.07, 6, false),
-      new THREE.MeshBasicMaterial({ color:0x9fb0ff, transparent:true, opacity:0.3 })));
-    for (let k=0; k<10; k++){   // glowing energy that streams up the path
-      const m = new THREE.Mesh(pulseGeo, new THREE.MeshBasicMaterial({ color:0xbfe0ff }));
-      helix.add(m); energy.push({ mesh:m, t:k/10 });
-    }
-  }
-  // ── SUMMIT of the whole spiral: every CORRECT answer spirals to the tip ──
-  const passed = nodes.filter(n => statOf(n.q.n).p > 0);
-  const cap = new THREE.Mesh(new THREE.ConeGeometry(2.4, 3.2, 6),
-    new THREE.MeshStandardMaterial({ color:0xffe6a8, emissive:0xffcf5c, emissiveIntensity:0.6, metalness:0.6, roughness:0.3 }));
-  cap.position.set(0, towerTop + 2, 0); helix.add(cap);
-  helix.add(mkLabel(`▲ Precalculus Summit — ${passed.length}/${nodes.length} correct`, "summit", towerTop + 5));
-  passed.forEach((n, i) => {
-    const a=i*0.7, ry=towerTop+5+i*0.8, rr=3*(1 - i/(passed.length+3));
-    const m=new THREE.Mesh(new THREE.IcosahedronGeometry(0.5,0), new THREE.MeshStandardMaterial({color:0x2ec27e,emissive:0x2ec27e,emissiveIntensity:0.7}));
-    m.position.set(Math.cos(a)*rr, ry, Math.sin(a)*rr); helix.add(m);
-  });
-  refreshBadges();   // set each label's right/wrong badge + _attempted flag before LOD runs
-}
-
-/* ── Camera. PLATFORM mode auto-frames the step looking AHEAD at the next
-   questions; FREE mode lets you fly/descend and look around yourself. ── */
-let tween = null, focusGi = 0, mode = "platform";   // platform | free
-const _v = new THREE.Vector3(), _up = new THREE.Vector3(0,1,0);
-function easeInOut(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
-function camFor(gi){
-  const i = Math.max(0, Math.min(nodes.length-1, gi));
-  const n = nodes[i], nNext = nodes[Math.min(i+1, nodes.length-1)], nNext2 = nodes[Math.min(i+2, nodes.length-1)];
-  let fwd = nNext.pos.clone().sub(n.pos); if (fwd.lengthSq() < 0.01) fwd.set(0,1,0); fwd.normalize();
-  _v.set(n.pos.x, 0, n.pos.z); if (_v.lengthSq() < 0.001) _v.set(1,0,0); _v.normalize();  // outward
-  // a step behind & outside the current block, looking AHEAD to the next question
-  // (the look is biased toward the question after, so it sits barely in view)
-  const camPos = n.pos.clone().sub(fwd.clone().multiplyScalar(7)).add(_v.clone().multiplyScalar(4.5)).add(new THREE.Vector3(0, 4.5, 0));
-  const look = nNext.pos.clone().lerp(nNext2.pos, 0.35);
-  return { camPos, look };
-}
-function flyTo(gi, andShow){
-  focusGi = Math.max(0, Math.min(nodes.length-1, gi));
-  const { camPos, look } = camFor(focusGi);
-  const ctrl = camera.position.clone().add(camPos).multiplyScalar(0.5).add(new THREE.Vector3(0, 3.5, 0));  // arc up → a swoop, not a slide
-  tween = { t:0, dur:1100, fromP:camera.position.clone(), ctrl, toP:camPos, fromT:controls.target.clone(), toT:look, show:andShow };
-  controls.enabled = false;
-  const n = nodes[focusGi];
-  document.getElementById("secName").textContent = "· " + n.q.n + " " + n.q.t + " · ↑" + Math.round(n.pos.y) + "m";
-  if (andShow) showQ(n.mesh.userData);   // reveal the clicked question NOW, not after the 1.1s swoop (the panel
-                                         // used to lag a beat behind, so the first click showed the previous one)
-  updateLabelLOD();
-}
-// only the steps near where you're standing show their words — no wall of text (wider window when free-floating)
-// Re-read the quiz stats and rewrite each cube's right/wrong badge (green = correct count,
-// red = wrong count) — runs on build and whenever the quiz writes progress.
-function refreshBadges(){
-  const stats = loadJSON("inkling-quiz-stats");
-  for (const n of nodes){
-    if (!n.labEl) continue;
-    const m = /^(\d+\.\d+)\.(\d+)$/.exec(n.q.n);
-    const st = m ? ((stats[m[1]]||{})[+m[2]-1]||{}) : {}, p = st.p||0, f = st.f||0;
-    let b=""; if(p) b+=`<span class="badge bp">${p>99?"99":p}</span>`; if(f) b+=`<span class="badge bf">${f>99?"99":f}</span>`;
-    n.labEl.innerHTML = (n.labBase||"") + b;
-    n.labEl._attempted = (p>0 || f>0);
-  }
-}
-function updateLabelLOD(){
-  const win = mode === "free" ? 16 : 8;
-  for (const n of nodes){
-    if (!n.labEl) continue;
-    if (n.labEl._attempted){ n.labEl.style.opacity = 1; n.labEl.style.display = ""; continue; }   // your right/wrong count always stays up
-    const d = Math.abs(n.gi - focusGi);
-    const o = d > win ? 0 : (d <= win*0.55 ? 1 : 1 - (d - win*0.55)/(win*0.45));
-    n.labEl.style.opacity = o; n.labEl.style.display = o <= 0.03 ? "none" : "";
-  }
-}
-// keep the 3D counts live with the flashcards (same-origin localStorage)
-window.addEventListener("storage", e => { if (!e.key || /inkling-quiz-(progress|stats)/.test(e.key)){ refreshBadges(); updateLabelLOD(); } });
-window.addEventListener("focus", () => { refreshBadges(); updateLabelLOD(); });
-document.addEventListener("visibilitychange", () => { if (!document.hidden){ refreshBadges(); updateLabelLOD(); } });
-window.addEventListener("pageshow", () => { refreshBadges(); updateLabelLOD(); });
-window.addEventListener("message", e => { if (e.data && e.data.type === "inkling-refresh-progress"){ refreshBadges(); updateLabelLOD(); } });
-setInterval(() => { if (!document.hidden){ refreshBadges(); updateLabelLOD(); } }, 1500);   // hard fallback so counts never stick stale
-
-/* ── question panel ── */
-const qpanel = document.getElementById("qpanel");
-let activeQ = null;
-function showQ(d){
-  activeQ = d.q;
-  document.getElementById("qk").textContent = d.q.n + " · " + d.q.t;
-  document.getElementById("qt").textContent = d.q.t;
-  const s = statOf(d.q.n);
-  document.getElementById("qtally").innerHTML = (s.p||s.f)
-    ? `<span style="color:#2ec27e">🟢 ${s.p} correct</span>  ·  <span style="color:#ff5a5a">🔴 ${s.f} wrong</span>` + (s.done?`  ·  <span style="color:#7be08a">✓ done</span>`:"")
-    : "Not attempted yet.";
-  document.getElementById("qp").textContent = d.q.p;
-  qpanel.classList.add("show");
-}
-document.getElementById("qclose").onclick = () => qpanel.classList.remove("show");
-document.getElementById("qopen").onclick = () => {
-  if (!activeQ) return;
-  if (window.parent && window.parent !== window){ try { window.parent.postMessage({ type:"inkling-open-flashcard", q:activeQ.n }, "*"); return; } catch(_){} }
-  const url = "quiz.html?q=" + encodeURIComponent(activeQ.n);
-  try { (window.top||window).location.href = url; } catch(_){ location.href = url; }
-};
-
-let downX=0, downY=0, moved=false;
-renderer.domElement.addEventListener("pointerdown", e => { downX=e.clientX; downY=e.clientY; moved=false; });
-renderer.domElement.addEventListener("pointermove", e => { if(Math.abs(e.clientX-downX)+Math.abs(e.clientY-downY)>10) moved=true; });   // 10px (was 5) — a finger tap drifts a little; 5 treated taps as drags
-const _pick = new THREE.Vector3();
-renderer.domElement.addEventListener("pointerup", e => {
-  if (moved) return;
-  pointer.x = (e.clientX/innerWidth)*2-1; pointer.y = -(e.clientY/innerHeight)*2+1;
-  raycaster.setFromCamera(pointer, camera);
-  const hit = raycaster.intersectObjects(pickables, false)[0];
-  if (hit){ flyTo(hit.object.userData.gi, true); return; }   // direct hit → fly + reveal
-  // Forgiving pick: at distance a node is a tiny target, so the first tap often just
-  // MISSED (nothing happened, panel stayed on the previous question → you tapped again).
-  // Fall back to the nearest on-screen node within ~46px of the tap.
-  let best=null, bestD=Infinity;
-  for (const n of nodes){
-    _pick.copy(n.pos).project(camera);
-    if (_pick.z > 1) continue;                                            // behind the camera
-    const sx=(_pick.x*0.5+0.5)*innerWidth, sy=(-_pick.y*0.5+0.5)*innerHeight;
-    const d=Math.hypot(sx-e.clientX, sy-e.clientY);
-    if (d<bestD){ bestD=d; best=n; }
-  }
-  if (best && bestD < 46) flyTo(best.gi, true);
+  // floating cluster label above the whole neighborhood
+  const labelDiv = document.createElement("div");
+  labelDiv.className = "clabel";
+  labelDiv.textContent = dom.emoji + " " + dom.name + " · " + n + " ch";
+  const label = new CSS2DObject(labelDiv);
+  label.position.set(dom.center.x, 12, dom.center.z);
+  scene.add(label);
 });
 
-/* ── nav: ▲▼ climb step-by-step, ‹ › jump sections, tabs jump to a band ── */
-function sectionStart(sec){ return Math.max(0, nodes.findIndex(n => n.sec === sec)); }
-document.getElementById("up").onclick   = () => flyTo(focusGi + 1, true);
-document.getElementById("down").onclick = () => flyTo(focusGi - 1, true);
-/* ── Platform ⇄ Free toggle. Free reveals the joystick + fly/descend. ── */
-const joyVec = { x:0, y:0 }; let flyV = 0;
-function setMode(m){
-  mode = m;
-  const free = m === "free";
-  document.getElementById("mode").innerHTML = free ? "🎯 Platform" : "🕹 Free fly";
-  document.getElementById("climb").style.display = free ? "none" : "flex";
-  document.getElementById("fly").style.display = free ? "flex" : "none";
-  document.getElementById("joy").style.display = free ? "block" : "none";
-  document.getElementById("hint").textContent = free
-    ? "Free flight · joystick to glide · ⤒⤓ rise & descend · drag to look around"
-    : "Platform view · ▲ climb step-by-step · ‹ › jump sections · tap a step";
-  if (free){ controls.enabled = true; tween = null; } else { flyTo(focusGi, false); }
-  updateLabelLOD();
+function refreshMastery(){
+  towers.forEach(t => {
+    const dom = DOMAINS.find(d => d.key === t.domainKey);
+    const { pass, fail } = masteryOf(dom.idPrefix, t.chapterNum);
+    if (pass === t.pass && fail === t.fail) return;
+    t.pass = pass; t.fail = fail;
+    const h = heightFor(pass, fail);
+    const { color, glow } = colorFor(t.hue, pass, fail);
+    t.mesh.scale.y = h; t.mesh.position.y = h/2;
+    t.mesh.material.color.copy(color); t.mesh.material.emissive.copy(color); t.mesh.material.emissiveIntensity = glow;
+    t.mesh.children[1].material.emissive.copy(color); t.mesh.children[1].material.emissiveIntensity = glow*1.3;
+  });
 }
-document.getElementById("mode").onclick = () => setMode(mode === "free" ? "platform" : "free");
-// exit — in-app closes the Mind overlay, standalone returns to the app
+window.addEventListener("storage", e => { if (!e.key || /inkling-quiz-(progress|stats)/.test(e.key)) refreshMastery(); });
+window.addEventListener("message", e => { if (e.data && e.data.type === "inkling-refresh-progress") refreshMastery(); });
+window.addEventListener("focus", refreshMastery);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshMastery(); });
+
+/* legend */
+const legend = document.getElementById("legend");
+DOMAINS.forEach(dom => {
+  const row = document.createElement("div"); row.className = "row";
+  const dot = document.createElement("span"); dot.className = "dot";
+  dot.style.background = "hsl(" + dom.hue + ",70%,55%)";
+  const label = document.createElement("span"); label.textContent = dom.emoji + " " + dom.name;
+  row.appendChild(dot); row.appendChild(label); legend.appendChild(row);
+});
+
+/* click a tower → tooltip */
+const raycaster = new THREE.Raycaster(); const pointer = new THREE.Vector2();
+const tip = document.getElementById("tip");
+function showTip(t){
+  document.getElementById("tipDomain").textContent = t.emoji + " " + t.domainName + " · Chapter " + t.chapterNum;
+  document.getElementById("tipTitle").textContent = t.chapterTitle;
+  const total = t.pass + t.fail;
+  document.getElementById("tipMastery").textContent = total
+    ? total + " question" + (total===1?"":"s") + " answered · " + Math.round(100*t.pass/total) + "% correct"
+    : "Not started yet — no graded questions here.";
+  tip.classList.add("show");
+}
+document.getElementById("tipClose").onclick = () => tip.classList.remove("show");
+renderer.domElement.addEventListener("click", (e) => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left)/rect.width)*2 - 1;
+  pointer.y = -((e.clientY - rect.top)/rect.height)*2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(towers.map(t => t.mesh), false)[0];
+  if (hit){ const t = towers.find(x => x.mesh === hit.object); if (t) showTip(t); }
+  else tip.classList.remove("show");
+});
+
+/* resize */
+addEventListener("resize", () => {
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight); bloom.setSize(innerWidth, innerHeight);
+});
+
+/* exit — in-app closes the Mind overlay, standalone returns to the app */
 document.getElementById("exit3d").onclick = () => {
   if (window.parent && window.parent !== window){ try { window.parent.postMessage({ type:"inkling-close-graph" }, "*"); return; } catch(_){} }
   location.href = "/";
 };
-// switch to the 2D canvas — in-app, route through the panel (postMessage) so it
-// re-points the SAME Mind iframe and keeps its src attribute in sync; a raw <a href>
-// navigation desynced that attribute and broke the 2D→3D toggle afterward.
-// Standalone: fall through to the <a href="wordweaver.html"> default navigation.
+/* switch to 2D — in-app routes through the panel so the Mind iframe's src stays in sync */
 document.getElementById("to2d").addEventListener("click", (e) => {
   if (window.parent && window.parent !== window){
     e.preventDefault();
     try { window.parent.postMessage({ type:"inkling-open-graph", mode:"2d" }, "*"); } catch(_){}
   }
 });
-// fly / descend (hold)
-function holdFly(id, v){ const b=document.getElementById(id);
-  const on=()=>{ flyV=v; }, off=()=>{ flyV=0; };
-  b.addEventListener("pointerdown", e=>{e.preventDefault(); on();}); b.addEventListener("pointerup", off); b.addEventListener("pointerleave", off);
-}
-holdFly("flyup", 1); holdFly("flydn", -1);
-// virtual joystick
-(function(){
-  const pad=document.getElementById("joy"), knob=document.getElementById("joyknob"); let active=false, cx=0, cy=0, rad=44;
-  function start(e){ active=true; const r=pad.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; move(e); }
-  function move(e){ if(!active) return; const p=e.touches?e.touches[0]:e; let dx=p.clientX-cx, dy=p.clientY-cy; const d=Math.hypot(dx,dy); if(d>rad){ dx=dx/d*rad; dy=dy/d*rad; } knob.style.transform=`translate(${dx}px,${dy}px)`; joyVec.x=dx/rad; joyVec.y=dy/rad; }
-  function end(){ active=false; joyVec.x=joyVec.y=0; knob.style.transform="translate(0,0)"; }
-  pad.addEventListener("pointerdown", e=>{e.preventDefault(); start(e);});
-  addEventListener("pointermove", move); addEventListener("pointerup", end);
-})();
-document.getElementById("east").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
-document.getElementById("west").onclick = () => { const s=SECTIONS[(SECTIONS.indexOf(nodes[focusGi].sec)+SECTIONS.length-1)%SECTIONS.length]; flyTo(sectionStart(s), false); };
-const tabsEl = document.getElementById("secTabs");
-SECTIONS.forEach(sec => { const b=document.createElement("button"); b.className="tab"; b.dataset.sec=sec; b.textContent=sec; b.style.borderColor=`hsl(${HUE[sec]} 70% 55%)`; b.onclick=()=>flyTo(sectionStart(sec), false); tabsEl.appendChild(b); });
-const chap = document.getElementById("chapSel");
-PRECALC_CHAPTERS.forEach((name,i) => { const o=document.createElement("option"); o.value=String(i+1); o.textContent="Chapter "+name; chap.appendChild(o); });
-chap.value="1";
-chap.onchange = () => { const c=chap.value+"."; const sec=SECTIONS.find(s => s.indexOf(c)===0); if(sec) flyTo(sectionStart(sec), false); };
 
-/* ── "What I'm missing": fly through your most-missed questions, worst first ── */
-let missQueue = [], missPtr = 0;
-document.getElementById("miss").onclick = () => {
-  const ranked = nodes.map(n => ({ gi:n.gi, f:statOf(n.q.n).f })).filter(x => x.f>0).sort((a,b)=> b.f - a.f);
-  if (!ranked.length){ alert("Nothing missed yet — go answer some questions and your weak spots will show up here."); return; }
-  if (missQueue.length !== ranked.length){ missQueue = ranked; missPtr = 0; } else { missPtr = (missPtr+1) % missQueue.length; }
-  flyTo(missQueue[missPtr].gi, true);
-};
-
-/* re-read stats live (quiz writes localStorage from its own iframe) */
-function rebuild(){ const keep=focusGi; buildTower(); flyTo(Math.min(keep, nodes.length-1), false); }
-window.addEventListener("storage", e => { if(!e.key || /inkling-quiz-(progress|stats)/.test(e.key)) rebuild(); });
-window.addEventListener("focus", rebuild);
-addEventListener("resize", () => {
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
-});
-
-buildTower();
-flyTo(0, false);
-document.getElementById("loading").style.display = "none";
-const clock = new THREE.Clock();
-const _mv = new THREE.Vector3(), _fwd = new THREE.Vector3(), _right = new THREE.Vector3();
-(function loop(){
-  requestAnimationFrame(loop);
-  const dt = clock.getDelta() * 1000, T = clock.elapsedTime;
-  if (tween){
-    tween.t += dt; const k = Math.min(1, tween.t/tween.dur), e = easeInOut(k), mt = 1 - e;
-    // quadratic bézier through the lifted control point → a swoop, not a slide
-    camera.position.set(0,0,0).addScaledVector(tween.fromP, mt*mt).addScaledVector(tween.ctrl, 2*mt*e).addScaledVector(tween.toP, e*e);
-    controls.target.lerpVectors(tween.fromT, tween.toT, e);
-    camera.lookAt(controls.target);
-    if (k >= 1){ controls.enabled = true; tween = null; }   // reveal now happens at flyTo-start (immediate), not here
-  } else {
-    controls.update();
-    if (mode === "free" && (joyVec.x || joyVec.y || flyV)){   // free flight: glide / rise / descend
-      const sp = 0.34 * dt;
-      camera.getWorldDirection(_fwd); _fwd.y = 0; if (_fwd.lengthSq() < 1e-4) _fwd.set(0,0,-1); _fwd.normalize();
-      _right.crossVectors(_fwd, _up).normalize();
-      _mv.set(0,0,0).addScaledVector(_fwd, -joyVec.y*sp).addScaledVector(_right, joyVec.x*sp); _mv.y += flyV*sp;
-      camera.position.add(_mv); controls.target.add(_mv);
-    }
-  }
-  // flowing energy streaming up the climb path
-  if (pathCurve){ for (const p of energy){ p.t += dt/16000; if (p.t > 1) p.t -= 1; pathCurve.getPoint(p.t, p.mesh.position); } }
-  // the scene breathes: a slow global glow swell
-  bloom.strength = 0.62 + 0.13*Math.sin(T*0.5);
-  key.intensity  = 1.0 + 0.12*Math.sin(T*0.6);
-  // pulse the ones you keep missing (red emissive)
-  const pulse = 0.3 + 0.35*Math.abs(Math.sin(T*2.2));
-  strugglers.forEach(c => { c.material.emissiveIntensity = pulse; });
-  // highlight the step you're on — only touch the focused cube (and ease the previous one back)
-  const fc = nodes[focusGi] && nodes[focusGi].mesh;
-  if (fc !== lastFc){
-    if (lastFc){ lastFc.scale.setScalar(1); if (!strugglers.has(lastFc)) lastFc.material.emissiveIntensity = lastFc.userData.baseE; }
-    lastFc = fc;
-  }
-  if (fc){
-    fc.scale.setScalar(fc.scale.x + (1.28 - fc.scale.x)*0.18);
-    focusRing.visible = true; focusRing.position.copy(fc.position); focusRing.lookAt(camera.position);
-    focusRing.scale.setScalar(1 + 0.06*Math.sin(T*3.5));
-    focusRing.material.opacity = 0.45 + 0.3*Math.abs(Math.sin(T*2.5));
-    if (!strugglers.has(fc)) fc.material.emissiveIntensity = 0.4 + 0.25*Math.abs(Math.sin(T*3));
-  }
-  composer.render(); labelRenderer.render(scene, camera);
+/* render loop */
+(function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  labelRenderer.render(scene, camera);
+  composer.render();
 })();
 </script>
 </body>

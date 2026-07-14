@@ -739,17 +739,401 @@ function buildBiologyMap() {
   };
 }
 
-/** Ensure the built-in maps exist. Idempotent; safe to call on every panel open. */
+function buildChemistryMap() {
+  const leaf = (label) => ({ id: uid("l"), label, mastery: 0 });
+  const branch = (label, labels) => ({ id: uid("b"), label, leaves: labels.map(leaf) });
+  return {
+    id: "sm_builtin_chemistry",
+    topic: "OpenStax Chemistry 2e",
+    builtin: true,
+    createdAt: Date.now(),
+    branches: [
+      branch("Chapter 1 · Essential Ideas", [
+        "1.1 Chemistry in Context",
+        "1.2 Phases and Classification of Matter",
+        "1.3 Physical and Chemical Properties",
+        "1.4 Measurements",
+        "1.5 Measurement Uncertainty, Accuracy, and Precision",
+        "1.6 Mathematical Treatment of Measurement Results"
+      ]),
+      branch("Chapter 2 · Atoms, Molecules, and Ions", [
+        "2.1 Early Ideas in Atomic Theory",
+        "2.2 Evolution of Atomic Theory",
+        "2.3 Atomic Structure and Symbolism",
+        "2.4 Chemical Formulas",
+        "2.5 The Periodic Table",
+        "2.6 Molecular and Ionic Compounds",
+        "2.7 Chemical Nomenclature"
+      ]),
+      branch("Chapter 3 · Composition of Substances and Solutions", [
+        "3.1 Formula Mass and the Mole Concept",
+        "3.2 Determining Empirical and Molecular Formulas",
+        "3.3 Molarity",
+        "3.4 Other Units for Solution Concentrations"
+      ]),
+      branch("Chapter 4 · Stoichiometry of Chemical Reactions", [
+        "4.1 Writing and Balancing Chemical Equations",
+        "4.2 Classifying Chemical Reactions",
+        "4.3 Reaction Stoichiometry",
+        "4.4 Reaction Yields",
+        "4.5 Quantitative Chemical Analysis"
+      ]),
+      branch("Chapter 5 · Thermochemistry", [
+        "5.1 Energy Basics",
+        "5.2 Calorimetry",
+        "5.3 Enthalpy"
+      ]),
+      branch("Chapter 6 · Electronic Structure and Periodic Properties of Elements", [
+        "6.1 Electromagnetic Energy",
+        "6.2 The Bohr Model",
+        "6.3 Development of Quantum Theory",
+        "6.4 Electronic Structure of Atoms (Electron Configurations)",
+        "6.5 Periodic Variations in Element Properties"
+      ]),
+      branch("Chapter 7 · Chemical Bonding and Molecular Geometry", [
+        "7.1 Ionic Bonding",
+        "7.2 Covalent Bonding",
+        "7.3 Lewis Symbols and Structures",
+        "7.4 Formal Charges and Resonance",
+        "7.5 Strengths of Ionic and Covalent Bonds",
+        "7.6 Molecular Structure and Polarity"
+      ]),
+      branch("Chapter 8 · Advanced Theories of Covalent Bonding", [
+        "8.1 Valence Bond Theory",
+        "8.2 Hybrid Atomic Orbitals",
+        "8.3 Multiple Bonds",
+        "8.4 Molecular Orbital Theory"
+      ]),
+      branch("Chapter 9 · Gases", [
+        "9.1 Gas Pressure",
+        "9.2 Relating Pressure, Volume, Amount, and Temperature: The Ideal Gas Law",
+        "9.3 Stoichiometry of Gaseous Substances, Mixtures, and Reactions",
+        "9.4 Effusion and Diffusion of Gases",
+        "9.5 The Kinetic-Molecular Theory",
+        "9.6 Non-Ideal Gas Behavior"
+      ]),
+      branch("Chapter 10 · Liquids and Solids", [
+        "10.1 Intermolecular Forces",
+        "10.2 Properties of Liquids",
+        "10.3 Phase Transitions",
+        "10.4 Phase Diagrams",
+        "10.5 The Solid State of Matter",
+        "10.6 Lattice Structures in Crystalline Solids"
+      ]),
+      branch("Chapter 11 · Solutions and Colloids", [
+        "11.1 The Dissolution Process",
+        "11.2 Electrolytes",
+        "11.3 Solubility",
+        "11.4 Colligative Properties",
+        "11.5 Colloids"
+      ]),
+      branch("Chapter 12 · Kinetics", [
+        "12.1 Chemical Reaction Rates",
+        "12.2 Factors Affecting Reaction Rates",
+        "12.3 Rate Laws",
+        "12.4 Integrated Rate Laws",
+        "12.5 Collision Theory",
+        "12.6 Reaction Mechanisms",
+        "12.7 Catalysis"
+      ]),
+      branch("Chapter 13 · Fundamental Equilibrium Concepts", [
+        "13.1 Chemical Equilibria",
+        "13.2 Equilibrium Constants",
+        "13.3 Shifting Equilibria: Le Chatelier's Principle",
+        "13.4 Equilibrium Calculations"
+      ]),
+      branch("Chapter 14 · Acid-Base Equilibria", [
+        "14.1 Brønsted-Lowry Acids and Bases",
+        "14.2 pH and pOH",
+        "14.3 Relative Strengths of Acids and Bases",
+        "14.4 Hydrolysis of Salts",
+        "14.5 Polyprotic Acids",
+        "14.6 Buffers",
+        "14.7 Acid-Base Titrations"
+      ]),
+      branch("Chapter 15 · Equilibria of Other Reaction Classes", [
+        "15.1 Precipitation and Dissolution",
+        "15.2 Lewis Acids and Bases",
+        "15.3 Coupled Equilibria"
+      ]),
+      branch("Chapter 16 · Thermodynamics", [
+        "16.1 Spontaneity",
+        "16.2 Entropy",
+        "16.3 The Second and Third Laws of Thermodynamics",
+        "16.4 Free Energy"
+      ]),
+      branch("Chapter 17 · Electrochemistry", [
+        "17.1 Balancing Oxidation-Reduction Reactions",
+        "17.2 Galvanic Cells",
+        "17.3 Standard Reduction Potentials",
+        "17.4 The Nernst Equation",
+        "17.5 Batteries and Fuel Cells",
+        "17.6 Corrosion",
+        "17.7 Electrolysis"
+      ]),
+      branch("Chapter 18 · Representative Metals, Metalloids, and Nonmetals", [
+        "18.1 Periodicity",
+        "18.2 Occurrence and Preparation of the Representative Metals",
+        "18.3 Structure and General Properties of the Metalloids",
+        "18.4 Structure and General Properties of the Nonmetals",
+        "18.5 Occurrence, Preparation, and Compounds of Hydrogen",
+        "18.6 Occurrence, Preparation, and Properties of Carbonates",
+        "18.7 Occurrence, Preparation, and Properties of Nitrogen",
+        "18.8 Occurrence, Preparation, and Properties of Phosphorus",
+        "18.9 Occurrence, Preparation, and Compounds of Oxygen",
+        "18.10 Occurrence, Preparation, and Properties of Sulfur",
+        "18.11 Occurrence, Preparation, and Properties of Halogens",
+        "18.12 Occurrence, Preparation, and Properties of the Noble Gases"
+      ]),
+      branch("Chapter 19 · Transition Metals and Coordination Chemistry", [
+        "19.1 Occurrence, Preparation, and Properties of Transition Metals and Their Compounds",
+        "19.2 Coordination Chemistry of Transition Metals",
+        "19.3 Spectroscopic and Magnetic Properties of Coordination Compounds"
+      ]),
+      branch("Chapter 20 · Organic Chemistry", [
+        "20.1 Hydrocarbons",
+        "20.2 Alcohols and Ethers",
+        "20.3 Aldehydes, Ketones, Carboxylic Acids, and Esters",
+        "20.4 Amines and Amides"
+      ]),
+      branch("Chapter 21 · Nuclear Chemistry", [
+        "21.1 Nuclear Structure and Stability",
+        "21.2 Nuclear Equations",
+        "21.3 Radioactive Decay",
+        "21.4 Transmutation and Nuclear Energy",
+        "21.5 Uses of Radioisotopes",
+        "21.6 Biological Effects of Radiation"
+      ])
+    ]
+  };
+}
+
+function buildAIMap() {
+  const leaf = (label) => ({ id: uid("l"), label, mastery: 0 });
+  const branch = (label, labels) => ({ id: uid("b"), label, leaves: labels.map(leaf) });
+  return {
+    id: "sm_builtin_ai",
+    topic: "Artificial Intelligence",
+    builtin: true,
+    createdAt: Date.now(),
+    branches: [
+      branch("Chapter 1 · Introduction to AI", [
+        "1.1 What Is Artificial Intelligence?",
+        "1.2 The History of AI",
+        "1.3 The State of the Art Today",
+        "1.4 Risks and Benefits of AI"
+      ]),
+      branch("Chapter 2 · Intelligent Agents", [
+        "2.1 Agents and Environments",
+        "2.2 Good Behavior: The Rationality Concept",
+        "2.3 The Nature of Environments",
+        "2.4 The Structure of Agents"
+      ]),
+      branch("Chapter 3 · Solving Problems by Searching", [
+        "3.1 Problem-Solving Agents",
+        "3.2 Example Problems",
+        "3.3 Uninformed Search Strategies",
+        "3.4 Informed (Heuristic) Search Strategies",
+        "3.5 Heuristic Functions"
+      ]),
+      branch("Chapter 4 · Beyond Classical Search", [
+        "4.1 Local Search and Optimization",
+        "4.2 Local Search in Continuous Spaces",
+        "4.3 Search with Nondeterministic Actions",
+        "4.4 Search in Partially Observable Environments",
+        "4.5 Online Search Agents"
+      ]),
+      branch("Chapter 5 · Adversarial Search and Games", [
+        "5.1 Game Theory",
+        "5.2 Optimal Decisions in Games (Minimax)",
+        "5.3 Alpha-Beta Pruning",
+        "5.4 Monte Carlo Tree Search",
+        "5.5 Stochastic and Partially Observable Games"
+      ]),
+      branch("Chapter 6 · Constraint Satisfaction Problems", [
+        "6.1 Defining Constraint Satisfaction Problems",
+        "6.2 Constraint Propagation",
+        "6.3 Backtracking Search for CSPs",
+        "6.4 Local Search for CSPs",
+        "6.5 The Structure of Problems"
+      ]),
+      branch("Chapter 7 · Logical Agents", [
+        "7.1 Knowledge-Based Agents",
+        "7.2 The Wumpus World",
+        "7.3 Propositional Logic",
+        "7.4 Inference in Propositional Logic",
+        "7.5 Effective Propositional Model Checking"
+      ]),
+      branch("Chapter 8 · First-Order Logic", [
+        "8.1 Representation Revisited",
+        "8.2 Syntax and Semantics of First-Order Logic",
+        "8.3 Using First-Order Logic",
+        "8.4 Knowledge Engineering"
+      ]),
+      branch("Chapter 9 · Inference in First-Order Logic", [
+        "9.1 Propositional vs. First-Order Inference",
+        "9.2 Unification and First-Order Inference",
+        "9.3 Forward Chaining",
+        "9.4 Backward Chaining",
+        "9.5 Resolution"
+      ]),
+      branch("Chapter 10 · Knowledge Representation", [
+        "10.1 Ontological Engineering",
+        "10.2 Categories and Objects",
+        "10.3 Events and Time",
+        "10.4 Reasoning Systems for Categories",
+        "10.5 The Semantic Web"
+      ]),
+      branch("Chapter 11 · Automated Planning", [
+        "11.1 Definition of Classical Planning",
+        "11.2 Algorithms for Planning",
+        "11.3 Heuristics for Planning",
+        "11.4 Hierarchical Planning",
+        "11.5 Planning and Acting in the Real World"
+      ]),
+      branch("Chapter 12 · Quantifying Uncertainty", [
+        "12.1 Acting under Uncertainty",
+        "12.2 Basic Probability Notation",
+        "12.3 Inference Using Full Joint Distributions",
+        "12.4 Independence and Bayes' Rule",
+        "12.5 Naive Bayes Models"
+      ]),
+      branch("Chapter 13 · Probabilistic Reasoning", [
+        "13.1 Representing Knowledge in an Uncertain Domain",
+        "13.2 Bayesian Networks",
+        "13.3 Exact Inference in Bayesian Networks",
+        "13.4 Approximate Inference",
+        "13.5 Hidden Markov Models"
+      ]),
+      branch("Chapter 14 · Making Simple Decisions", [
+        "14.1 Combining Beliefs and Desires under Uncertainty",
+        "14.2 The Basis of Utility Theory",
+        "14.3 Utility Functions",
+        "14.4 Decision Networks"
+      ]),
+      branch("Chapter 15 · Making Complex Decisions", [
+        "15.1 Sequential Decision Problems",
+        "15.2 Markov Decision Processes",
+        "15.3 Value and Policy Iteration",
+        "15.4 Partially Observable MDPs",
+        "15.5 Multiagent Decision Making"
+      ]),
+      branch("Chapter 16 · Machine Learning: Learning from Examples", [
+        "16.1 Forms of Learning",
+        "16.2 Supervised Learning",
+        "16.3 Decision Trees",
+        "16.4 Model Selection and Overfitting",
+        "16.5 Ensemble Learning: Bagging, Boosting, Random Forests",
+        "16.6 Support Vector Machines"
+      ]),
+      branch("Chapter 17 · Learning Probabilistic Models", [
+        "17.1 Statistical Learning",
+        "17.2 Naive Bayes Models",
+        "17.3 Maximum Likelihood and MAP Estimation",
+        "17.4 Unsupervised Clustering (EM Algorithm)"
+      ]),
+      branch("Chapter 18 · Deep Learning", [
+        "18.1 Simple Feedforward Networks",
+        "18.2 Backpropagation and Gradient Descent",
+        "18.3 Convolutional Neural Networks",
+        "18.4 Recurrent Neural Networks",
+        "18.5 Transformers and Attention",
+        "18.6 Generative Models: GANs, Diffusion, Autoencoders"
+      ]),
+      branch("Chapter 19 · Reinforcement Learning", [
+        "19.1 Learning from Rewards",
+        "19.2 Passive Reinforcement Learning",
+        "19.3 Active Reinforcement Learning (Q-Learning)",
+        "19.4 Policy Search",
+        "19.5 Deep Reinforcement Learning"
+      ]),
+      branch("Chapter 20 · Natural Language Processing", [
+        "20.1 Language Models",
+        "20.2 Text Classification",
+        "20.3 Information Retrieval",
+        "20.4 Grammar and Parsing",
+        "20.5 Machine Translation",
+        "20.6 Large Language Models"
+      ]),
+      branch("Chapter 21 · Computer Vision", [
+        "21.1 Image Formation",
+        "21.2 Feature Extraction and Edge Detection",
+        "21.3 Object Recognition",
+        "21.4 Convolutional Networks for Vision",
+        "21.5 3D Vision and Video Understanding"
+      ]),
+      branch("Chapter 22 · Robotics", [
+        "22.1 Robots and Robotic Systems",
+        "22.2 Robotic Perception",
+        "22.3 Planning and Control in Robotics",
+        "22.4 Reinforcement Learning in Robotics",
+        "22.5 Human-Robot Interaction"
+      ]),
+      branch("Chapter 23 · Philosophy, Ethics, and Safety of AI", [
+        "23.1 Weak vs Strong AI",
+        "23.2 Bias and Fairness",
+        "23.3 Privacy and Surveillance",
+        "23.4 AI Safety and Alignment",
+        "23.5 The Future of AI and Society"
+      ])
+    ]
+  };
+}
+
+/**
+ * Precalc/Biology were seeded under an older, non-id-tracked scheme before the
+ * id-tracked seeding below existed, so some users ended up with two entries per
+ * topic (an orphaned legacy copy + the canonical "sm_builtin_*" one) — the dedup
+ * below only ever checked ids, which never matched the legacy copy. This merges
+ * mastery (keeping the higher value per leaf, matched by label) from every
+ * duplicate into the canonical builtin map, then drops the extras. Runs once.
+ */
+const DEDUPED_KEY = "inkling-studymaps-builtin-deduped-v1";
+function normalizeTopic(topic) {
+  return String(topic || "").trim().toLowerCase().replace(/^openstax\s+/, "");
+}
+function dedupeLegacyBuiltins(maps) {
+  if (localStorage.getItem(DEDUPED_KEY)) return false;
+  localStorage.setItem(DEDUPED_KEY, "1");
+  const byTopic = new Map();
+  for (const m of maps) {
+    if (!m.topic) continue;
+    const key = normalizeTopic(m.topic);          // "Biology" and "OpenStax Biology" collapse together
+    if (!byTopic.has(key)) byTopic.set(key, []);
+    byTopic.get(key).push(m);
+  }
+  let changed = false;
+  for (const group of byTopic.values()) {
+    if (group.length < 2) continue;
+    const canonical = group.find((m) => m.id.startsWith("sm_builtin_")) || group[0];
+    for (const dup of group) {
+      if (dup === canonical) continue;
+      for (const br of dup.branches || []) {
+        for (const leaf of br.leaves || []) {
+          const target = canonical.branches
+            .flatMap((b) => b.leaves)
+            .find((l) => l.label.toLowerCase() === leaf.label.toLowerCase());
+          if (target && (leaf.mastery || 0) > (target.mastery || 0)) target.mastery = leaf.mastery;
+        }
+      }
+      maps.splice(maps.indexOf(dup), 1);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 /** Ensure the built-in maps exist. Idempotent; each builtin seeds once (tracked by id),
- *  so deletes stick AND a newly-added builtin (Biology) shows up for existing users too. */
+ *  so deletes stick AND a newly-added builtin (Biology, Chemistry, AI) shows up for
+ *  existing users too. Also runs the one-time legacy-duplicate cleanup above. */
 export function seedBuiltInStudyMaps() {
   try {
     let seeded;
     try { const v = JSON.parse(localStorage.getItem(BUILTIN_SEEDED_KEY) || "[]"); seeded = Array.isArray(v) ? v : ["sm_builtin_precalc"]; }
     catch { seeded = []; }
     const maps = loadStudyMaps();
-    let changed = false;
-    [buildPrecalcMap, buildBiologyMap].forEach((fn) => {
+    let changed = dedupeLegacyBuiltins(maps);
+    [buildPrecalcMap, buildBiologyMap, buildChemistryMap, buildAIMap].forEach((fn) => {
       const m = fn();
       if (seeded.includes(m.id)) return;                     // already seeded before (or user deleted it)
       if (!maps.some((x) => x.id === m.id)) { maps.unshift(m); changed = true; }
