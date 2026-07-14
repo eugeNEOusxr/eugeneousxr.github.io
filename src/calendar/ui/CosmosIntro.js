@@ -104,11 +104,13 @@ export class CosmosIntro {
     this._greet = greet;
   }
 
-  /** Any tap → leave the welcome and open the 3D calendar (notebook-wall months),
-   *  so the very first tap lands you where you can tap a day. */
+  /** Any tap → leave the welcome and open the 2D Study Map (knowledge graph).
+   *  The old 3D notebook calendar has been retired from the UI, so the first tap
+   *  now lands on the Mind graph (interim destination; a "jot a note" prompt will
+   *  precede the graph once the note-onboarding flow is built). */
   _enter() {
     this.hide();
-    try { this.app?.enterCalendarMaxLayer?.(); } catch { /* ignore */ }
+    try { this.app?._handleBottomNavTab?.("mind", { toggle: false }); } catch { /* ignore */ }
   }
 
   show() {
