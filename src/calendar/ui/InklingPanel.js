@@ -12,6 +12,7 @@ import { openPanel } from "./AppLauncher.js";
 import { InklingAlerts, colorizeAlertWords } from "./InklingAlertsPanel.js";
 import { analyzePatterns, patternInsights, dataNudge, reportSuggestions, CONNECTIONS_PROMPT, checkInQuestions, followUpSuggestions, recentRemarks } from "../ai/patternBrain.js";
 import { GoalsPanel } from "./GoalsPanel.js";
+import { StorybookPanel } from "./StorybookPanel.js";
 import { Connections2D } from "./Connections2D.js";
 import { InklingMindPanel } from "./InklingMindPanel.js";
 import { StudyMapPanel } from "./StudyMapPanel.js";
@@ -543,6 +544,12 @@ export class InklingPanel {
   showGoals(opts = {}) {
     if (!this._goals) this._goals = new GoalsPanel();
     this._goals.show(opts);
+  }
+
+  /** Open the Storybook surface — your notes, events, and goals composed into a readable chapter. */
+  showStorybook(opts = {}) {
+    if (!this._storybook) this._storybook = new StorybookPanel();
+    this._storybook.show(opts);
   }
 
   /** Open the Mind surface — the WordWeaver knowledge canvas (zoomable node graph). */

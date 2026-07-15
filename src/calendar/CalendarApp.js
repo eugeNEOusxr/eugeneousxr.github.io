@@ -1096,6 +1096,7 @@ export class CalendarApp {
     this.inklingPanel?.alerts?.hide({ silent: true });
     this.inklingPanel?._connMap?.hide?.({ silent: true });
     this.inklingPanel?._goals?.hide?.({ silent: true });
+    this.inklingPanel?._storybook?.hide?.({ silent: true });
     this.inklingPanel?._mindPanel?.hide?.({ silent: true });
     closeAlertsDropdown();
     this.windowManager?.closeAllPanels();
@@ -1210,6 +1211,7 @@ export class CalendarApp {
     this.inklingPanel.minimize();
     this.inklingPanel?._connMap?.hide?.({ silent: true });
     this.inklingPanel?._goals?.hide?.({ silent: true });
+    this.inklingPanel?._storybook?.hide?.({ silent: true });
     this.inklingPanel?._mindPanel?.hide?.({ silent: true });
     this.wordWeaverEmbed?.exitImmersive();
     this.wordWeaverEmbed?.hide();
@@ -1272,6 +1274,12 @@ export class CalendarApp {
         document.body.classList.add("inkling-stage-open");
         this._showStageBackdrop(true);
         this.inklingPanel?.showGoals({ onClose: () => this._closeBottomStage() });
+        break;
+      case "storybook":
+        document.body.classList.add("inkling-stage-open");
+        this._showStageBackdrop(true);
+        // Your life, projects, and ideas read back as an evolving story.
+        this.inklingPanel?.showStorybook({ onClose: () => this._closeBottomStage() });
         break;
       case "study":
         document.body.classList.add("inkling-stage-open");
