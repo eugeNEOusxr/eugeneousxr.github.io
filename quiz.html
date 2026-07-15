@@ -2600,12 +2600,13 @@
       var s=String(to||"");
       return /^[a-z0-9-]+$/.test(s) ? kgPretty(s) : s;
     }
+    // Resolve to a concept ONLY on a genuine topic match. No subject-level
+    // fallback: a question that doesn't match a concept shows no concept links,
+    // rather than borrowing an unrelated concept's prerequisites/careers.
     function kgSlugFor(deckId, title, prompt){
       var hay=((title||"")+" "+(prompt||"")).toLowerCase();
       for (var i=0;i<KG.match.length;i++){ if (KG.match[i].re.test(hay)) return KG.match[i].slug; }
-      var d=String(deckId||"");
-      var dom=/^bio\s/i.test(d)?"biology":/^chem\s/i.test(d)?"chemistry":/^phys\s/i.test(d)?"physics":/^ai\s/i.test(d)?"ai":/^psych\s/i.test(d)?"psychology":"precalc";
-      return KG.domainDefault[dom]||null;
+      return null;
     }
     function kgEdges(slug, type){ return KG.edges.filter(function(e){ return e.from===slug && e.type===type; }); }
     // Follow the first prereq/next each level to build a short path chain of titles.
@@ -2726,6 +2727,7 @@
     function showKnowledgePortal(){
       if (!explainBody || document.getElementById("kgPortal")) return;
       var slug=kgSlugFor(DECKS[curDeck].id, DECKS[curDeck].title, sessionQA && sessionQA.prompt);
+      if (!slug) return;   // no genuine concept match → no concept card (avoids subject-only noise)
       renderPortalFor(slug, { deckId:DECKS[curDeck].id, title:DECKS[curDeck].title, prompt: sessionQA && sessionQA.prompt });
     }
     // Open the panel focused on a prerequisite concept the student chose to review.
