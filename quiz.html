@@ -2741,46 +2741,42 @@
       var prev=document.getElementById("kgPortal"); if (prev) prev.remove();
       var c=slug && KG.concepts[slug];
       var rel=relevanceFor(opts.deckId!=null?opts.deckId:"", (c?c.title:(opts.title||"")), (c?c.definition:opts.prompt));
-      var secHead=function(n,label,color){ return '<div style="font:800 11px system-ui;color:'+color+';letter-spacing:.4px;margin:13px 0 5px">'+n+' · '+label+'</div>'; };
-      var html='';
+      // Each section is a collapsible DOOR — tap the header to open it. Only the
+      // first is open by default, so the card is a tidy menu, not a wall of text.
+      var secs=[];
+      function door(label,color,body,open){ if(body) secs.push({label:label,color:color,body:body,open:!!open}); }
 
-      // 1 — What is it?
-      html+=secHead("①","WHAT IS IT?","#a5b4fc");
+      // ① What is it
       if (c){
-        html+='<div style="font:700 14px system-ui;color:var(--text);margin-bottom:3px">'+kgEsc(c.title)+'</div>';
-        html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)"><b>'+kgEsc(c.definition)+'</b><br>'+kgEsc(c.explanation)+'</div>';
-        if (c.analogy) html+='<div style="margin-top:7px;font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">🔎 <i>'+kgEsc(c.analogy)+'</i></div>';
-        if (c.example) html+='<div style="margin-top:6px;font:600 12.5px/1.5 ui-monospace,monospace;color:#7dd3fc;background:rgba(56,189,248,.08);border-radius:8px;padding:6px 9px">'+kgEsc(c.example)+'</div>';
-        var princ = KG_PRINCIPLE[slug];
-        if (princ) html+='<div style="margin-top:9px;font:500 13px/1.55 system-ui;color:var(--text);border-left:3px solid rgba(129,140,248,.55);padding-left:10px"><b style="color:#a5b4fc">⚙️ Why it works — </b>'+kgEsc(princ)+'</div>';
+        var whatBody=
+            '<div style="font:700 14px system-ui;color:var(--text);margin-bottom:3px">'+kgEsc(c.title)+'</div>'
+          + '<div style="font:500 13.5px/1.55 system-ui;color:var(--text)"><b>'+kgEsc(c.definition)+'</b><br>'+kgEsc(c.explanation)+'</div>'
+          + (c.analogy?'<div style="margin-top:7px;font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">🔎 <i>'+kgEsc(c.analogy)+'</i></div>':'')
+          + (c.example?'<div style="margin-top:6px;font:600 12.5px/1.5 ui-monospace,monospace;color:#7dd3fc;background:rgba(56,189,248,.08);border-radius:8px;padding:6px 9px">'+kgEsc(c.example)+'</div>':'');
+        door("① What is it","#a5b4fc",whatBody,true);
+        var princ=KG_PRINCIPLE[slug];
+        if (princ) door("⚙️ Why it works","#a5b4fc",'<div style="font:500 13px/1.55 system-ui;color:var(--text)">'+kgEsc(princ)+'</div>',false);
+        if (c.why) door("② Why it matters","#f0abfc",'<div style="font:500 13.5px/1.55 system-ui;color:var(--text)">'+kgEsc(c.why)+'</div>',false);
       } else {
-        html+='<div style="font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">This card is an entry point — the concept graph for this topic is still being mapped.</div>';
+        door("① What is it","#a5b4fc",'<div style="font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">This card is an entry point — the concept graph for this topic is still being mapped.</div>',true);
       }
 
-      // 2 — Why does it matter?
-      if (c && c.why){ html+=secHead("②","WHY IT MATTERS","#f0abfc"); html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)">'+kgEsc(c.why)+'</div>'; }
-
-      // ✦ Cross-domain synthesis — the same idea wearing a different costume.
-      //   The rarest, most valuable edges in the graph: a concept revealed to be
-      //   an idea the student may already know from another subject.
+      // 🔀 The same idea, elsewhere (cross-domain equivalences)
       var same = slug ? kgEdges(slug,"sameIdea") : [];
       if (same.length){
-        html+='<div style="margin:14px 0 2px;background:linear-gradient(180deg,rgba(217,70,239,.11),rgba(56,189,248,.06));border:1px solid rgba(217,70,239,.34);border-radius:12px;padding:10px 12px">'+
-          '<div style="font:800 11px system-ui;color:#e879f9;letter-spacing:.4px;margin-bottom:3px">🔀 THE SAME IDEA, ELSEWHERE</div>'+
-          same.map(function(e){
-            return '<div style="font:500 13px/1.55 system-ui;color:var(--text);margin-top:7px"><b style="color:#f0abfc">'+kgEsc(kgLabel(e.to))+'</b> — '+kgEsc(e.reason||"")+kgConfBadge(e)+'</div>';
-          }).join('')+'</div>';
+        door("🔀 The same idea, elsewhere","#e879f9", same.map(function(e){
+          return '<div style="font:500 13px/1.55 system-ui;color:var(--text);margin-top:6px"><b style="color:#f0abfc">'+kgEsc(kgLabel(e.to))+'</b> — '+kgEsc(e.reason||"")+kgConfBadge(e)+'</div>';
+        }).join(''), false);
       }
 
-      // 3 — Where is it used? (reuses the Relevance Engine)
+      // 💼 Where it's used (Relevance Engine)
       if (rel){
-        html+=secHead("③","WHERE IT'S USED","#38bdf8");
-        html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)">'+rel.text+'</div>';
-        if (rel.careers && rel.careers.length)
-          html+='<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">'+rel.careers.map(function(x){ return '<span style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.35);border-radius:999px;padding:3px 10px;font:700 11px system-ui;color:#7dd3fc">'+kgEsc(x)+'</span>'; }).join("")+'</div>';
+        var useBody='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)">'+rel.text+'</div>'
+          + ((rel.careers&&rel.careers.length)?'<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">'+rel.careers.map(function(x){ return '<span style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.35);border-radius:999px;padding:3px 10px;font:700 11px system-ui;color:#7dd3fc">'+kgEsc(x)+'</span>'; }).join("")+'</div>':'');
+        door("💼 Where it's used","#38bdf8",useBody,false);
       }
 
-      // 4 & 5 — knowledge path (before ↑ / after ↓), an arrow chain of titles.
+      // 🧭 Where it fits — before & after path
       if (c){
         var arrow=function(chain,hereIdx){
           return '<div style="font:600 13px/1.7 system-ui">'+chain.map(function(s,i){
@@ -2789,17 +2785,16 @@
             return node+(i<chain.length-1?'<div style="color:#64748b;font-size:12px;line-height:1.1">↓</div>':'');
           }).join("")+'</div>';
         };
-        var pre=kgChain(slug,"prerequisite",3);
-        html+=secHead("④","WHAT TO KNOW FIRST","#fca5a5");
-        html+= pre.length>1 ? arrow(pre, pre.length-1)
-             : '<div style="font:500 13px system-ui;color:var(--muted,#9aa3bd)">Foundational — no prerequisites to worry about.</div>';
-        var nxt=kgChain(slug,"next",3);
-        html+=secHead("⑤","WHAT IT LEADS TO","#86efac");
-        html+= nxt.length>1 ? arrow(nxt, 0)
-             : '<div style="font:500 13px system-ui;color:var(--muted,#9aa3bd)">You\'re near the frontier of this track.</div>';
+        var pre=kgChain(slug,"prerequisite",3), nxt=kgChain(slug,"next",3);
+        var pathBody=
+            '<div style="font:800 10.5px system-ui;color:#fca5a5;margin-bottom:3px">WHAT TO KNOW FIRST</div>'
+          + (pre.length>1?arrow(pre,pre.length-1):'<div style="font:500 13px system-ui;color:var(--muted,#9aa3bd)">Foundational — no prerequisites.</div>')
+          + '<div style="font:800 10.5px system-ui;color:#86efac;margin:11px 0 3px">WHAT IT LEADS TO</div>'
+          + (nxt.length>1?arrow(nxt,0):'<div style="font:500 13px system-ui;color:var(--muted,#9aa3bd)">You\'re near the frontier of this track.</div>');
+        door("🧭 Where it fits (before & after)","#fca5a5",pathBody,false);
       }
 
-      // 6 — How does it connect? (typed relationship chips, by KG_TYPES order)
+      // 🔗 How it connects (typed relationship chips)
       if (c){
         var connectTypes=["related","career","industry","project","history"], rows="";
         connectTypes.forEach(function(t){
@@ -2810,17 +2805,34 @@
             return '<span style="display:inline-flex;align-items:center;background:rgba(148,163,184,.12);border:1px solid rgba(148,163,184,.28);border-radius:999px;padding:3px 9px;font:700 11.5px system-ui;color:var(--text)">'+kgEsc(kgLabel(e.to))+kgConfBadge(e)+'</span>';
           }).join("")+'</div></div>';
         });
-        if (rows){
-          html+=secHead("⑥","HOW IT CONNECTS","#fdba74");
-          html+='<div style="font:500 11px system-ui;color:var(--muted,#9aa3bd);margin:-2px 0 2px">Each link shows whether it is human-verified or an AI suggestion (with confidence).</div>'+rows;
-        }
+        if (rows) door("🔗 How it connects","#fdba74",'<div style="font:500 11px system-ui;color:var(--muted,#9aa3bd);margin:0 0 2px">Human-verified vs AI-suggested (with confidence).</div>'+rows,false);
       }
+
+      var html=secs.map(function(s){
+        return '<div class="kgsec">'
+          + '<button type="button" class="kgsec-h" style="width:100%;text-align:left;background:none;border:none;border-top:1px solid rgba(148,163,184,.16);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 2px;font:800 12px system-ui;color:'+s.color+';letter-spacing:.2px">'
+          +   '<span>'+s.label+'</span><span class="kgsec-chev" style="color:var(--muted,#9aa3bd);font-size:11px">'+(s.open?'▾':'▸')+'</span>'
+          + '</button>'
+          + '<div class="kgsec-b" style="display:'+(s.open?'block':'none')+';padding:0 2px 10px">'+s.body+'</div>'
+        + '</div>';
+      }).join('');
 
       var d=document.createElement("div");
       d.id="kgPortal";
-      d.style.cssText="background:linear-gradient(180deg,rgba(99,102,241,.08),rgba(56,189,248,.05));border:1px solid rgba(129,140,248,.30);border-radius:14px;padding:12px 14px 14px;margin-bottom:6px";
+      d.style.cssText="background:linear-gradient(180deg,rgba(99,102,241,.08),rgba(56,189,248,.05));border:1px solid rgba(129,140,248,.30);border-radius:14px;padding:12px 14px 8px;margin-bottom:6px";
       d.innerHTML='<div style="font:900 12.5px system-ui;color:#c7d2fe;letter-spacing:.5px;display:flex;align-items:center;gap:6px">📘 ABOUT THIS CONCEPT'+
-        (c?'<span style="font:700 11px system-ui;color:var(--muted,#9aa3bd)">· '+kgEsc(c.title)+(c.difficulty?' · difficulty '+c.difficulty+'/5':'')+'</span>':'')+'</div>'+html;
+        (c?'<span style="font:700 11px system-ui;color:var(--muted,#9aa3bd)">· '+kgEsc(c.title)+(c.difficulty?' · difficulty '+c.difficulty+'/5':'')+'</span>':'')+'</div>'+
+        '<div style="font:500 11px system-ui;color:var(--muted,#9aa3bd);margin:3px 0 4px">Tap a section to open it 👇</div>'+html;
+      // One delegated toggle for every collapsible door.
+      d.addEventListener("click",function(ev){
+        var h=ev.target && ev.target.closest ? ev.target.closest(".kgsec-h") : null;
+        if(!h || !d.contains(h)) return;
+        var body=h.nextElementSibling, chev=h.querySelector(".kgsec-chev");
+        if(!body) return;
+        var isOpen=body.style.display!=="none";
+        body.style.display=isOpen?"none":"block";
+        if(chev) chev.textContent=isOpen?"▸":"▾";
+      });
       if (opts.override){
         var back=document.createElement("button");
         back.type="button"; back.textContent="← back to your question";
