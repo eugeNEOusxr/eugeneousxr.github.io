@@ -2856,10 +2856,66 @@
       [].forEach.call(d.querySelectorAll(".kg-pre"),function(b){ b.addEventListener("click",function(){ openConceptPortal(b.getAttribute("data-slug")); }); });
       var rv=d.querySelector("#kgReview"); if (rv) rv.addEventListener("click",function(){ openConceptPortal(slug); });
     }
+    /* ── Real-world scenario for THIS specific problem ───────────────────────
+       Concept cards are the same across a section; a student wants to know what
+       THIS exact question maps to in the real world. Two layers: a free, instant
+       scenario keyed to the problem's SHAPE (line, parabola, growth, angle…) that
+       varies per question and works for guests, plus a "tailor with AI" button
+       that writes a bespoke scenario for the precise problem (signed-in, cached). */
+    var SCENARIO_CACHE_KEY="inkling-quiz-scenario-cache";
+    function scenarioGet(qa){ try{ var m=JSON.parse(localStorage.getItem(SCENARIO_CACHE_KEY)||"{}"); return m[explainKey(qa)]||null; }catch(e){ return null; } }
+    function scenarioSet(qa,txt){ try{ var m=JSON.parse(localStorage.getItem(SCENARIO_CACHE_KEY)||"{}"); var k=explainKey(qa); if(!(k in m)){ var ks=Object.keys(m); while(ks.length>=80){ delete m[ks.shift()]; } } m[k]=txt; localStorage.setItem(SCENARIO_CACHE_KEY, JSON.stringify(m)); }catch(e){} }
+    // Shape/topic detectors → a concrete real-world framing. First match wins.
+    function localScenario(qa){
+      var t=((qa.prompt||"")+" "+(qa.answer||"")).toLowerCase();
+      if (/imaginary|complex number|a\s*\+\s*bi/.test(t)) return "Picture an AC power line: engineers write the voltage as a complex number, where the imaginary part tracks how far the current lags behind — the same a + bi you're working with here keeps a city's grid in phase.";
+      if (/x\s*²|x\s*\^\s*2|quadratic|parabola/.test(t)) return "Read this as the arc of something launched — a motorbike catching air off a ramp, or water from a fountain. The curve climbs to a peak and falls; a coach reads the top as max height, an engineer reads it as where a headlight's beam focuses.";
+      if (/exponential|half-life|compound|\bdecay\b|growth factor|\bb\s*\^\s*x|2\s*\^|e\s*\^/.test(t)) return "This is the shape of $500 compounding in a savings account, a rumor doubling each retelling, or a radioactive sample fading by half — slow at first, then racing away (or vanishing) faster and faster.";
+      if (/sine|cosine|tangent|radian|angle|trig/.test(t)) return "Think of a Ferris wheel or a piston: as the angle turns, your height traces a sine wave. The same math points a satellite dish, spins a game character, and shapes a sound wave.";
+      if (/slope|linear|point-slope|\bm\s*x\b|y\s*=\s*-?\d*\.?\d*\s*x/.test(t)) return "Treat this line as a road's incline or a phone plan: the slope is how steep the climb — or how much each extra mile or gigabyte costs — and the starting value is the height you set out from, or the flat monthly base.";
+      if (/\b[a-z]\(\s*-?\d/i.test(t)) return "Plugging a number into the function is like setting a machine's dial: feed in a value (hours parked, items in the cart, miles driven) and read the single output it returns — the price, the total, the distance.";
+      if (/probab|likelihood|\bodds\b|\bdice\b|\bcoin\b/.test(t)) return "This is the math a meteorologist uses for '70% chance of rain,' an insurer uses to price your premium, and a self-driving car uses to decide how sure it is that shape ahead is a pedestrian.";
+      return null;
+    }
+    function showScenario(){
+      if (!explainBody || document.getElementById("kgScenario")) return;
+      var qa=sessionQA || currentQA();
+      var box=document.createElement("div"); box.id="kgScenario";
+      box.style.cssText="background:linear-gradient(180deg,rgba(52,211,153,.11),rgba(56,189,248,.05));border:1px solid rgba(52,211,153,.32);border-radius:12px;padding:11px 13px;margin-bottom:8px";
+      box.innerHTML='<div style="font:800 11px system-ui;color:#34d399;letter-spacing:.4px;margin-bottom:5px">🌍 THIS PROBLEM IN THE REAL WORLD</div><div id="kgScenarioBody" style="font:500 13.5px/1.55 system-ui;color:var(--text)"></div>';
+      explainBody.insertBefore(box, explainBody.firstChild);
+      var body=box.querySelector("#kgScenarioBody");
+      var cached=scenarioGet(qa), local=localScenario(qa);
+      if (cached){ body.innerHTML=cached; return; }
+      if (local) body.innerHTML=local;
+      else if (!authToken()){ body.innerHTML='<span style="color:var(--muted,#9aa3bd)">Sign in to Inkling for a real-world scenario tailored to this exact problem.</span>'; return; }
+      if (authToken()){
+        var btn=document.createElement("button");
+        btn.type="button"; btn.textContent="✨ Tailor this to the exact problem";
+        btn.style.cssText="margin-top:8px;cursor:pointer;background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.4);border-radius:999px;padding:4px 12px;font:700 12px system-ui;color:#6ee7b7";
+        btn.addEventListener("click",function(){
+          btn.disabled=true; body.textContent="…";
+          var ask="In 2–3 vivid sentences, describe a specific real-world scenario where THIS exact problem's math shows up. Invent concrete, plausible details — real objects, quantities, units. If it involves a line, curve, graph, or points, say what they could physically represent (a road's incline, a thrown ball's arc, a motor's RPM in a given gear, a pricing plan). Do NOT solve it or restate the question. Problem: "+qa.prompt+(qa.answer?" (the answer is "+qa.answer+")":"");
+          fetch(apiBase()+"/api/inkling/explain",{ method:"POST", headers:{ "Content-Type":"application/json","Authorization":"Bearer "+authToken() }, body:JSON.stringify({ history:[{role:"user",content:ask}], mode:"scenario" }) })
+            .then(function(r){ return r.json().catch(function(){return null;}); })
+            .then(function(d){
+              if(!d){ body.textContent="Couldn't reach Inkling — try again."; return; }
+              if(d.source==="guest"){ body.innerHTML='<span style="color:var(--muted,#9aa3bd)">Sign in to Inkling for a tailored scenario.</span>'; return; }
+              if(d.source==="capped"){ body.textContent="You've hit today's AI limit — resets tomorrow."; return; }
+              var reply=String(d.reply||"").trim(); if(!reply){ body.textContent=local||"Hmm — couldn't picture one this time."; return; }
+              var safe=reply.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+              body.innerHTML=safe; scenarioSet(qa, safe);
+            })
+            .catch(function(){ body.textContent=local||"Couldn't reach Inkling — check your connection."; });
+        });
+        box.appendChild(btn);
+      }
+    }
     function openExplain(){
       ensureSession();
       explainPanel.classList.remove("hidden");
       showKnowledgePortal();
+      showScenario();
       showFull();
       explainInput.focus();
     }
@@ -2867,6 +2923,7 @@
       ensureSession();
       explainPanel.classList.remove("hidden");
       showKnowledgePortal();
+      showScenario();
       if (fullShown || explainBusy){ explainInput.focus(); return; }
       var qa=sessionQA;
       if (hintLevel===0){
