@@ -1092,6 +1092,71 @@ const DEDUPED_KEY = "inkling-studymaps-builtin-deduped-v1";
 function normalizeTopic(topic) {
   return String(topic || "").trim().toLowerCase().replace(/^openstax\s+/, "");
 }
+function buildEEMap() {
+  const leaf = (label) => ({ id: uid("l"), label, mastery: 0 });
+  const branch = (label, labels) => ({ id: uid("b"), label, leaves: labels.map(leaf) });
+  return {
+    id: "sm_builtin_ee",
+    topic: "Electrical Engineering",
+    builtin: true,
+    createdAt: Date.now(),
+    branches: [
+      branch("Stage 0 · Foundations", [
+        "Algebra & Trigonometry",
+        "Calculus I–II",
+        "Calculus III · Multivariable",
+        "Differential Equations",
+        "Linear Algebra ★",
+        "Probability & Statistics ★",
+        "Physics I · Mechanics",
+        "Physics II · Electricity & Magnetism ★",
+        "Programming · C/C++ & Python ★",
+        "Intro Chemistry"
+      ]),
+      branch("Stage 1 · Core Circuits & Logic", [
+        "Circuit Analysis I · DC ★",
+        "Circuit Analysis II · AC ★",
+        "Digital Logic Design ★",
+        "Signals & Systems ★",
+        "Electronics I ★"
+      ]),
+      branch("Stage 2 · The Pillars", [
+        "Electronics II",
+        "Microcontrollers & Embedded Systems ★",
+        "Electromagnetic Fields & Waves",
+        "Control Systems ★",
+        "Digital Signal Processing ★",
+        "Computer Architecture ★"
+      ]),
+      branch("Stage 3 · Embedded & Robotics (your path)", [
+        "RTOS & Real-Time Programming ★",
+        "Sensors & Actuators ★",
+        "Motor Control ★",
+        "Robot Kinematics ★",
+        "ROS · Robot Operating System ★",
+        "PCB Design · KiCad ★"
+      ]),
+      branch("Stage 3 · Other EE Branches (breadth)", [
+        "Power & Energy",
+        "Communications & RF",
+        "Computer Engineering / VLSI",
+        "Signals, Controls & ML"
+      ]),
+      branch("Stage 4 · Capstone & Mastery", [
+        "Senior Design / Capstone ★",
+        "Advanced Branch Electives",
+        "Target Build · autonomous robot / embedded AI ★"
+      ]),
+      branch("Throughout · Lab & Tools", [
+        "Lab instruments · scope, multimeter, soldering",
+        "Simulation · SPICE, MATLAB/Simulink",
+        "PCB / CAD · KiCad",
+        "Git & documentation"
+      ])
+    ]
+  };
+}
+
 function dedupeLegacyBuiltins(maps) {
   if (localStorage.getItem(DEDUPED_KEY)) return false;
   localStorage.setItem(DEDUPED_KEY, "1");
@@ -1133,7 +1198,7 @@ export function seedBuiltInStudyMaps() {
     catch { seeded = []; }
     const maps = loadStudyMaps();
     let changed = dedupeLegacyBuiltins(maps);
-    [buildPrecalcMap, buildBiologyMap, buildChemistryMap, buildAIMap].forEach((fn) => {
+    [buildPrecalcMap, buildBiologyMap, buildChemistryMap, buildAIMap, buildEEMap].forEach((fn) => {
       const m = fn();
       if (seeded.includes(m.id)) return;                     // already seeded before (or user deleted it)
       if (!maps.some((x) => x.id === m.id)) { maps.unshift(m); changed = true; }
