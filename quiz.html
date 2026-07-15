@@ -2577,7 +2577,29 @@
         { from:"derivatives",  type:"sameIdea", to:"Marginal cost (economics)",           confidence:.85, status:"verified", reason:"Marginal cost literally IS the derivative of total cost: how much the next unit adds." },
         { from:"conditioning", type:"sameIdea", to:"Reinforcement learning (AI)",          confidence:.85, status:"verified", reason:"An AI learning from rewards is operant conditioning in code — behavior that pays off gets repeated." },
         { from:"trigonometry", type:"sameIdea", to:"Waves and oscillation (physics)",      confidence:.8,  status:"verified", reason:"Sound, light, and springs all trace sine waves — the same circular motion trig describes." },
-        { from:"factoring",    type:"sameIdea", to:"Public-key encryption (cybersecurity)", confidence:.75, status:"ai", reason:"RSA's security rests on factoring being hard — the exact skill you're practicing, scaled to 600-digit numbers." }
+        { from:"factoring",    type:"sameIdea", to:"Public-key encryption (cybersecurity)", confidence:.75, status:"ai", reason:"RSA's security rests on factoring being hard — the exact skill you're practicing, scaled to 600-digit numbers." },
+        { from:"factoring",    type:"sameIdea", to:"Prime factorization (number theory)",  confidence:.9,  status:"verified", reason:"Breaking a polynomial into factors and a number into primes are the same move: find the multiplicative building blocks." },
+
+        { from:"functions",    type:"sameIdea", to:"Hash maps / lookup tables (computer science)", confidence:.8, status:"verified", reason:"A hash map is a function in data form — every key maps to exactly one value." },
+
+        { from:"quadratics",   type:"sameIdea", to:"Projectile motion (physics)",          confidence:.9,  status:"verified", reason:"The arc of anything thrown — a ball, a rocket, a jet of water — is a parabola: the graph of a quadratic." },
+        { from:"quadratics",   type:"sameIdea", to:"Revenue optimization (business)",       confidence:.85, status:"verified", reason:"Maximum revenue usually sits at the vertex of a quadratic — the peak price before demand falls off." },
+        { from:"quadratics",   type:"sameIdea", to:"Satellite dishes & headlights (engineering)", confidence:.8, status:"ai", reason:"A parabola focuses every incoming ray to one point — why dishes, headlights, and telescopes are parabolic." },
+
+        { from:"trigonometry", type:"sameIdea", to:"3D rotation in games (game development)", confidence:.85, status:"verified", reason:"Spinning a character or camera uses sine and cosine to rotate points around a circle — trig in motion." },
+        { from:"trigonometry", type:"sameIdea", to:"GPS triangulation (navigation)",        confidence:.8,  status:"ai", reason:"Your phone fixes its location by measuring angles to satellites — trig locating a single point." },
+
+        { from:"derivatives",  type:"sameIdea", to:"A speedometer (physics)",                confidence:.9,  status:"verified", reason:"A speedometer reads the derivative of your position: how fast it's changing at this exact instant." },
+
+        { from:"limits",       type:"sameIdea", to:"Zeno's paradox (philosophy)",            confidence:.85, status:"verified", reason:"Achilles never quite catching the tortoise is a limit — infinitely many shrinking steps summing to a finite distance." },
+
+        { from:"conditioning", type:"sameIdea", to:"Slot machines & habit-forming apps (product design)", confidence:.85, status:"verified", reason:"Variable rewards that keep you pulling a lever — or refreshing a feed — are the operant schedule Skinner found in pigeons." },
+
+        { from:"intro-psychology", type:"sameIdea", to:"The scientific method (all sciences)", confidence:.85, status:"verified", reason:"Psychology tests hypotheses with control groups exactly like physics or biology — same method, different subject." },
+
+        { from:"variables",         type:"sameIdea", to:"Variables in code (programming)",   confidence:.9,  status:"verified", reason:"x in algebra and a variable in a program are the same idea: a named container for a value that can change." },
+        { from:"coordinate-plane",  type:"sameIdea", to:"Latitude & longitude (geography)",  confidence:.9,  status:"verified", reason:"Map coordinates and (x, y) points are the same idea — two numbers pinning one exact location." },
+        { from:"gcf",               type:"sameIdea", to:"Reducing fractions & gear ratios (engineering)", confidence:.8, status:"ai", reason:"Reducing a fraction to lowest terms is finding the GCF — the same move that simplifies a gear ratio." }
       ],
       match: [   // topic-regex → concept slug (checked before the domain fallback)
         { re:/\bfactor|greatest common|gcf\b/i,                          slug:"factoring" },
