@@ -13,6 +13,7 @@ import { InklingAlerts, colorizeAlertWords } from "./InklingAlertsPanel.js";
 import { analyzePatterns, patternInsights, dataNudge, reportSuggestions, CONNECTIONS_PROMPT, checkInQuestions, followUpSuggestions, recentRemarks } from "../ai/patternBrain.js";
 import { GoalsPanel } from "./GoalsPanel.js";
 import { StorybookPanel } from "./StorybookPanel.js";
+import { registerAlertFromPayload } from "../alerts/alertsModel.js";
 import { Connections2D } from "./Connections2D.js";
 import { InklingMindPanel } from "./InklingMindPanel.js";
 import { StudyMapPanel } from "./StudyMapPanel.js";
@@ -34,7 +35,7 @@ const INKLING_CRON_KEY = "calendar3d-inkling-cron-v1";
 // stamp a content change only showed up after a manual HARD reset. BUMP THIS
 // whenever wordweaver.html, wordweaver3d.html, or quiz.html changes, and the next
 // normal app load fetches the fresh file. */
-const CANVAS_VERSION = "20260714x";
+const CANVAS_VERSION = "20260714y";
 function withCanvasVersion(path) {
   return path + (path.includes("?") ? "&" : "?") + "v=" + CANVAS_VERSION;
 }
@@ -131,6 +132,17 @@ export class InklingPanel {
         this._openCanvasOverlay(withCanvasVersion(m.mode === "3d" ? "/wordweaver3d.html" : "/wordweaver.html"), "Mind — knowledge graph", "_mindOverlay", true);
       }
       else if (m.type === "inkling-close-graph") { if (this._mindOverlay) this._mindOverlay.style.display = "none"; }
+      else if (m.type === "inkling-note-added") {
+        // A note jotted on the graph that names a future time ("2pm lunch") → schedule
+        // a real reminder so it fires like a Schedule alert (was previously a silent map-note).
+        try {
+          const a = m.alert;
+          if (a && a.time) {
+            registerAlertFromPayload({ time: a.time, text: a.text, date: a.date, category: a.category });
+            recomputeSchedule();
+          }
+        } catch { /* ignore */ }
+      }
       else if (m.type === "inkling-highlight-schedule") {
         // Onboarding stage 2: glow the Schedule (writer) bottom-nav tab so a user
         // who feels lost on the graph sees where to add more notes/appointments.

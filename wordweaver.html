@@ -1307,23 +1307,51 @@
      the Schedule tab, then re-clusters + frames so you watch it land. ── */
   function _pad2(x){ return String(x).padStart(2,"0"); }
   function _bucketOf(clock){ var h=parseInt((clock||"09:00").split(":")[0],10)||9; return h<5?"Late Night":h<8?"Dawn":h<12?"Morning":h<14?"Noon":h<18?"Afternoon":h<21?"Evening":"Night"; }
+  // Pull a time out of a jotted note ("2pm lunch", "at 3", "14:00", "noon") → "HH:MM"
+  // (24h), or null. Powers both where the note lands on the clock AND its reminder.
+  function parseNoteTime(text){
+    var s = " " + String(text||"").toLowerCase() + " ";
+    var m = s.match(/\b([01]?\d|2[0-3]):([0-5]\d)\s*(am|pm)?\b/);
+    if (m){
+      var h = +m[1];
+      if (m[3]==="pm" && h<12) h+=12; else if (m[3]==="am" && h===12) h=0;
+      return _pad2(h%24)+":"+m[2];
+    }
+    if (/\bnoon\b/.test(s)) return "12:00";
+    if (/\bmidnight\b/.test(s)) return "00:00";
+    m = s.match(/\b(?:at\s+)?(\d{1,2})\s*(am|pm)\b/);
+    if (m){ var hh=+m[1]%12; if (m[2]==="pm") hh+=12; return _pad2(hh)+":00"; }
+    m = s.match(/\bat\s+(\d{1,2})\b/);   // "at 3"/"at 7" → assume afternoon/evening for small hours
+    if (m){ var h2=+m[1]; if (h2>=1 && h2<=7) h2+=12; return _pad2(h2%24)+":00"; }
+    return null;
+  }
   function jotNote(text, category){
     text = String(text||"").trim(); if (!text) return false;
     var now = new Date();
-    var dateIso = now.getFullYear()+"-"+_pad2(now.getMonth()+1)+"-"+_pad2(now.getDate());
-    var clock = _pad2(now.getHours())+":"+_pad2(now.getMinutes());
-    var startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes()).toISOString();
+    // If the note names a time, place it (and its reminder) at that time today;
+    // otherwise stamp it at the moment it was jotted.
+    var parsed = parseNoteTime(text);
+    var useH = now.getHours(), useM = now.getMinutes();
+    if (parsed){ var pp = parsed.split(":"); useH = +pp[0]; useM = +pp[1]; }
+    var when = new Date(now.getFullYear(), now.getMonth(), now.getDate(), useH, useM, 0);
+    var dateIso = when.getFullYear()+"-"+_pad2(when.getMonth()+1)+"-"+_pad2(when.getDate());
+    var clock = _pad2(useH)+":"+_pad2(useM);
+    var startTime = when.toISOString();
     var cat = (category && category!=="auto") ? category : inferCategory({ text:text });
+    // A future named time → carry an alert so the app schedules a reminder.
+    var alertPayload = (parsed && when.getTime() > now.getTime() + 1000)
+      ? { time:clock, text:text.slice(0,140), date:dateIso, category:cat } : null;
     var ev = {
       id: "ww_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
       type:"note", title:text.slice(0,120), body:text, startTime:startTime, endTime:null,
-      category:cat, priority:1, alerts:[], createdAt:startTime, updatedAt:startTime,
+      category:cat, priority:1, alerts: alertPayload ? [{ time:startTime, kind:"popup" }] : [],
+      alertAtStart: !!alertPayload, createdAt:startTime, updatedAt:startTime,
       _wwRender:{ label:"Note", timeBucket:_bucketOf(clock), color:"#e2e8f0", fontSize:0.26, weight:"normal", date:dateIso }
     };
     var arr = loadTimelineNotes(); arr.push(ev);
     try { localStorage.setItem("inkling-timeline-v1", JSON.stringify(arr)); localStorage.setItem("inkling-has-user-notes","true"); } catch(_){ return false; }
     buildNoteClusters(); buildNoteLegend(); frameNotes();
-    if (window.parent && window.parent!==window){ try { window.parent.postMessage({ type:"inkling-note-added" }, "*"); } catch(_){} }
+    if (window.parent && window.parent!==window){ try { window.parent.postMessage({ type:"inkling-note-added", alert: alertPayload }, "*"); } catch(_){} }
     if (localStorage.getItem("inkling-onboarding-active")){
       try { localStorage.removeItem("inkling-onboarding-active"); } catch(_){}
       showOnboardToast("✨ Nice — that's on your map. Keep adding, and Inkling links what belongs together.", true);
