@@ -1230,54 +1230,59 @@
       var ang = m>1 ? (-Math.PI/2 + i/m*Math.PI*2) : -Math.PI/2;
       var cx = NOTES_CENTER.x + Math.cos(ang)*(m>1?NOTES_RING:0);
       var cy = NOTES_CENTER.y + Math.sin(ang)*(m>1?NOTES_RING:0);
-      var label = MONTH_NAMES[(+key.slice(5,7))-1] + " " + key.slice(0,4);
-      var notes = byMonth[key].map(function(f){ var cat=inferCategory(f); return { text:f.text, cat:cat, color:noteColor(cat), time:f.time||"" }; });
-      notes.sort(function(a,b){ return a.cat<b.cat?-1:a.cat>b.cat?1:(a.time<b.time?-1:1); });  // alike categories adjacent
-      var cnt = notes.length;
-      // Place each note at its TIME on a 12-hour clock face (12 at top, clockwise) —
-      // a 1:30 note sits at the 1:30 position. Notes with no time fall back to an
-      // even spread. A tiny radial stagger keeps near-time notes from fully stacking.
-      notes.forEach(function(nn, j){
-        var mins = clockMinutes(nn.time);
-        var frac = (mins!=null) ? (((mins/60) % 12) / 12) : (j/Math.max(1,cnt));
-        var na = -Math.PI/2 + frac*Math.PI*2;
-        var rr = NOTE_HUB_R*(0.62 + 0.30*((j%3)/2));
-        nn.x=cx+Math.cos(na)*rr; nn.y=cy+Math.sin(na)*rr;
+      var yr = +key.slice(0,4), mo = +key.slice(5,7);
+      var label = MONTH_NAMES[mo-1] + " " + yr;
+      // Group this month's notes BY DAY so notes from different days never overlap.
+      // Each day becomes its own small labeled hub, ringed around the month centre
+      // by day-of-month; notes spread around their day hub by time-of-day.
+      var DAY_RING = NOTE_HUB_R, DAY_R = 155;
+      var byDay = {};
+      byMonth[key].forEach(function(f){ (byDay[f.date] = byDay[f.date] || []).push(f); });
+      var daysInMonth = new Date(yr, mo, 0).getDate();
+      var days = Object.keys(byDay).sort().map(function(dk){
+        var dom = parseInt(dk.slice(8,10),10) || 1;
+        var da = -Math.PI/2 + ((dom-1)/Math.max(1,daysInMonth))*Math.PI*2;
+        var dx = cx + Math.cos(da)*DAY_RING, dy = cy + Math.sin(da)*DAY_RING;
+        var notes = byDay[dk].map(function(f){ var cat=inferCategory(f); return { text:f.text, cat:cat, color:noteColor(cat), time:f.time||"", date:dk }; });
+        notes.sort(function(a,b){ return a.time<b.time?-1:a.time>b.time?1:0; });
+        var cnt = notes.length;
+        notes.forEach(function(nn, j){
+          var mins = clockMinutes(nn.time);
+          var frac = (mins!=null) ? ((mins/1440) % 1) : (j/Math.max(1,cnt));
+          var na = -Math.PI/2 + frac*Math.PI*2;
+          var rr = (cnt>1 ? DAY_R : 0) * (0.55 + 0.4*((j%3)/2));
+          nn.x = dx + Math.cos(na)*rr; nn.y = dy + Math.sin(na)*rr;
+        });
+        return { day:dom, label:MONTH_NAMES[mo-1].slice(0,3)+" "+dom, dx:dx, dy:dy, dr:DAY_R, notes:notes };
       });
-      NOTE_CLUSTERS.push({ key:key, label:label, cx:cx, cy:cy, r:NOTE_HUB_R, notes:notes });
+      NOTE_CLUSTERS.push({ key:key, label:label, cx:cx, cy:cy, r:DAY_RING+DAY_R+80, days:days });
     });
   }
   function drawNotes(){
     if (!NOTE_CLUSTERS.length) return;
     for (var c=0;c<NOTE_CLUSTERS.length;c++){
-      var cl = NOTE_CLUSTERS[c], hub = w2s(cl.cx, cl.cy), ringR = cl.r*cam.s*1.18;
-      if (ringR > 6 && !offscreen(hub, ringR+60)){
-        ctx.strokeStyle="rgba(200,214,255,0.16)"; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(hub[0],hub[1],ringR,0,7); ctx.stroke();
-        // Clock face: 12 tick marks (cardinal ones bolder) + 12/3/6/9 numerals, so
-        // the month ring reads as a clock and notes visibly sit at their time.
-        if (ringR > 34){
-          for (var tk=0; tk<12; tk++){
-            var ta=-Math.PI/2+(tk/12)*Math.PI*2, big=(tk%3===0);
-            ctx.strokeStyle="rgba(200,214,255,"+(big?0.42:0.20)+")"; ctx.lineWidth=big?1.6:0.8;
-            ctx.beginPath();
-            ctx.moveTo(hub[0]+Math.cos(ta)*ringR*(big?0.9:0.94), hub[1]+Math.sin(ta)*ringR*(big?0.9:0.94));
-            ctx.lineTo(hub[0]+Math.cos(ta)*ringR, hub[1]+Math.sin(ta)*ringR); ctx.stroke();
-          }
-          if (ringR > 62){
-            ctx.fillStyle="rgba(200,214,255,0.5)"; ctx.font="700 "+Math.min(13,ringR*0.09)+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle";
-            [["12",-Math.PI/2],["3",0],["6",Math.PI/2],["9",Math.PI]].forEach(function(p){ ctx.fillText(p[0], hub[0]+Math.cos(p[1])*ringR*0.8, hub[1]+Math.sin(p[1])*ringR*0.8); });
-          }
+      var cl = NOTE_CLUSTERS[c], mHub = w2s(cl.cx, cl.cy);
+      // Month title sits at the centre of its ring of days.
+      if (!offscreen(mHub, 160)){
+        ctx.fillStyle="#ffe6a8"; ctx.font="700 "+Math.max(14,Math.min(30,cl.r*cam.s*0.22))+"px system-ui";
+        ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cl.label, mHub[0], mHub[1]);
+      }
+      for (var di=0; di<cl.days.length; di++){
+        var dcl = cl.days[di], dHub = w2s(dcl.dx, dcl.dy), dR = Math.max(8, dcl.dr*cam.s*1.05);
+        if (offscreen(dHub, dR+80)) continue;
+        // Connector month → day, a faint ring, and the day's DATE label above it.
+        ctx.strokeStyle="rgba(200,214,255,0.10)"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(mHub[0],mHub[1]); ctx.lineTo(dHub[0],dHub[1]); ctx.stroke();
+        if (dR>6){ ctx.strokeStyle="rgba(200,214,255,0.15)"; ctx.beginPath(); ctx.arc(dHub[0],dHub[1],dR,0,7); ctx.stroke(); }
+        if (cam.s>0.05){ ctx.fillStyle="rgba(255,230,168,0.85)"; ctx.font="700 "+Math.max(11,Math.min(18,dR*0.5))+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(dcl.label, dHub[0], dHub[1]-dR-9); }
+        for (var k=0;k<dcl.notes.length;k++){
+          var nt = dcl.notes[k], sp = w2s(nt.x, nt.y); if (offscreen(sp, 30)) continue;
+          var rad = Math.max(2.2, 7*cam.s + 1.5);
+          ctx.strokeStyle = hexA(nt.color, 0.22); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(dHub[0],dHub[1]); ctx.lineTo(sp[0],sp[1]); ctx.stroke();
+          if (rad > 3){ var gg=ctx.createRadialGradient(sp[0],sp[1],0,sp[0],sp[1],rad*2.4); gg.addColorStop(0,hexA(nt.color,0.4)); gg.addColorStop(1,hexA(nt.color,0)); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(sp[0],sp[1],rad*2.4,0,7); ctx.fill(); }
+          ctx.fillStyle = hexA(nt.color, 0.95); ctx.beginPath(); ctx.arc(sp[0],sp[1],rad,0,7); ctx.fill();
+          if (cam.s > 0.24 && nt.text){ ctx.globalAlpha=Math.min(1,(cam.s-0.24)*5); ctx.fillStyle="#e8ecfb"; ctx.font="600 "+Math.max(10,Math.min(15,9*cam.s+6))+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; var lbl=(nt.time?nt.time+"  ":"")+nt.text; ctx.fillText(fit(lbl,150,12), sp[0], sp[1]+rad+9); ctx.globalAlpha=1; }
         }
       }
-      for (var k=0;k<cl.notes.length;k++){
-        var nt = cl.notes[k], sp = w2s(nt.x, nt.y); if (offscreen(sp, 30)) continue;
-        var rad = Math.max(2.2, 7*cam.s + 1.5);
-        ctx.strokeStyle = hexA(nt.color, 0.22); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(hub[0],hub[1]); ctx.lineTo(sp[0],sp[1]); ctx.stroke();
-        if (rad > 3){ var gg=ctx.createRadialGradient(sp[0],sp[1],0,sp[0],sp[1],rad*2.4); gg.addColorStop(0,hexA(nt.color,0.4)); gg.addColorStop(1,hexA(nt.color,0)); ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(sp[0],sp[1],rad*2.4,0,7); ctx.fill(); }
-        ctx.fillStyle = hexA(nt.color, 0.95); ctx.beginPath(); ctx.arc(sp[0],sp[1],rad,0,7); ctx.fill();
-        if (cam.s > 0.24 && nt.text){ ctx.globalAlpha=Math.min(1,(cam.s-0.24)*5); ctx.fillStyle="#e8ecfb"; ctx.font="600 "+Math.max(10,Math.min(15,9*cam.s+6))+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(fit(nt.text,150,12), sp[0], sp[1]+rad+9); ctx.globalAlpha=1; }
-      }
-      if (!offscreen(hub, 80)){ ctx.fillStyle="#ffe6a8"; ctx.font="700 "+Math.max(13,Math.min(26,cl.r*cam.s*0.5))+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(cl.label, hub[0], hub[1]); }
     }
   }
   function frameNotes(){
@@ -1289,7 +1294,7 @@
     cam.s=camT.s=Math.max(0.03, Math.min(0.5, s)); return true;
   }
   function buildNoteLegend(){
-    var cats={}; NOTE_CLUSTERS.forEach(function(c){ c.notes.forEach(function(n){ cats[n.cat]=n.color; }); });
+    var cats={}; NOTE_CLUSTERS.forEach(function(c){ (c.days||[]).forEach(function(d){ d.notes.forEach(function(n){ cats[n.cat]=n.color; }); }); });
     var keys=Object.keys(cats).sort(), el=document.getElementById("noteLegend");
     if (!keys.length){ if (el) el.style.display="none"; return; }
     if (!el){ el=document.createElement("div"); el.id="noteLegend"; el.style.cssText="position:fixed;left:12px;bottom:14px;z-index:6;background:rgba(12,17,30,0.74);border:.5px solid #222b46;border-radius:12px;padding:8px 12px;font:600 12px system-ui;color:#e6ebff;display:flex;flex-direction:column;gap:5px;max-width:46vw;pointer-events:none"; document.body.appendChild(el); }
