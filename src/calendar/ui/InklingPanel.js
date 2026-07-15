@@ -33,7 +33,7 @@ const INKLING_CRON_KEY = "calendar3d-inkling-cron-v1";
 // stamp a content change only showed up after a manual HARD reset. BUMP THIS
 // whenever wordweaver.html, wordweaver3d.html, or quiz.html changes, and the next
 // normal app load fetches the fresh file. */
-const CANVAS_VERSION = "20260714q";
+const CANVAS_VERSION = "20260714r";
 function withCanvasVersion(path) {
   return path + (path.includes("?") ? "&" : "?") + "v=" + CANVAS_VERSION;
 }
