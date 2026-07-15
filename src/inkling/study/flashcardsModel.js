@@ -85,27 +85,51 @@ export function setProgress(set) {
  * Generate a deck via Haiku (server). `meta` ties it to a study map section.
  * @returns {Promise<{ok:boolean, set?:object, reason?:string}>}
  */
+/** Local, no-server recall cards from a branch's subject terms — so "Make cards"
+ *  never dead-ends for guests/offline. Sign-in swaps these for AI-written Q&A. */
+function localCardsFromTerms(terms = []) {
+  const clean = (s) => String(s)
+    .replace(/★/g, "")
+    .replace(/^\s*(Stage\s*\d+|Throughout)\s*·\s*/i, "")
+    .trim();
+  const cards = [];
+  for (const raw of terms) {
+    const label = clean(raw);
+    if (label.length < 2) continue;
+    cards.push({
+      q: `In your own words: what is “${label}”, and why does it matter?`,
+      a: "Recall the core idea, then check it against your notes or a resource. Sign in to Inkling to get AI-written answers here.",
+      type: "concept"
+    });
+  }
+  return cards;
+}
+
 export async function generateFlashcards({ topic, section = "", terms = [], mapId = null, branchId = null }) {
   const t = String(topic || "").trim();
   if (t.length < 2) return { ok: false, reason: "empty" };
-  let data;
+  let data = null;
   try {
     data = await apiFetch("/api/inkling/flashcards", {
       method: "POST",
       body: JSON.stringify({ topic: t, section, terms })
     });
-  } catch { return { ok: false, reason: "offline" }; }
-  if (data?.source === "guest") return { ok: false, reason: "signin" };
-  if (data?.source === "capped") return { ok: false, reason: "capped" };
-  if (!data?.cards?.length) return { ok: false, reason: "empty" };
+  } catch { data = null; }
+  // Use the AI cards when the server actually returned some; otherwise fall back
+  // to local recall cards so the button always produces a usable set.
+  const aiCards = (data && data.source !== "guest" && data.source !== "capped" && Array.isArray(data.cards))
+    ? data.cards : [];
+  const usedLocal = aiCards.length === 0;
+  const rawCards = usedLocal ? localCardsFromTerms(terms) : aiCards;
+  if (!rawCards.length) return { ok: false, reason: "empty" };
   const set = {
     id: uid("set"),
     topic: t,
     section: section || "",
-    mapId, branchId,
+    mapId, branchId, local: usedLocal,
     createdAt: Date.now(),
-    cards: data.cards.map((c) => ({ id: uid("card"), q: c.q, a: c.a, type: c.type || "concept", status: 0 }))
+    cards: rawCards.map((c) => ({ id: uid("card"), q: c.q, a: c.a, type: c.type || "concept", status: 0 }))
   };
   saveFlashcardSet(set);
-  return { ok: true, set };
+  return { ok: true, set, local: usedLocal };
 }
