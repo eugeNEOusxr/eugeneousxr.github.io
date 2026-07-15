@@ -18,7 +18,7 @@ import { Connections2D } from "./Connections2D.js";
 import { InklingMindPanel } from "./InklingMindPanel.js";
 import { StudyMapPanel } from "./StudyMapPanel.js";
 import { FlashcardsPanel } from "./FlashcardsPanel.js";
-import { createEvent } from "../../wordweaver/timelineModel.js";
+import { createEvent, reloadTimelineFromStorage } from "../../wordweaver/timelineModel.js";
 import { VoiceDictation, isVoiceInputSupported } from "./voiceInput.js";
 import { appendTurn, ingestText, mindInsights, mindGraph, connectConcepts, extractConcepts, ingestCalendar, enrichFromServer } from "../../inkling/mind/index.js";
 
@@ -133,8 +133,11 @@ export class InklingPanel {
       }
       else if (m.type === "inkling-close-graph") { if (this._mindOverlay) this._mindOverlay.style.display = "none"; }
       else if (m.type === "inkling-note-added") {
-        // A note jotted on the graph that names a future time ("2pm lunch") → schedule
-        // a real reminder so it fires like a Schedule alert (was previously a silent map-note).
+        // The graph iframe wrote the note straight to localStorage — re-sync the
+        // app's in-memory model so the calendar/day views actually show it.
+        try { reloadTimelineFromStorage(); } catch { /* ignore */ }
+        // A note that names a future time ("2pm lunch") → schedule a real reminder
+        // so it fires like a Schedule alert (was previously a silent map-note).
         try {
           const a = m.alert;
           if (a && a.time) {

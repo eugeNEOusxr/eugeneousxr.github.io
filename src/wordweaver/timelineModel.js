@@ -1227,6 +1227,20 @@ export function initTimelineModel() {
 /** Spec alias (§3.3). */
 export const init = initTimelineModel;
 
+/**
+ * Re-read the store into the in-memory model. Needed when another context (e.g.
+ * the WordWeaver graph iframe) writes a note straight to localStorage — the app's
+ * `_events` cache would otherwise stay stale and the calendar/day views wouldn't
+ * show it. Emits `eventCreated` so views + the alerts scheduler refresh.
+ * @returns {number} event count after reload
+ */
+export function reloadTimelineFromStorage() {
+  _events = sortEventsByStartTime(loadFromStorage());
+  _initialized = true;
+  emitMutation("eventCreated", { eventCount: _events.length, source: "external-reload" });
+  return _events.length;
+}
+
 // --- CRUD (§3.3) ---
 
 /**
