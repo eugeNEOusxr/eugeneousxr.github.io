@@ -1254,6 +1254,64 @@
         { type:"match", prompt:"Match each agent type with its description.", options:["Simple reflex agent","Model-based reflex agent","Goal-based agent","Utility-based agent"], items:[{ eq:"Acts on the current percept alone via condition-action rules", answer:0 },{ eq:"Keeps internal state to track the unobserved parts of the world", answer:1 },{ eq:"Chooses actions by considering whether they achieve explicit goals", answer:2 },{ eq:"Maximizes expected utility to weigh competing or graded outcomes", answer:3 }], points:10 }
       ] }
     );
+    // ── Artificial Intelligence · Chapter 3 · Search & Planning ──
+    DECKS.push(
+      { id:"ai 3.1", title:"3.1 · Solving Problems by Searching", graded:{}, questions:[
+        { type:"mc", prompt:"A well-defined search problem includes all of the following EXCEPT:", options:["The initial state","A set of actions and a transition model","A goal test","The optimal solution's cost, known in advance"], correct:3, points:10 },
+        { type:"mc", prompt:"In a search algorithm, the <em>frontier</em> (open list) is:", options:["The set of nodes generated but not yet expanded","The set of already-expanded nodes","The goal state","The heuristic function"], correct:0, points:10 },
+        { type:"mc", prompt:"Breadth-first search always expands:", options:["The shallowest unexpanded node","The deepest unexpanded node","A random node","The node with the lowest heuristic"], correct:0, points:10 },
+        { type:"mc", prompt:"Depth-first search always expands:", options:["The deepest unexpanded node","The shallowest unexpanded node","The lowest-cost node","The highest-heuristic node"], correct:0, points:10 },
+        { type:"mc", prompt:"A major drawback of breadth-first search is its:", options:["High memory use — it must store the whole frontier","Inability to ever find a solution","Requirement for a heuristic","Reliance on randomness"], correct:0, points:10 },
+        { type:"mc", prompt:"Depth-first search's main advantage over breadth-first is its:", options:["Much lower memory requirement","Guaranteed optimality","Guaranteed speed","Freedom from a goal test"], correct:0, points:10 },
+        { type:"mc", prompt:"Uniform-cost search expands the node with the:", options:["Lowest path cost g(n) so far","Fewest children","Highest cost","Most recent arrival on the frontier"], correct:0, points:10 },
+        { type:"mc", prompt:"An <em>uninformed</em> (blind) search strategy is one that:", options:["Uses only the problem definition, with no estimate of goal distance","Uses a heuristic estimate of remaining cost","Cheats by seeing the answer","Always returns the optimal path"], correct:0, points:10 },
+        { type:"mc", prompt:"A search algorithm is <em>complete</em> if it:", options:["Is guaranteed to find a solution when one exists","Runs quickly","Uses no memory","Needs a heuristic"], correct:0, points:10 },
+        { type:"mc", prompt:"Iterative deepening search combines:", options:["Depth-first's low memory with breadth-first's completeness","Two heuristics at once","Random restarts with pruning","Greedy search with backtracking"], correct:0, points:10 },
+        { type:"match", prompt:"Match each strategy to how it picks the next node to expand.", options:["Breadth-first","Depth-first","Uniform-cost","Iterative deepening"], items:[{ eq:"Shallowest node first", answer:0 },{ eq:"Deepest node first", answer:1 },{ eq:"Lowest path cost first", answer:2 },{ eq:"Repeated depth-limited search with a growing limit", answer:3 }], points:10 }
+      ] },
+      { id:"ai 3.2", title:"3.2 · Informed Search and A*", graded:{}, questions:[
+        { type:"mc", prompt:"A heuristic function h(n) estimates:", options:["The cost from node n to the nearest goal","The cost already spent to reach n","The number of nodes expanded","Nothing at all"], correct:0, points:10 },
+        { type:"mc", prompt:"Greedy best-first search expands the node with the:", options:["Lowest h(n) — closest estimated to the goal","Lowest g(n)","Highest h(n)","Most children"], correct:0, points:10 },
+        { type:"mc", prompt:"A* search ranks nodes by f(n) =", options:["g(n) + h(n)","h(n) only","g(n) only","g(n) − h(n)"], correct:0, points:10 },
+        { type:"mc", prompt:"In A*, g(n) represents:", options:["The path cost from the start to n","The estimated cost to the goal","The heuristic value","The branching factor"], correct:0, points:10 },
+        { type:"mc", prompt:"A heuristic is <em>admissible</em> if it:", options:["Never overestimates the true cost to the goal","Always overestimates the cost","Is always zero","Is chosen at random"], correct:0, points:10 },
+        { type:"mc", prompt:"With an admissible heuristic, A* is:", options:["Optimal — it finds a least-cost path","Never optimal","Faster but usually wrong","Effectively uninformed"], correct:0, points:10 },
+        { type:"mc", prompt:"The straight-line (Euclidean) distance is a classic admissible heuristic for:", options:["Route-finding on a map","Sorting a list","Playing chess only","Searching text"], correct:0, points:10 },
+        { type:"mc", prompt:"If h(n) = 0 for every node, A* behaves exactly like:", options:["Uniform-cost search","Depth-first search","Greedy search","A random walk"], correct:0, points:10 },
+        { type:"mc", prompt:"Compared with uninformed search, a good heuristic mainly:", options:["Reduces the number of nodes A* must expand","Guarantees zero memory use","Removes the need for a goal test","Makes the problem unsolvable"], correct:0, points:10 },
+        { type:"mc", prompt:"A heuristic that overestimates the remaining cost can cause A* to:", options:["Return a non-optimal (worse) path","Run forever","Use no memory","Become uninformed"], correct:0, points:10 },
+        { type:"match", prompt:"Match each term to its meaning in A* search.", options:["g(n)","h(n)","f(n) = g + h","Admissible heuristic"], items:[{ eq:"Cost already spent from the start", answer:0 },{ eq:"Estimated cost remaining to the goal", answer:1 },{ eq:"The total score A* uses to order nodes", answer:2 },{ eq:"Never overestimates the true remaining cost", answer:3 }], points:10 }
+      ] }
+    );
+    // ── Artificial Intelligence · Chapter 4 · Machine Learning ──
+    DECKS.push(
+      { id:"ai 4.1", title:"4.1 · Learning from Data", graded:{}, questions:[
+        { type:"mc", prompt:"Machine learning is best described as:", options:["Programs that improve at a task from data or experience","Hand-coding every rule by hand","Guessing at random","Robotics hardware only"], correct:0, points:10 },
+        { type:"mc", prompt:"In <em>supervised</em> learning, the training data consists of:", options:["Labeled examples — inputs paired with correct outputs","Inputs with no labels","No data at all","Only rewards"], correct:0, points:10 },
+        { type:"mc", prompt:"<em>Unsupervised</em> learning works with:", options:["Unlabeled data, discovering structure or patterns","Labeled input–output pairs","A teacher's answer key","Reward and punishment signals"], correct:0, points:10 },
+        { type:"mc", prompt:"A <em>classification</em> task predicts:", options:["A discrete category or label","A continuous number","Nothing","A reward"], correct:0, points:10 },
+        { type:"mc", prompt:"A <em>regression</em> task predicts:", options:["A continuous numeric value","A category label","A cluster id","A policy"], correct:0, points:10 },
+        { type:"mc", prompt:"Clustering, such as k-means, is a form of:", options:["Unsupervised learning","Supervised learning","Reinforcement learning","Uninformed search"], correct:0, points:10 },
+        { type:"mc", prompt:"<em>Overfitting</em> means a model:", options:["Fits the training data too closely and generalizes poorly","Is far too simple","Has no parameters","Ignores the training data"], correct:0, points:10 },
+        { type:"mc", prompt:"We keep a separate <em>test set</em> in order to:", options:["Estimate how well the model generalizes to unseen data","Train the model faster","Increase overfitting on purpose","Label the training data"], correct:0, points:10 },
+        { type:"mc", prompt:"A <em>feature</em> is:", options:["An input variable or measurable property used to make predictions","The final answer","The learning rate","A type of neuron"], correct:0, points:10 },
+        { type:"mc", prompt:"In <em>reinforcement</em> learning, the agent learns from:", options:["Rewards and penalties received from its environment","Labeled examples","Clustering unlabeled data","A fixed rulebook"], correct:0, points:10 },
+        { type:"match", prompt:"Match each learning paradigm to its description.", options:["Supervised","Unsupervised","Reinforcement","Overfitting"], items:[{ eq:"Learns from labeled input–output examples", answer:0 },{ eq:"Finds structure in unlabeled data", answer:1 },{ eq:"Learns from reward and penalty feedback", answer:2 },{ eq:"Memorizes training data but fails on new data", answer:3 }], points:10 }
+      ] },
+      { id:"ai 4.2", title:"4.2 · Neural Networks and Deep Learning", graded:{}, questions:[
+        { type:"mc", prompt:"An artificial neuron computes:", options:["A weighted sum of its inputs passed through an activation function","A random number","Only the maximum input","Only the average of inputs"], correct:0, points:10 },
+        { type:"mc", prompt:"The <em>weights</em> in a neural network are:", options:["Parameters adjusted during training","Fixed constants that never change","The raw inputs","The output labels"], correct:0, points:10 },
+        { type:"mc", prompt:"<em>Deep</em> learning refers to networks with:", options:["Many hidden layers","A single neuron","No layers","Only an input layer"], correct:0, points:10 },
+        { type:"mc", prompt:"An activation function such as ReLU introduces:", options:["Non-linearity, letting the network model complex patterns","Randomness only","Labels","Extra training data"], correct:0, points:10 },
+        { type:"mc", prompt:"Training a neural network adjusts the weights to:", options:["Minimize a loss (error) function","Maximize the error","Randomize the outputs","Add more layers"], correct:0, points:10 },
+        { type:"mc", prompt:"<em>Backpropagation</em> is used to:", options:["Compute gradients of the loss so the weights can be updated","Add neurons to the network","Label the training data","Cluster the inputs"], correct:0, points:10 },
+        { type:"mc", prompt:"<em>Gradient descent</em> updates weights in the direction that:", options:["Reduces the loss","Increases the loss","Is purely random","Keeps the loss constant"], correct:0, points:10 },
+        { type:"mc", prompt:"Convolutional neural networks (CNNs) are especially strong at:", options:["Image and vision tasks","Sorting numbers","Nothing in particular","Only spreadsheet math"], correct:0, points:10 },
+        { type:"mc", prompt:"The <em>Transformer</em> architecture powers modern:", options:["Large language models","Spreadsheets","Search trees","k-means clustering"], correct:0, points:10 },
+        { type:"mc", prompt:"A common cause of poor generalization in deep networks is:", options:["Overfitting to the training data","Using any activation function","Having any hidden layers at all","Using a loss function"], correct:0, points:10 },
+        { type:"match", prompt:"Match each neural-network term to its role.", options:["Weights","Activation function","Backpropagation","Loss function"], items:[{ eq:"Trainable parameters tuned during learning", answer:0 },{ eq:"Adds non-linearity to a neuron's output", answer:1 },{ eq:"Computes gradients to update the weights", answer:2 },{ eq:"Measures how wrong the predictions are", answer:3 }], points:10 }
+      ] }
+    );
     // ── Psychology · Chapter 1 · Introduction to Psychology (OpenStax Psych 2e) ──
     // Concept-based mc + a closing match, mirroring the AI/Biology deck format.
     // Ids "psych N.M" route to the Psychology subject via isPsych()/subjectKey().
@@ -1997,6 +2055,9 @@
     function isPsych(sec){ return /^psych\s/i.test(sec); }            // "psych 1.1" = a Psychology section
     function chapterOf(sec){ return parseInt(String(sec).split(".")[0], 10); }
     function chapterSections(n){ return SECTIONS.filter(function(s){ return isPrecalc(s.sec) && chapterOf(s.sec) === n; }); }
+    // AI sections are ids like "ai 3.1" — pull the chapter number out of them.
+    function aiChapterOf(sec){ var m=/ai\s+(\d+)/i.exec(sec); return m?parseInt(m[1],10):0; }
+    var AI_CHAPTERS = ["Foundations of AI","Intelligent Agents","Search & Planning","Machine Learning"];
     // A subject groups its sections. Precalc chapters share "precalc"; each
     // generated set (biology, etc.) is its OWN subject — so the section dropdown
     // never mixes biology in with the precalc sections.
@@ -2071,10 +2132,35 @@
       }
 
       // Artificial Intelligence — its sections (flat for now; chapter nesting comes as it grows).
+      // AI — the sections inside a chosen chapter.
+      var aim = /^ai-ch-(\d+)$/.exec(homeView || "");
+      if (aim){
+        var acn = parseInt(aim[1], 10);
+        titleEl.textContent = "🤖 Chapter " + acn + " · " + (AI_CHAPTERS[acn - 1] || "");
+        homeGrid.appendChild(makeMiscBox("Back to chapters", "←", function(){ homeView = "ai"; buildHome(); }));
+        aiSecs.filter(function(s){ return aiChapterOf(s.sec) === acn; })
+              .forEach(function(s){ if (!dismissed[s.sec]) homeGrid.appendChild(makeSectionBox(s)); });
+        return;
+      }
+      // AI — the chapters (only built ones are clickable).
       if (homeView === "ai"){
-        titleEl.textContent = "🤖 Artificial Intelligence · " + aiSecs.length + " section" + (aiSecs.length !== 1 ? "s" : "");
+        titleEl.textContent = "🤖 Artificial Intelligence · chapters";
         homeGrid.appendChild(makeMiscBox("Back to subjects", "←", function(){ homeView = null; buildHome(); }));
-        aiSecs.forEach(function(s){ if (!dismissed[s.sec]) homeGrid.appendChild(makeSectionBox(s)); });
+        var builtAI = {};
+        aiSecs.forEach(function(s){ var n = aiChapterOf(s.sec); builtAI[n] = (builtAI[n] || 0) + 1; });
+        AI_CHAPTERS.forEach(function(name, i){
+          var n = i + 1, count = builtAI[n] || 0;
+          var box = document.createElement("button");
+          box.type = "button";
+          box.className = "homebox" + (count ? "" : " homebox--soon");
+          box.innerHTML =
+            '<div class="hsec">Chapter ' + n + '</div>' +
+            '<div class="htitle">' + name + '</div>' +
+            '<div class="hmeta">' + (count ? count + " section" + (count > 1 ? "s" : "") + " →" : "Coming soon") + '</div>';
+          if (count) box.addEventListener("click", function(){ homeView = "ai-ch-" + n; buildHome(); });
+          else box.disabled = true;
+          homeGrid.appendChild(box);
+        });
         return;
       }
 
