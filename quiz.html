@@ -2636,7 +2636,43 @@
           explanation:"It quantifies uncertainty, letting us reason carefully about what we can't predict for sure.",
           analogy:"A weather forecast: '70% chance of rain' is probability in everyday life.",
           example:"Rolling a 6 on a fair die has probability 1/6 ≈ 0.17.",
-          why:"Every decision under uncertainty — insurance, medicine, AI, games — runs on probability." }
+          why:"Every decision under uncertainty — insurance, medicine, AI, games — runs on probability." },
+        "artificial-intelligence": { title:"Artificial Intelligence", subject:"ai", difficulty:1,
+          definition:"The science of building machines that perceive, reason, and act to achieve goals.",
+          explanation:"AI spans everything from rule-following programs to systems that learn from data; the modern aim is a 'rational agent' that does the best it can with what it knows.",
+          analogy:"A very fast, tireless apprentice — it only knows what you've shown it, but it never gets bored.",
+          example:"A spam filter, a chess engine, and a chatbot are all AI.",
+          why:"AI now touches search, medicine, transport, and creativity — understanding it is basic literacy for this century." },
+        "intelligent-agents": { title:"Intelligent Agents", subject:"ai", difficulty:2,
+          definition:"An agent perceives its environment through sensors and acts on it through actuators to reach a goal.",
+          explanation:"Framing AI as agents lets one idea cover robots, assistants, and game bots: sense, decide, act, repeat.",
+          analogy:"A thermostat is a tiny agent — it senses the temperature and acts by switching the heater.",
+          example:"A self-driving car senses the road and steers; a vacuum robot senses dirt and cleans.",
+          why:"The agent view organizes the whole field and is how engineers actually design AI systems." },
+        "search-algorithms": { title:"Search Algorithms", subject:"ai", difficulty:2,
+          definition:"Systematic ways to explore possible states to find a path from a start to a goal.",
+          explanation:"Keep a 'frontier' of options and expand them in a disciplined order — shallowest, deepest, or cheapest first.",
+          analogy:"Solving a maze: breadth-first checks all nearby paths first; depth-first follows one corridor to its end.",
+          example:"Finding a route through a road network, or solving a sliding-tile puzzle.",
+          why:"Search sits under route planners, puzzle solvers, and game AI." },
+        "heuristic-search": { title:"Heuristic Search (A*)", subject:"ai", difficulty:3,
+          definition:"Search guided by a heuristic estimate of how far each state is from the goal.",
+          explanation:"Rank options by f = g + h — the cost so far plus a smart guess of the cost left. If the guess never overestimates, A* still finds the best path.",
+          analogy:"A hiker heading toward a peak they can see, using the view to pick the promising trail instead of wandering.",
+          example:"GPS finding the fastest route, or a game character pathfinding around obstacles.",
+          why:"A* powers GPS navigation, video-game pathfinding, and robot motion." },
+        "machine-learning": { title:"Machine Learning", subject:"ai", difficulty:2,
+          definition:"Programs that improve at a task by finding patterns in data instead of being explicitly programmed.",
+          explanation:"You show the system many examples and it adjusts internal numbers until its guesses match the answers — so it learns the rule itself.",
+          analogy:"A child learning 'dog' from seeing many dogs, not from a dictionary definition.",
+          example:"Show thousands of labeled photos and the model learns to call a new one 'cat' or 'dog'.",
+          why:"ML runs spam filters, recommendations, medical diagnosis, fraud detection, and self-driving cars." },
+        "neural-networks": { title:"Neural Networks & Deep Learning", subject:"ai", difficulty:3,
+          definition:"Layers of simple units (neurons) that each compute a weighted sum, learning by adjusting the weights.",
+          explanation:"Training nudges every weight a little in the direction that reduces error, and stacking many layers lets the network build complex patterns out of simple ones.",
+          analogy:"A huge team of yes/no voters, each listening to the layer before and passing a signal forward.",
+          example:"Pixels → edges → shapes → 'this is a face'.",
+          why:"Neural nets power image recognition, voice assistants, translation, and the LLMs behind modern AI." }
       },
       // First-class relationship edges. `to` is a concept slug for concept-typed
       // relations, otherwise a free-text label. confidence 0..1; status verified|ai.
@@ -2747,7 +2783,40 @@
         { from:"probability", type:"career",   to:"Data Scientist",   confidence:.8,  status:"ai" },
         { from:"probability", type:"sameIdea", to:"Machine-learning predictions (AI)",   confidence:.85, status:"verified", reason:"A model's confidence is a probability — how sure it is the photo is a cat." },
         { from:"probability", type:"sameIdea", to:"Insurance & risk pricing (finance)",  confidence:.85, status:"verified", reason:"Premiums are set from the probability of a claim — betting math, formalized." },
-        { from:"probability", type:"sameIdea", to:"Medical test accuracy (healthcare)",  confidence:.8,  status:"verified", reason:"False positives and true positives are conditional probabilities — Bayes' rule in the clinic." }
+        { from:"probability", type:"sameIdea", to:"Medical test accuracy (healthcare)",  confidence:.8,  status:"verified", reason:"False positives and true positives are conditional probabilities — Bayes' rule in the clinic." },
+
+        { from:"artificial-intelligence", type:"next",    to:"intelligent-agents", confidence:.85, status:"verified" },
+        { from:"artificial-intelligence", type:"related", to:"machine-learning",  confidence:.8,  status:"verified" },
+        { from:"artificial-intelligence", type:"career",  to:"AI Researcher",      confidence:.85, status:"verified" },
+        { from:"artificial-intelligence", type:"sameIdea",to:"Rational choice (economics)", confidence:.75, status:"ai", reason:"'Do the best action given your information' is exactly the economist's rational agent." },
+
+        { from:"intelligent-agents", type:"prerequisite", to:"artificial-intelligence", confidence:.8, status:"verified" },
+        { from:"intelligent-agents", type:"next",         to:"search-algorithms",       confidence:.75, status:"verified" },
+        { from:"intelligent-agents", type:"career",       to:"Robotics Engineer",        confidence:.85, status:"verified" },
+        { from:"intelligent-agents", type:"sameIdea",     to:"A thermostat / cruise control (engineering)", confidence:.85, status:"verified", reason:"Sense a value, act to close the gap to a target — a control loop is the simplest agent." },
+        { from:"intelligent-agents", type:"sameIdea",     to:"Stimulus → response (psychology)", confidence:.7, status:"ai", reason:"Perceive, then act — the agent loop mirrors how behaviorists model a reflex." },
+
+        { from:"search-algorithms", type:"prerequisite", to:"intelligent-agents", confidence:.7,  status:"verified" },
+        { from:"search-algorithms", type:"next",         to:"heuristic-search",   confidence:.9,  status:"verified" },
+        { from:"search-algorithms", type:"career",       to:"Software Engineer",  confidence:.8,  status:"ai" },
+        { from:"search-algorithms", type:"sameIdea",     to:"Finding your way through a maze (everyday)", confidence:.85, status:"verified", reason:"BFS checks all nearby turns first; DFS follows one corridor to the end — exactly two ways people escape a maze." },
+
+        { from:"heuristic-search", type:"prerequisite", to:"search-algorithms", confidence:.9,  status:"verified" },
+        { from:"heuristic-search", type:"career",       to:"Robotics Engineer",  confidence:.8,  status:"ai" },
+        { from:"heuristic-search", type:"sameIdea",     to:"GPS navigation (everyday)",  confidence:.9,  status:"verified", reason:"Your maps app estimates the remaining distance to steer toward the destination — a heuristic in your pocket." },
+        { from:"heuristic-search", type:"sameIdea",     to:"A rule of thumb / intuition (psychology)", confidence:.8, status:"verified", reason:"A heuristic is a fast, good-enough guess — the same shortcut human intuition uses." },
+
+        { from:"machine-learning", type:"prerequisite", to:"artificial-intelligence", confidence:.7,  status:"verified" },
+        { from:"machine-learning", type:"next",         to:"neural-networks",        confidence:.85, status:"verified" },
+        { from:"machine-learning", type:"career",       to:"Data Scientist",          confidence:.85, status:"verified" },
+        { from:"machine-learning", type:"sameIdea",     to:"Conditioning (psychology)", confidence:.85, status:"verified", reason:"Reinforcement learning rewards good actions so they repeat — operant conditioning, in code." },
+        { from:"machine-learning", type:"sameIdea",     to:"Fitting a line to data (statistics)", confidence:.8, status:"verified", reason:"The simplest learning is drawing the best line through points — regression is machine learning's hello-world." },
+
+        { from:"neural-networks", type:"prerequisite", to:"machine-learning", confidence:.85, status:"verified" },
+        { from:"neural-networks", type:"related",      to:"derivatives",      confidence:.8,  status:"verified" },
+        { from:"neural-networks", type:"career",       to:"ML Engineer",      confidence:.9,  status:"verified" },
+        { from:"neural-networks", type:"sameIdea",     to:"Derivatives (calculus)", confidence:.9,  status:"verified", reason:"Training follows the gradient downhill to shrink error — that gradient is the derivative you meet in precalc, scaled up." },
+        { from:"neural-networks", type:"sameIdea",     to:"The brain's synapses (biology)", confidence:.75, status:"ai", reason:"Learning strengthens useful connections — a weight growing is a synapse getting stronger." }
       ],
       match: [   // topic-regex → concept slug (checked before the domain fallback)
         { re:/\bfactor|greatest common|gcf\b/i,                          slug:"factoring" },
@@ -2759,6 +2828,12 @@
         { re:/\blogarith|\blog_|\bln\b/i,                                slug:"logarithms" },
         { re:/\bslope|linear function|point-slope|y\s*=\s*mx\b/i,        slug:"linear-functions" },
         { re:/\bprobab|likelihood|\bodds\b/i,                            slug:"probability" },
+        { re:/\bneural network|deep learning|\bneuron|activation function|backprop|gradient descent|transformer|convolutional\b/i, slug:"neural-networks" },
+        { re:/\bmachine learning|supervised|unsupervised|training data|overfitt|classification|regression|clustering\b/i, slug:"machine-learning" },
+        { re:/\bheuristic|\ba\*|admissible|informed search|greedy best-first\b/i, slug:"heuristic-search" },
+        { re:/\buninformed|breadth-first|depth-first|\bfrontier\b|search problem|uniform-cost|iterative deepening\b/i, slug:"search-algorithms" },
+        { re:/\bagent\b|percept|actuator|\bsensor|rational agent\b/i,     slug:"intelligent-agents" },
+        { re:/\bturing test|artificial intelligence|thinking humanly|acting rationally\b/i, slug:"artificial-intelligence" },
         { re:/\bfunction|domain|range|composition\b/i,                   slug:"functions" },
         { re:/\bconditioning|reinforcement|pavlov|operant|punishment\b/i, slug:"conditioning" },
         { re:/\bpsycholog|behavior|cognition|\bmind\b/i,                 slug:"intro-psychology" }
@@ -2781,7 +2856,13 @@
       "probability":"Split every possible outcome into equally likely pieces and count the ones you care about. The fraction that match is how likely the event is.",
       "limits":"You never have to arrive — you only have to get arbitrarily close. Pinning down the value a function approaches is enough to define slopes and areas exactly.",
       "gcf":"Every term is built from shared factors; pulling out the biggest shared one leaves a simpler expression that means exactly the same thing.",
-      "distributive-property":"Multiplying by a group is the same as multiplying each member and adding — which is why it can be run forward (expand) or backward (factor)."
+      "distributive-property":"Multiplying by a group is the same as multiplying each member and adding — which is why it can be run forward (expand) or backward (factor).",
+      "artificial-intelligence":"It works by turning 'being smart' into a concrete goal — take the action that best achieves a measurable objective given the information available.",
+      "intelligent-agents":"Define what success means (a performance measure), and rational behavior is just picking the action expected to score highest on it.",
+      "search-algorithms":"Every problem becomes a graph of states; exploring that graph in a disciplined order is guaranteed to find a goal if one exists.",
+      "heuristic-search":"Adding an estimate of the distance left steers effort toward the goal — and never overestimating keeps the answer optimal.",
+      "machine-learning":"Learning is optimization: define an error, then adjust the model's numbers until that error is as small as possible on the examples.",
+      "neural-networks":"Because each layer is differentiable, you can measure how every weight affects the error and nudge them all downhill — over millions of examples that composes into intelligence."
     };
     function kgEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
     function kgPretty(slug){ return String(slug||"").replace(/-/g," ").replace(/\b\w/g,function(c){ return c.toUpperCase(); }); }
