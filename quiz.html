@@ -2680,6 +2680,23 @@
       // Domain → a default concept, so EVERY card opens at least a partial portal.
       domainDefault: { precalc:"functions", psychology:"intro-psychology", biology:null, chemistry:null, physics:null, ai:null }
     };
+    // The "why it works" layer — the mathematical principle behind each concept
+    // (concept-level; the how-to is per-problem via AI, the where-used is the scenario).
+    var KG_PRINCIPLE = {
+      "functions":"The rule makes a strict promise — one input can't give two different outputs. That single-valued-ness is what lets you predict, reverse, and build on it: every input has one definite answer.",
+      "linear-functions":"The rate of change never varies. Add the same amount to x and y always moves by the same step — and 'the same step every time' is exactly what draws a straight line.",
+      "quadratics":"x is multiplied by itself, so the output grows faster and faster. That squaring bends the straight line into a curve that rises, turns exactly once, and falls — which is why there's always a single highest or lowest point.",
+      "factoring":"Multiplication can be run backwards: any expression is the product of smaller pieces. Finding those pieces exposes the values that make it zero — its roots.",
+      "derivatives":"Zoom in until the interval you measure over is a single instant, and the average rate of change becomes the exact rate at that point — the slope of the curve right there.",
+      "trigonometry":"Similar right triangles keep the same side ratios no matter their size, so one angle always pins down sin, cos, and tan — turning a direction into numbers.",
+      "complex-numbers":"Invent one new number, i, whose square is −1. That single rule gives every equation a solution and quietly turns multiplication into rotation.",
+      "exponential-functions":"You multiply each step instead of adding, so growth is proportional to how big it already is — the bigger it gets, the faster it moves.",
+      "logarithms":"It asks the reverse of an exponent — 'what power makes this number?' — which turns multiplying into adding and squeezes huge ranges into small, countable steps.",
+      "probability":"Split every possible outcome into equally likely pieces and count the ones you care about. The fraction that match is how likely the event is.",
+      "limits":"You never have to arrive — you only have to get arbitrarily close. Pinning down the value a function approaches is enough to define slopes and areas exactly.",
+      "gcf":"Every term is built from shared factors; pulling out the biggest shared one leaves a simpler expression that means exactly the same thing.",
+      "distributive-property":"Multiplying by a group is the same as multiplying each member and adding — which is why it can be run forward (expand) or backward (factor)."
+    };
     function kgEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
     function kgPretty(slug){ return String(slug||"").replace(/-/g," ").replace(/\b\w/g,function(c){ return c.toUpperCase(); }); }
     // Concept slugs prettify to a title; free-text labels (careers, projects,
@@ -2734,6 +2751,8 @@
         html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)"><b>'+kgEsc(c.definition)+'</b><br>'+kgEsc(c.explanation)+'</div>';
         if (c.analogy) html+='<div style="margin-top:7px;font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">🔎 <i>'+kgEsc(c.analogy)+'</i></div>';
         if (c.example) html+='<div style="margin-top:6px;font:600 12.5px/1.5 ui-monospace,monospace;color:#7dd3fc;background:rgba(56,189,248,.08);border-radius:8px;padding:6px 9px">'+kgEsc(c.example)+'</div>';
+        var princ = KG_PRINCIPLE[slug];
+        if (princ) html+='<div style="margin-top:9px;font:500 13px/1.55 system-ui;color:var(--text);border-left:3px solid rgba(129,140,248,.55);padding-left:10px"><b style="color:#a5b4fc">⚙️ Why it works — </b>'+kgEsc(princ)+'</div>';
       } else {
         html+='<div style="font:500 13px/1.5 system-ui;color:var(--muted,#9aa3bd)">This card is an entry point — the concept graph for this topic is still being mapped.</div>';
       }
@@ -2869,7 +2888,7 @@
     function localScenario(qa){
       var t=((qa.prompt||"")+" "+(qa.answer||"")).toLowerCase();
       if (/imaginary|complex number|a\s*\+\s*bi/.test(t)) return "Picture an AC power line: engineers write the voltage as a complex number, where the imaginary part tracks how far the current lags behind — the same a + bi you're working with here keeps a city's grid in phase.";
-      if (/x\s*²|x\s*\^\s*2|quadratic|parabola/.test(t)) return "Read this as the arc of something launched — a motorbike catching air off a ramp, or water from a fountain. The curve climbs to a peak and falls; a coach reads the top as max height, an engineer reads it as where a headlight's beam focuses.";
+      if (/x\s*²|x\s*\^\s*2|quadratic|parabola/.test(t)) return "A parabola is worth more than its curve. Its single focus point is why satellite dishes, headlights, and telescope mirrors are shaped this way (every ray meets at one spot); its single peak is how a business finds max profit or an engineer finds max height. Something like 3x²+2x could be the area of a panel whose length is 2 more than 3× its width — set it to your target size and solve. And doubling a car's speed quadruples its braking distance for this exact reason: the square.";
       if (/exponential|half-life|compound|\bdecay\b|growth factor|\bb\s*\^\s*x|2\s*\^|e\s*\^/.test(t)) return "This is the shape of $500 compounding in a savings account, a rumor doubling each retelling, or a radioactive sample fading by half — slow at first, then racing away (or vanishing) faster and faster.";
       if (/sine|cosine|tangent|radian|angle|trig/.test(t)) return "Think of a Ferris wheel or a piston: as the angle turns, your height traces a sine wave. The same math points a satellite dish, spins a game character, and shapes a sound wave.";
       if (/slope|linear|point-slope|\bm\s*x\b|y\s*=\s*-?\d*\.?\d*\s*x/.test(t)) return "Treat this line as a road's incline or a phone plan: the slope is how steep the climb — or how much each extra mile or gigabyte costs — and the starting value is the height you set out from, or the flat monthly base.";
