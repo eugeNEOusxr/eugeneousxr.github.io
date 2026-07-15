@@ -2440,6 +2440,7 @@
     var KG_TYPES = {   // order = the order sections render in "how it connects"
       prerequisite:{ label:"Prerequisites", concept:true },
       next:{ label:"Leads to", concept:true },
+      sameIdea:{ label:"The same idea elsewhere", icon:"🔀" },
       related:{ label:"Related concepts", icon:"🔗", concept:true },
       career:{ label:"Careers", icon:"💼" },
       industry:{ label:"Industries", icon:"🏭" },
@@ -2569,7 +2570,14 @@
         { from:"coordinate-plane",      type:"next", to:"functions",   confidence:.85, status:"verified" },
         { from:"distributive-property", type:"next", to:"factoring",   confidence:.9, status:"verified" },
         { from:"gcf",                   type:"next", to:"factoring",   confidence:.9, status:"verified" },
-        { from:"limits",                type:"next", to:"derivatives", confidence:.9, status:"verified" }
+        { from:"limits",                type:"next", to:"derivatives", confidence:.9, status:"verified" },
+
+        { from:"functions",    type:"sameIdea", to:"Pure functions (programming)",        confidence:.9,  status:"verified", reason:"A math function and a 'pure function' in code make the same promise: one input, exactly one output, no surprises." },
+        { from:"derivatives",  type:"sameIdea", to:"Gradient descent (machine learning)", confidence:.9,  status:"verified", reason:"Both follow a function's slope to decide which way to move — calculus reads a curve, ML uses it to shrink a model's error." },
+        { from:"derivatives",  type:"sameIdea", to:"Marginal cost (economics)",           confidence:.85, status:"verified", reason:"Marginal cost literally IS the derivative of total cost: how much the next unit adds." },
+        { from:"conditioning", type:"sameIdea", to:"Reinforcement learning (AI)",          confidence:.85, status:"verified", reason:"An AI learning from rewards is operant conditioning in code — behavior that pays off gets repeated." },
+        { from:"trigonometry", type:"sameIdea", to:"Waves and oscillation (physics)",      confidence:.8,  status:"verified", reason:"Sound, light, and springs all trace sine waves — the same circular motion trig describes." },
+        { from:"factoring",    type:"sameIdea", to:"Public-key encryption (cybersecurity)", confidence:.75, status:"ai", reason:"RSA's security rests on factoring being hard — the exact skill you're practicing, scaled to 600-digit numbers." }
       ],
       match: [   // topic-regex → concept slug (checked before the domain fallback)
         { re:/\bfactor|greatest common|gcf\b/i,                          slug:"factoring" },
@@ -2642,6 +2650,18 @@
 
       // 2 — Why does it matter?
       if (c && c.why){ html+=secHead("②","WHY IT MATTERS","#f0abfc"); html+='<div style="font:500 13.5px/1.55 system-ui;color:var(--text)">'+kgEsc(c.why)+'</div>'; }
+
+      // ✦ Cross-domain synthesis — the same idea wearing a different costume.
+      //   The rarest, most valuable edges in the graph: a concept revealed to be
+      //   an idea the student may already know from another subject.
+      var same = slug ? kgEdges(slug,"sameIdea") : [];
+      if (same.length){
+        html+='<div style="margin:14px 0 2px;background:linear-gradient(180deg,rgba(217,70,239,.11),rgba(56,189,248,.06));border:1px solid rgba(217,70,239,.34);border-radius:12px;padding:10px 12px">'+
+          '<div style="font:800 11px system-ui;color:#e879f9;letter-spacing:.4px;margin-bottom:3px">🔀 THE SAME IDEA, ELSEWHERE</div>'+
+          same.map(function(e){
+            return '<div style="font:500 13px/1.55 system-ui;color:var(--text);margin-top:7px"><b style="color:#f0abfc">'+kgEsc(kgLabel(e.to))+'</b> — '+kgEsc(e.reason||"")+kgConfBadge(e)+'</div>';
+          }).join('')+'</div>';
+      }
 
       // 3 — Where is it used? (reuses the Relevance Engine)
       if (rel){
