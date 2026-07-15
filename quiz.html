@@ -1486,6 +1486,7 @@
     function render(){
       var q = DECK[idx];
       if (typeof resetTutorUI==="function") resetTutorUI();
+      if (typeof clearSuggest==="function") clearSuggest();   // drop the prior question's remediation nudge
       scoreEl.textContent=""; scoreEl.style.color="var(--text)";
       selEl.textContent = qnum(idx) + " ▾";
       optsEl.innerHTML="";
@@ -1628,6 +1629,7 @@
       DECKS[curDeck].graded[idx]=pts; setEarned(); persistProgress(); bumpStats(pts===max);
       scoreEl.textContent = pts+" / "+max+" ("+Math.round((pts/max)*100)+"%)";
       scoreEl.style.color = (pts===max)?"var(--ok)":"var(--text)";
+      if (typeof showPrereqSuggestion==="function") showPrereqSuggestion(pts,max);  // missed → graph-driven remediation
     }
     function grade(){
       var q=DECK[idx]; if(q.type==="placeholder") return;
@@ -2487,7 +2489,37 @@
           explanation:"Classical conditioning links two stimuli; operant conditioning links a behavior to reward or punishment. Both explain how experience reshapes behavior.",
           analogy:"A dog that drools at a bell, or a child who tidies up to earn a sticker.",
           example:"Pavlov's dogs salivating at a bell that had been paired with food.",
-          why:"Conditioning underlies habits, phobia therapy, marketing, and classroom management." }
+          why:"Conditioning underlies habits, phobia therapy, marketing, and classroom management." },
+        "variables": { title:"Variables", subject:"precalc", difficulty:1,
+          definition:"A symbol (usually a letter like x) that stands for a number which can change.",
+          explanation:"Variables let us write one rule that works for many numbers instead of redoing the arithmetic each time.",
+          analogy:"A labelled box: 'x' holds whatever number you put in it.",
+          example:"In 2x+1, x can be 3 (giving 7) or 10 (giving 21).",
+          why:"Variables are the alphabet of algebra — every equation, function, and formula is written with them." },
+        "coordinate-plane": { title:"The Coordinate Plane", subject:"precalc", difficulty:1,
+          definition:"A grid of a horizontal x-axis and a vertical y-axis that locates points as (x, y) pairs.",
+          explanation:"It turns pairs of numbers into positions, so a relationship between two quantities can be drawn as a graph.",
+          analogy:"A map with streets and avenues — an address (x, y) pins one exact spot.",
+          example:"The point (3, 2) sits 3 right and 2 up from the origin.",
+          why:"Graphing every function, line, and curve depends on the coordinate plane." },
+        "distributive-property": { title:"The Distributive Property", subject:"precalc", difficulty:1,
+          definition:"a(b + c) = ab + ac — multiplying a sum means multiplying each term.",
+          explanation:"It links multiplication with addition, and running it backwards is exactly what factoring does.",
+          analogy:"Handing every kid in two groups the same treat — total = treats·group1 + treats·group2.",
+          example:"3(x + 4) = 3x + 12.",
+          why:"It's the engine behind expanding, simplifying, and (in reverse) factoring expressions." },
+        "gcf": { title:"Greatest Common Factor (GCF)", subject:"precalc", difficulty:1,
+          definition:"The largest factor shared by two or more numbers or terms.",
+          explanation:"Pulling out the GCF is usually the first step of factoring — it strips the common piece off every term.",
+          analogy:"The biggest identical LEGO brick you can remove from two different builds.",
+          example:"The GCF of 6x² and 9x is 3x, so 6x²+9x = 3x(2x+3).",
+          why:"Almost every factoring problem starts by taking out the GCF." },
+        "limits": { title:"Limits", subject:"precalc", difficulty:4,
+          definition:"The value a function approaches as its input approaches some point.",
+          explanation:"Limits describe a function's behavior arbitrarily close to a point — even where it isn't defined — and are the formal basis of the derivative.",
+          analogy:"Walking halfway to a wall over and over: you get arbitrarily close without ever needing to touch it.",
+          example:"As x→2, x² →4, even without plugging in exactly.",
+          why:"Limits are the doorway from algebra into calculus — derivatives and integrals are both defined with them." }
       },
       // First-class relationship edges. `to` is a concept slug for concept-typed
       // relations, otherwise a free-text label. confidence 0..1; status verified|ai.
@@ -2531,7 +2563,13 @@
         { from:"conditioning", type:"prerequisite", to:"intro-psychology", confidence:.7,  status:"verified" },
         { from:"conditioning", type:"next",         to:"memory",           confidence:.6,  status:"ai" },
         { from:"conditioning", type:"career",       to:"UX Designer",      confidence:.7,  status:"ai", reason:"Habit-forming products lean on reinforcement schedules." },
-        { from:"conditioning", type:"related",      to:"behaviorism",      confidence:.85, status:"verified" }
+        { from:"conditioning", type:"related",      to:"behaviorism",      confidence:.85, status:"verified" },
+
+        { from:"variables",             type:"next", to:"functions",   confidence:.9, status:"verified" },
+        { from:"coordinate-plane",      type:"next", to:"functions",   confidence:.85, status:"verified" },
+        { from:"distributive-property", type:"next", to:"factoring",   confidence:.9, status:"verified" },
+        { from:"gcf",                   type:"next", to:"factoring",   confidence:.9, status:"verified" },
+        { from:"limits",                type:"next", to:"derivatives", confidence:.9, status:"verified" }
       ],
       match: [   // topic-regex → concept slug (checked before the domain fallback)
         { re:/\bfactor|greatest common|gcf\b/i,                          slug:"factoring" },
@@ -2579,12 +2617,15 @@
       var lvl=e.confidence>=.8?"High":e.confidence>=.5?"Med":"Low";
       return '<span title="'+kgEsc(e.reason||"AI-suggested connection — not yet human-verified")+'" style="background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#fcd34d;border-radius:999px;padding:1px 7px;font:800 9.5px system-ui;margin-left:6px;white-space:nowrap">✨ AI · '+lvl+'</span>';
     }
-    // Render the six-question portal ONCE per question at the top of the panel.
-    function showKnowledgePortal(){
-      if (!explainBody || document.getElementById("kgPortal")) return;
-      var slug=kgSlugFor(DECKS[curDeck].id, DECKS[curDeck].title, sessionQA && sessionQA.prompt);
+    // Assemble the six-question portal for ANY concept slug — used both for the
+    // current question (showKnowledgePortal) and for a prerequisite the student
+    // taps to review from the Suggestion Engine (openConceptPortal).
+    function renderPortalFor(slug, opts){
+      opts = opts || {};
+      if (!explainBody) return;
+      var prev=document.getElementById("kgPortal"); if (prev) prev.remove();
       var c=slug && KG.concepts[slug];
-      var rel=relevanceFor(DECKS[curDeck].id, DECKS[curDeck].title, sessionQA && sessionQA.prompt);
+      var rel=relevanceFor(opts.deckId!=null?opts.deckId:"", (c?c.title:(opts.title||"")), (c?c.definition:opts.prompt));
       var secHead=function(n,label,color){ return '<div style="font:800 11px system-ui;color:'+color+';letter-spacing:.4px;margin:13px 0 5px">'+n+' · '+label+'</div>'; };
       var html='';
 
@@ -2649,9 +2690,60 @@
       var d=document.createElement("div");
       d.id="kgPortal";
       d.style.cssText="background:linear-gradient(180deg,rgba(99,102,241,.08),rgba(56,189,248,.05));border:1px solid rgba(129,140,248,.30);border-radius:14px;padding:12px 14px 14px;margin-bottom:6px";
-      d.innerHTML='<div style="font:900 12.5px system-ui;color:#c7d2fe;letter-spacing:.5px;display:flex;align-items:center;gap:6px">🚪 KNOWLEDGE PORTAL'+
+      d.innerHTML='<div style="font:900 12.5px system-ui;color:#c7d2fe;letter-spacing:.5px;display:flex;align-items:center;gap:6px">📘 ABOUT THIS CONCEPT'+
         (c?'<span style="font:700 11px system-ui;color:var(--muted,#9aa3bd)">· '+kgEsc(c.title)+(c.difficulty?' · difficulty '+c.difficulty+'/5':'')+'</span>':'')+'</div>'+html;
+      if (opts.override){
+        var back=document.createElement("button");
+        back.type="button"; back.textContent="← back to your question";
+        back.style.cssText="cursor:pointer;background:none;border:none;color:#93c5fd;font:800 12px system-ui;padding:0;margin-bottom:4px;text-decoration:underline;display:block";
+        back.addEventListener("click",function(){ explainBody.innerHTML=""; showKnowledgePortal(); });
+        d.insertBefore(back, d.firstChild);
+      }
       explainBody.insertBefore(d, explainBody.firstChild);
+      explainBody.scrollTop=0;
+    }
+    // The current question's portal (once per question, opened by Explain/Hint).
+    function showKnowledgePortal(){
+      if (!explainBody || document.getElementById("kgPortal")) return;
+      var slug=kgSlugFor(DECKS[curDeck].id, DECKS[curDeck].title, sessionQA && sessionQA.prompt);
+      renderPortalFor(slug, { deckId:DECKS[curDeck].id, title:DECKS[curDeck].title, prompt: sessionQA && sessionQA.prompt });
+    }
+    // Open the panel focused on a prerequisite concept the student chose to review.
+    function openConceptPortal(slug){
+      if (!explainPanel || !explainBody) return;
+      explainPanel.classList.remove("hidden");
+      explainBody.innerHTML="";
+      renderPortalFor(slug, { deckId:"", override:true });
+    }
+    /* ── AI Suggestion Engine ────────────────────────────────────────────────
+       A missed question is a signal, not just a score. Resolve the question's
+       concept, walk its prerequisite EDGES, and surface the building blocks to
+       shore up first — turning the graph from a display into remediation. Every
+       chip opens that prerequisite's own Knowledge Portal. ───────────────────*/
+    function clearSuggest(){ var s=document.getElementById("kgSuggest"); if(s) s.remove(); }
+    function showPrereqSuggestion(pts, max){
+      clearSuggest();
+      if (pts>=max) return;                        // full credit → no nudge
+      var qa=currentQA();
+      var slug=kgSlugFor(DECKS[curDeck].id, DECKS[curDeck].title, qa.prompt);
+      if (!slug) return;                           // unmapped topic → stay quiet
+      var pre=kgEdges(slug,"prerequisite"), c=KG.concepts[slug];
+      var mainEl=document.querySelector("main"); if (!mainEl) return;
+      var d=document.createElement("div"); d.id="kgSuggest";
+      d.style.cssText="margin:14px 0 4px;background:linear-gradient(180deg,rgba(251,113,133,.09),rgba(129,140,248,.06));border:1px solid rgba(251,113,133,.32);border-radius:13px;padding:11px 13px";
+      var head='<div style="font:800 11.5px system-ui;color:#fca5a5;letter-spacing:.3px;margin-bottom:6px">🧭 SHORE UP THE BASICS FIRST</div>';
+      if (pre.length){
+        d.innerHTML=head+
+          '<div style="font:500 13px/1.5 system-ui;color:var(--text);margin-bottom:8px">Struggling with <b>'+kgEsc(c?c.title:kgLabel(slug))+'</b>? It builds on these — tap one to review:</div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:7px">'+pre.map(function(e){
+            return '<button type="button" class="kg-pre" data-slug="'+kgEsc(e.to)+'" style="cursor:pointer;display:inline-flex;align-items:center;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.42);border-radius:999px;padding:4px 11px;font:700 12px system-ui;color:#c7d2fe">'+kgEsc(kgLabel(e.to))+kgConfBadge(e)+'</button>';
+          }).join("")+'</div>';
+      } else if (c){
+        d.innerHTML=head+'<div style="font:500 13px/1.5 system-ui;color:var(--text)">This is a foundational concept with no prerequisites. <button type="button" id="kgReview" style="cursor:pointer;background:none;border:none;color:#c7d2fe;font:800 13px system-ui;text-decoration:underline;padding:0">Open its Knowledge Portal →</button></div>';
+      } else { return; }
+      mainEl.appendChild(d);
+      [].forEach.call(d.querySelectorAll(".kg-pre"),function(b){ b.addEventListener("click",function(){ openConceptPortal(b.getAttribute("data-slug")); }); });
+      var rv=d.querySelector("#kgReview"); if (rv) rv.addEventListener("click",function(){ openConceptPortal(slug); });
     }
     function openExplain(){
       ensureSession();
