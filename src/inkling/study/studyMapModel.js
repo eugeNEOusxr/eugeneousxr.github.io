@@ -1205,6 +1205,21 @@ export function seedBuiltInStudyMaps() {
       seeded.push(m.id);
     });
     if (changed) saveAll(maps);
+    // One-time: light the recommended first-semester EE subjects as "Learning" so
+    // the map starts with a clear day-one starting point, not a wall of untouched.
+    try {
+      const EE_FS_KEY = "inkling-ee-firstsem-seeded-v1";
+      if (!localStorage.getItem(EE_FS_KEY) && maps.some((x) => x.id === "sm_builtin_ee")) {
+        touchLeavesByLabel([
+          "Calculus I–II",
+          "Programming · C/C++ & Python ★",
+          "Physics II · Electricity & Magnetism ★",
+          "Digital Logic Design ★",
+          "Circuit Analysis I · DC ★"
+        ]);
+        localStorage.setItem(EE_FS_KEY, "1");
+      }
+    } catch { /* non-fatal */ }
     localStorage.setItem(BUILTIN_SEEDED_KEY, JSON.stringify(seeded));
   } catch { /* non-fatal */ }
 }
