@@ -2408,14 +2408,20 @@
     function gotoDeepLink(){
       var qp; try { qp = new URLSearchParams(location.search).get("q"); } catch(_){ qp = null; }
       if (!qp) return false;
-      var m = /^(\d+\.\d+)\.(\d+)$/.exec(qp.trim()); if (!m) return false;
-      var sec = m[1], n = parseInt(m[2],10) - 1, di = -1;
-      for (var i=0;i<DECKS.length;i++){ if (DECKS[i].id===sec && !DECKS[i].generated){ di=i; break; } }
-      if (di<0) for (var j=0;j<DECKS.length;j++){ if (DECKS[j].id===sec){ di=j; break; } }
-      if (di<0) return false;
-      hideHome(); switchDeck(di);
-      if (n>=0 && n<DECK.length){ idx=n; render(); }
-      closeMenu(); return true;
+      qp = qp.trim();
+      var m = /^(\d+\.\d+)\.(\d+)$/.exec(qp);
+      if (m){
+        var sec = m[1], n = parseInt(m[2],10) - 1, di = -1;
+        for (var i=0;i<DECKS.length;i++){ if (DECKS[i].id===sec && !DECKS[i].generated){ di=i; break; } }
+        if (di<0) for (var j=0;j<DECKS.length;j++){ if (DECKS[j].id===sec){ di=j; break; } }
+        if (di<0) return false;
+        hideHome(); switchDeck(di);
+        if (n>=0 && n<DECK.length){ idx=n; render(); }
+        closeMenu(); return true;
+      }
+      // Form 2: a full deck/section id like "elec 1.1" or "ckt 1.2" → open that deck at Q1.
+      for (var k=0;k<DECKS.length;k++){ if (DECKS[k].id===qp){ hideHome(); switchDeck(k); idx=0; render(); closeMenu(); return true; } }
+      return false;
     }
     if (!gotoDeepLink()) restoreLoc();
 

@@ -9,6 +9,17 @@ import { findSetFor, generateFlashcards } from "../../inkling/study/flashcardsMo
 
 function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
+// Built-in maps that have an authored, GRADED quiz.html deck (MC / fill-in /
+// match) — open that instead of generating passive flip-cards. Value = the
+// quiz deep-link (deck id) to start at.
+const MAP_QUIZ_START = {
+  sm_builtin_precalc: "1.1",
+  sm_builtin_biology: "bio 1.1",
+  sm_builtin_ai: "ai 1.1",
+  sm_builtin_ee: "ckt 1.1",
+  sm_builtin_electrician: "elec 1.1"
+};
+
 export class StudyMapPanel {
   constructor() { this._panel = null; this._body = null; this._openId = null; }
 
@@ -136,20 +147,31 @@ export class StudyMapPanel {
       lab.textContent = br.label;
       const cards = document.createElement("button");
       cards.type = "button";
-      cards.textContent = findSetFor(map.id, br.id) ? "📇 Cards" : "📇 Make cards";
       cards.style.cssText = "flex:0 0 auto;background:rgba(240,171,252,0.12);color:#f0abfc;border:1px solid rgba(240,171,252,0.4);border-radius:999px;padding:4px 10px;font:700 11px system-ui;cursor:pointer";
-      cards.addEventListener("click", async () => {
-        const existing = findSetFor(map.id, br.id);
-        if (existing) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: existing.id } })); return; }
-        cards.textContent = "Making…"; cards.disabled = true;
-        const r = await generateFlashcards({
-          topic: map.topic, section: br.label,
-          terms: br.leaves.map((l) => l.label), mapId: map.id, branchId: br.id
+      const quizStart = MAP_QUIZ_START[map.id];
+      if (quizStart) {
+        // Subjects with a real graded deck → open answerable questions (MC/fill-in).
+        cards.textContent = "📝 Quiz";
+        cards.title = "Open graded questions for this subject";
+        cards.addEventListener("click", () => {
+          document.dispatchEvent(new CustomEvent("inkling:open-quiz", { detail: { q: quizStart } }));
         });
-        cards.disabled = false;
-        if (r.ok) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: r.set.id } })); }
-        else { cards.textContent = r.reason === "signin" ? "Sign in" : r.reason === "capped" ? "Limit hit" : "Retry"; setTimeout(() => { cards.textContent = "📇 Make cards"; }, 2000); }
-      });
+      } else {
+        // No authored deck yet → generate practice cards from the subject terms.
+        cards.textContent = findSetFor(map.id, br.id) ? "📇 Cards" : "📇 Make cards";
+        cards.addEventListener("click", async () => {
+          const existing = findSetFor(map.id, br.id);
+          if (existing) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: existing.id } })); return; }
+          cards.textContent = "Making…"; cards.disabled = true;
+          const r = await generateFlashcards({
+            topic: map.topic, section: br.label,
+            terms: br.leaves.map((l) => l.label), mapId: map.id, branchId: br.id
+          });
+          cards.disabled = false;
+          if (r.ok) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: r.set.id } })); }
+          else { cards.textContent = r.reason === "signin" ? "Sign in" : r.reason === "capped" ? "Limit hit" : "Retry"; setTimeout(() => { cards.textContent = "📇 Make cards"; }, 2000); }
+        });
+      }
       sec.append(lab, cards);
       this._body.appendChild(sec);
       const wrap = document.createElement("div");

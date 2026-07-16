@@ -35,7 +35,7 @@ const INKLING_CRON_KEY = "calendar3d-inkling-cron-v1";
 // stamp a content change only showed up after a manual HARD reset. BUMP THIS
 // whenever wordweaver.html, wordweaver3d.html, or quiz.html changes, and the next
 // normal app load fetches the fresh file. */
-const CANVAS_VERSION = "20260715a";
+const CANVAS_VERSION = "20260715b";
 function withCanvasVersion(path) {
   return path + (path.includes("?") ? "&" : "?") + "v=" + CANVAS_VERSION;
 }
@@ -120,6 +120,11 @@ export class InklingPanel {
     document.addEventListener("inkling:open-flashcards", (e) => {
       this.minimize();
       this.showCardSet(e.detail?.setId);
+    });
+    // Study Map subjects with an authored deck open the GRADED quiz (MC/fill-in).
+    document.addEventListener("inkling:open-quiz", (e) => {
+      this.minimize();
+      this.showFlashcards(e.detail?.q);
     });
     // Cross-surface messages from the embedded canvases (wordweaver / quiz iframes).
     window.addEventListener("message", (e) => {
