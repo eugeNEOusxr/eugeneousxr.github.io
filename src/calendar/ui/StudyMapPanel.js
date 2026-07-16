@@ -145,34 +145,43 @@ export class StudyMapPanel {
       const lab = document.createElement("div");
       lab.style.cssText = "font:800 12px system-ui;color:#cbd5e1";
       lab.textContent = br.label;
-      const cards = document.createElement("button");
-      cards.type = "button";
-      cards.style.cssText = "flex:0 0 auto;background:rgba(240,171,252,0.12);color:#f0abfc;border:1px solid rgba(240,171,252,0.4);border-radius:999px;padding:4px 10px;font:700 11px system-ui;cursor:pointer";
+      // Two clearly-separate actions per subject: STUDY the real graded questions
+      // (pink, prominent) vs MAKE your own practice cards (muted) — never conflated.
+      const btns = document.createElement("div");
+      btns.style.cssText = "display:flex;gap:6px;align-items:center;flex:0 0 auto";
+
       const quizStart = MAP_QUIZ_START[map.id];
       if (quizStart) {
-        // Subjects with a real graded deck → open answerable questions (MC/fill-in).
-        cards.textContent = "📝 Quiz";
-        cards.title = "Open graded questions for this subject";
-        cards.addEventListener("click", () => {
+        const study = document.createElement("button");
+        study.type = "button";
+        study.textContent = "📝 Study";
+        study.title = "Answer the real graded questions for this subject";
+        study.style.cssText = "background:rgba(240,171,252,0.16);color:#f0abfc;border:1px solid rgba(240,171,252,0.55);border-radius:999px;padding:4px 12px;font:800 11px system-ui;cursor:pointer";
+        study.addEventListener("click", () => {
           document.dispatchEvent(new CustomEvent("inkling:open-quiz", { detail: { q: quizStart } }));
         });
-      } else {
-        // No authored deck yet → generate practice cards from the subject terms.
-        cards.textContent = findSetFor(map.id, br.id) ? "📇 Cards" : "📇 Make cards";
-        cards.addEventListener("click", async () => {
-          const existing = findSetFor(map.id, br.id);
-          if (existing) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: existing.id } })); return; }
-          cards.textContent = "Making…"; cards.disabled = true;
-          const r = await generateFlashcards({
-            topic: map.topic, section: br.label,
-            terms: br.leaves.map((l) => l.label), mapId: map.id, branchId: br.id
-          });
-          cards.disabled = false;
-          if (r.ok) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: r.set.id } })); }
-          else { cards.textContent = r.reason === "signin" ? "Sign in" : r.reason === "capped" ? "Limit hit" : "Retry"; setTimeout(() => { cards.textContent = "📇 Make cards"; }, 2000); }
-        });
+        btns.appendChild(study);
       }
-      sec.append(lab, cards);
+
+      const make = document.createElement("button");
+      make.type = "button";
+      make.textContent = findSetFor(map.id, br.id) ? "✨ Cards" : "✨ Make";
+      make.title = "Generate your own practice cards from this section";
+      make.style.cssText = "background:rgba(148,163,184,0.12);color:#cbd5e1;border:1px solid rgba(148,163,184,0.4);border-radius:999px;padding:4px 10px;font:700 11px system-ui;cursor:pointer";
+      make.addEventListener("click", async () => {
+        const existing = findSetFor(map.id, br.id);
+        if (existing) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: existing.id } })); return; }
+        make.textContent = "Making…"; make.disabled = true;
+        const r = await generateFlashcards({
+          topic: map.topic, section: br.label,
+          terms: br.leaves.map((l) => l.label), mapId: map.id, branchId: br.id
+        });
+        make.disabled = false;
+        if (r.ok) { document.dispatchEvent(new CustomEvent("inkling:open-flashcards", { detail: { setId: r.set.id } })); }
+        else { make.textContent = r.reason === "signin" ? "Sign in" : r.reason === "capped" ? "Limit hit" : "Retry"; setTimeout(() => { make.textContent = "✨ Make"; }, 2000); }
+      });
+      btns.appendChild(make);
+      sec.append(lab, btns);
       this._body.appendChild(sec);
       const wrap = document.createElement("div");
       wrap.style.cssText = "display:flex;flex-wrap:wrap;gap:7px";
