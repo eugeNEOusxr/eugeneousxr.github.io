@@ -2280,8 +2280,10 @@
         return;
       }
 
-      // Level 1 — subjects.
+      // Level 1 — grouped into three pillars: Subjects · Career paths · My flashcards.
       titleEl.textContent = "📚 Study sets";
+      var catHead = function(t){ var h=document.createElement("div"); h.style.cssText="grid-column:1/-1;font:800 11px system-ui;color:#9aa3bd;letter-spacing:.6px;text-transform:uppercase;margin:6px 2px 0;padding-top:10px;border-top:1px solid rgba(255,255,255,.09)"; h.textContent=t; homeGrid.appendChild(h); };
+      if (precalc.length || bioSecs.length || aiSecs.length || psychSecs.length) catHead("📚 Subjects");
       if (precalc.length && !dismissed["__precalc"]){
         var chs = {}; precalc.forEach(function(s){ chs[chapterOf(s.sec)] = 1; });
         var readyList = Object.keys(chs).sort(function(a,b){ return a - b; }).join(", ");
@@ -2340,6 +2342,7 @@
         });
         homeGrid.appendChild(psc);
       }
+      if (cktSecs.length || elecSecs.length) catHead("🎓 Career paths");
       if (cktSecs.length && !dismissed["__circuits"]){
         var cbx = document.createElement("button");
         cbx.type = "button"; cbx.className = "homebox";
@@ -2368,6 +2371,7 @@
         });
         homeGrid.appendChild(ebx);
       }
+      catHead("📇 My flashcards");
       others.forEach(function(s){ if (!dismissed[s.sec]) homeGrid.appendChild(makeSectionBox(s)); });
       homeGrid.appendChild(makeMiscBox("Generate a new set", "✨", function(){ hideHome(); if (genBar.style.display === "none") genBtn.click(); }));
       if (Object.keys(dismissed).length){
