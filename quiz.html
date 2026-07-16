@@ -1431,30 +1431,30 @@
     // Ids "elec N.M" route via isElec()/subjectKey().
     DECKS.push(
       { id:"elec 1.1", title:"1.1 · Electrical Safety", graded:{}, questions:[
-        { type:"mc", prompt:"The two hazards that make electrical work most dangerous are:", options:["Electric shock and arc flash","Loud noise and dust","Heavy lifting only","Bright light and heat"], correct:0, points:10 },
-        { type:"mc", prompt:"<em>Lockout/tagout</em> (LOTO) is a procedure to:", options:["De-energize equipment and keep it from being turned on during work","Label every wire by color","Test voltage on a live line","Bend conduit accurately"], correct:0, points:10 },
-        { type:"mc", prompt:"Before working on a circuit you should always:", options:["Verify it is de-energized with a tester — 'test before touch'","Assume it is already off","Just wear gloves and proceed","Check it later"], correct:0, points:10 },
-        { type:"mc", prompt:"PPE stands for:", options:["Personal Protective Equipment","Public Power Exchange","Primary Panel Enclosure","Portable Power Extension"], correct:0, points:10 },
-        { type:"mc", prompt:"An <em>arc flash</em> is:", options:["An explosive release of energy from an electrical fault","A type of light fixture","A code paperwork error","A wiring method"], correct:0, points:10 },
-        { type:"mc", prompt:"The U.S. agency that sets workplace safety standards is:", options:["OSHA","NEC","IBEW","FCC"], correct:0, points:10 },
-        { type:"mc", prompt:"Near electrical work, the safer ladder to use is:", options:["A non-conductive fiberglass ladder","An aluminum ladder","Any metal ladder","No ladder is ever needed"], correct:0, points:10 },
-        { type:"mc", prompt:"A <em>GFCI</em> (ground-fault circuit interrupter) protects people by:", options:["Cutting power when it detects current leaking to ground","Raising the voltage","Adding steady resistance","Measuring temperature"], correct:0, points:10 },
-        { type:"mc", prompt:"Grounding a system improves safety by:", options:["Giving fault current a safe path so the breaker trips","Increasing the voltage","Storing extra charge","Dimming the lights"], correct:0, points:10 },
-        { type:"mc", prompt:"Even a fairly low voltage can be deadly because:", options:["It's the current through the body, not just voltage, that harms you","Voltage never matters","Only very high voltage is dangerous","Low voltage can't hurt you"], correct:0, points:10 },
-        { type:"match", prompt:"Match each safety term to its meaning.", options:["OSHA","Lockout/tagout","PPE","GFCI"], items:[{ eq:"The U.S. workplace-safety agency", answer:0 },{ eq:"De-energize and secure equipment before work", answer:1 },{ eq:"Protective gear worn on the job", answer:2 },{ eq:"Cuts power when current leaks to ground", answer:3 }], points:10 }
+        { type:"mc", prompt:"A GFCI trips when the current in the hot and neutral conductors differs (leaks to ground) by more than about:", options:["15 amps","4–6 milliamps","120 volts","1 amp"], correct:1, points:10 },
+        { type:"mc", prompt:"The <em>let-go threshold</em> — the current above which your muscles clamp and you cannot release a live conductor — is roughly:", options:["4–6 mA","10–16 mA","1 amp","50 amps"], correct:1, points:10 },
+        { type:"mc", prompt:"Current as small as about ______ passing across the chest can trigger fatal ventricular fibrillation:", options:["1 mA","5 mA","50–100 mA","10 amps"], correct:2, points:10 },
+        { type:"mc", prompt:"A GFCI protects <em>people</em> from shock; an ordinary circuit breaker mainly protects:", options:["the wiring from overcurrent and fire","people from shock as well","against lightning strikes","against low voltage"], correct:0, points:10 },
+        { type:"mc", prompt:"An <em>AFCI</em> (arc-fault circuit interrupter) differs from a GFCI because it guards against:", options:["dangerous arcing that can start a fire","ground faults / shock only","overvoltage surges","lightning"], correct:0, points:10 },
+        { type:"mc", prompt:"An arc flash can reach temperatures of roughly:", options:["500 °F","2,000 °F","35,000 °F — hotter than the sun's surface","200 °F"], correct:2, points:10 },
+        { type:"mc", prompt:"Proper 'test-before-touch' uses the <em>live-dead-live</em> method, which means:", options:["test a known live source, test the circuit, then re-test the known source to confirm the tester still works","test the circuit once and proceed","assume the meter is good","test only the ground"], correct:0, points:10 },
+        { type:"mc", prompt:"After locking and tagging out equipment, the critical final step is to:", options:["verify zero energy by testing AND attempting to start the equipment","just leave the tag in place","wait five minutes","phone the office"], correct:0, points:10 },
+        { type:"mc", prompt:"Class-rated insulating rubber gloves are selected based on:", options:["the maximum voltage they are rated to protect against","their color","glove size alone","the manufacturer"], correct:0, points:10 },
+        { type:"mc", prompt:"Two people touch the same 120 V source; one is hurt far worse. The biggest factor is:", options:["the current path and skin resistance (wet vs dry) — since current, not voltage alone, harms tissue","the wire's color","the time of day","the breaker's brand"], correct:0, points:10 },
+        { type:"match", prompt:"Match each body-current level to its effect.", options:["≈ 1 mA","10–16 mA","50–100 mA","4–6 mA"], items:[{ eq:"Threshold of perception — barely felt", answer:0 },{ eq:"Let-go threshold — muscles clamp, can't release", answer:1 },{ eq:"Can cause fatal heart fibrillation", answer:2 },{ eq:"The GFCI trip point (set below let-go)", answer:3 }], points:10 }
       ] },
       { id:"elec 1.2", title:"1.2 · The National Electrical Code (NEC)", graded:{}, questions:[
-        { type:"mc", prompt:"The National Electrical Code (NEC) is:", options:["The U.S. standard for safe electrical installation","A law about wages","A brand of tools","An electricians' union"], correct:0, points:10 },
-        { type:"mc", prompt:"The NEC is also formally known as:", options:["NFPA 70","OSHA 30","IEEE 802","UL 100"], correct:0, points:10 },
-        { type:"mc", prompt:"The NEC is revised and republished:", options:["Every 3 years","Every year","Only once, long ago","Every 10 years"], correct:0, points:10 },
-        { type:"mc", prompt:"The stated purpose of the NEC is:", options:["The practical safeguarding of people and property from electrical hazards","To set the price of electrical work","To certify power tools","To schedule apprentices"], correct:0, points:10 },
-        { type:"mc", prompt:"A <em>conductor</em> is:", options:["A material (usually copper or aluminum) that carries current","An insulator that blocks current","A type of switch","A circuit breaker"], correct:0, points:10 },
-        { type:"mc", prompt:"The <em>ampacity</em> of a conductor is:", options:["The maximum current it can safely carry","Its physical length","Its voltage rating","Its insulation color"], correct:0, points:10 },
-        { type:"mc", prompt:"A circuit <em>breaker</em> is designed to:", options:["Automatically stop current when it exceeds a safe level","Store electrical charge","Step up the voltage","Bend conduit"], correct:0, points:10 },
-        { type:"mc", prompt:"A <em>branch circuit</em> is:", options:["The wiring between the final overcurrent device and the outlets/devices","The main utility service","The electric meter","The ground rod"], correct:0, points:10 },
-        { type:"mc", prompt:"By common color code, the equipment <em>grounding</em> conductor is:", options:["Green or bare copper","Black","Red","Blue"], correct:0, points:10 },
-        { type:"mc", prompt:"A <em>load calculation</em> determines:", options:["How much electrical demand a circuit or panel must safely handle","The price of the job","The color of the wire","The length of the conduit run"], correct:0, points:10 },
-        { type:"match", prompt:"Match each NEC term to its meaning.", options:["NFPA 70","Ampacity","Circuit breaker","Branch circuit"], items:[{ eq:"The formal name of the NEC", answer:0 },{ eq:"Max current a conductor can safely carry", answer:1 },{ eq:"Automatically stops overcurrent", answer:2 },{ eq:"Wiring from the last breaker out to the devices", answer:3 }], points:10 }
+        { type:"mc", prompt:"Under standard NEC rules, 12 AWG copper is generally protected at:", options:["15 A","20 A","30 A","50 A"], correct:1, points:10 },
+        { type:"mc", prompt:"14 AWG copper is generally protected at:", options:["15 A","20 A","10 A","30 A"], correct:0, points:10 },
+        { type:"mc", prompt:"A <em>continuous</em> load (running 3+ hours) must be sized at what percent of the load for the conductor and breaker?", options:["100%","125%","80%","150%"], correct:1, points:10 },
+        { type:"mc", prompt:"The NEC general-lighting load for a dwelling is calculated at about:", options:["3 VA per square foot","1 VA per square foot","10 VA per square foot","100 VA per square foot"], correct:0, points:10 },
+        { type:"mc", prompt:"The grounded (neutral) and equipment-grounding conductors may be bonded together:", options:["only at the service / main panel — never at a subpanel","at every junction box","at every outlet","never, anywhere"], correct:0, points:10 },
+        { type:"mc", prompt:"A conductor's ampacity must be <em>derated</em> (reduced) when:", options:["many current-carrying conductors are bundled together, or the ambient temperature is high","the run is short","the wire is copper","it is installed indoors"], correct:0, points:10 },
+        { type:"mc", prompt:"<em>Box-fill</em> calculations are based on:", options:["the box's cubic-inch volume and each conductor's required volume allowance","the box's weight","the wire color","the breaker amperage"], correct:0, points:10 },
+        { type:"mc", prompt:"A THHN conductor's 90 °C insulation rating matters because:", options:["it sets which ampacity column and derating you're allowed to use","it changes the wire's color","it sets the price","it is purely decorative"], correct:0, points:10 },
+        { type:"mc", prompt:"The NEC generally requires GFCI-protected receptacles in:", options:["bathrooms, kitchens, garages, outdoors, and other damp/wet areas","only bathrooms","only outdoors","no residential areas"], correct:0, points:10 },
+        { type:"mc", prompt:"Beyond wire gauge, a conductor's allowed ampacity depends most on:", options:["its insulation temperature rating and the installation conditions (heat, bundling)","its color","the manufacturer","the run length alone"], correct:0, points:10 },
+        { type:"match", prompt:"Match each NEC value to what it governs.", options:["20 A","15 A","125%","3 VA / sq ft"], items:[{ eq:"Overcurrent protection for 12 AWG copper", answer:0 },{ eq:"Overcurrent protection for 14 AWG copper", answer:1 },{ eq:"Sizing factor for a continuous load", answer:2 },{ eq:"Dwelling general-lighting load per square foot", answer:3 }], points:10 }
       ] }
     );
     // School WebWork — Assignment 1.5: Transformation of Functions (front:true → 1.5.1..1.5.5).
@@ -1631,6 +1631,16 @@
     }
     function render(){
       var q = DECK[idx];
+      // Shuffle multiple-choice options ONCE per question so the correct answer
+      // isn't always first (authored decks put it at index 0). Remaps q.correct
+      // so grading / show-answer / AI stay consistent.
+      if (q && q.type==="mc" && Array.isArray(q.options) && q.options.length>1 && !q._shuf){
+        var _oc=q.correct, _opts=q.options, _ord=_opts.map(function(_,i){return i;});
+        for (var _i=_ord.length-1;_i>0;_i--){ var _j=Math.floor(Math.random()*(_i+1)), _t=_ord[_i]; _ord[_i]=_ord[_j]; _ord[_j]=_t; }
+        q.options=_ord.map(function(i){return _opts[i];});
+        q.correct=_ord.indexOf(_oc);
+        q._shuf=true;
+      }
       if (typeof resetTutorUI==="function") resetTutorUI();
       if (typeof clearSuggest==="function") clearSuggest();   // drop the prior question's remediation nudge
       scoreEl.textContent=""; scoreEl.style.color="var(--text)";
