@@ -1157,6 +1157,60 @@ function buildEEMap() {
   };
 }
 
+function buildElectricianMap() {
+  const leaf = (label) => ({ id: uid("l"), label, mastery: 0 });
+  const branch = (label, labels) => ({ id: uid("b"), label, leaves: labels.map(leaf) });
+  return {
+    id: "sm_builtin_electrician",
+    topic: "Electrician Apprenticeship",
+    builtin: true,
+    createdAt: Date.now(),
+    branches: [
+      branch("Year 1 · Fundamentals", [
+        "Electrical theory · Ohm's law",
+        "DC circuits · series, parallel, Kirchhoff",
+        "Electrical math (applied)",
+        "Safety · OSHA, arc flash, lockout/tagout",
+        "Hand & power tools",
+        "Intro to the National Electrical Code (NEC)",
+        "Wiring methods & materials",
+        "Print / blueprint reading"
+      ]),
+      branch("Year 2 · AC & Residential", [
+        "AC theory · impedance, power factor",
+        "Transformers",
+        "Conduit bending",
+        "Grounding & bonding",
+        "Residential wiring",
+        "NEC · branch circuits & loads"
+      ]),
+      branch("Year 3 · Commercial & Industrial", [
+        "Three-phase power",
+        "Motor controls · relays, contactors, overloads",
+        "Commercial wiring",
+        "Raceways & cable",
+        "Lighting systems",
+        "NEC load calculations",
+        "Low-voltage / fire alarm"
+      ]),
+      branch("Year 4 · Automation & Advanced", [
+        "PLCs · programmable logic controllers",
+        "VFDs & industrial motor control",
+        "Instrumentation",
+        "Power distribution & switchgear",
+        "Advanced code calculations",
+        "Solar PV / renewables"
+      ]),
+      branch("Throughout · On the Job & Code", [
+        "On-the-job training hours (OJT)",
+        "The National Electrical Code (NEC)",
+        "Safety & first aid",
+        "Journeyman exam prep"
+      ])
+    ]
+  };
+}
+
 function dedupeLegacyBuiltins(maps) {
   if (localStorage.getItem(DEDUPED_KEY)) return false;
   localStorage.setItem(DEDUPED_KEY, "1");
@@ -1198,7 +1252,7 @@ export function seedBuiltInStudyMaps() {
     catch { seeded = []; }
     const maps = loadStudyMaps();
     let changed = dedupeLegacyBuiltins(maps);
-    [buildPrecalcMap, buildBiologyMap, buildChemistryMap, buildAIMap, buildEEMap].forEach((fn) => {
+    [buildPrecalcMap, buildBiologyMap, buildChemistryMap, buildAIMap, buildEEMap, buildElectricianMap].forEach((fn) => {
       const m = fn();
       if (seeded.includes(m.id)) return;                     // already seeded before (or user deleted it)
       if (!maps.some((x) => x.id === m.id)) { maps.unshift(m); changed = true; }
