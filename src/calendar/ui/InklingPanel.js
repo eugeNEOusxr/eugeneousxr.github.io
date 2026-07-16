@@ -119,7 +119,7 @@ export class InklingPanel {
     // Study Map sections jump into a generated deck via this event.
     document.addEventListener("inkling:open-flashcards", (e) => {
       this.minimize();
-      this.showFlashcards(e.detail?.setId);
+      this.showCardSet(e.detail?.setId);
     });
     // Cross-surface messages from the embedded canvases (wordweaver / quiz iframes).
     window.addEventListener("message", (e) => {
@@ -565,6 +565,14 @@ export class InklingPanel {
   showStorybook(opts = {}) {
     if (!this._storybook) this._storybook = new StorybookPanel();
     this._storybook.show(opts);
+  }
+
+  /** Open a GENERATED flashcard set (from a Study Map's "Make cards") in the
+   *  FlashcardsPanel. Distinct from showFlashcards(q), which opens the graded
+   *  quiz.html decks — routing a generated set id there landed on a stale deck. */
+  showCardSet(setId) {
+    if (!this._fcPanel) this._fcPanel = new FlashcardsPanel();
+    this._fcPanel.show(setId);
   }
 
   /** Open the Mind surface — the WordWeaver knowledge canvas (zoomable node graph). */
