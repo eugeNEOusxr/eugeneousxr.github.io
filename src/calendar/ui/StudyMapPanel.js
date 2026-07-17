@@ -16,6 +16,7 @@ const MAP_QUIZ_START = {
   sm_builtin_precalc: "1.1",
   sm_builtin_biology: "bio 1.1",
   sm_builtin_ai: "ai 1.1",
+  sm_builtin_psychology: "psych 1.1",
   sm_builtin_ee: "ckt 1.1",
   sm_builtin_electrician: "elec 1.1"
 };

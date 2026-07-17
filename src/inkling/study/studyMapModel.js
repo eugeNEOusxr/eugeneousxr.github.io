@@ -1242,6 +1242,141 @@ function dedupeLegacyBuiltins(maps) {
   return changed;
 }
 
+// OpenStax "Psychology 2e" — the 16-chapter course. Chapter 1 has authored graded
+// quiz questions (psych 1.1–1.4) + Chapter 2 (psych 2.1–2.2); the map lists the full
+// scope so the whole subject is visible and checkable as you learn it.
+function buildPsychologyMap() {
+  const leaf = (label) => ({ id: uid("l"), label, mastery: 0 });
+  const branch = (label, labels) => ({ id: uid("b"), label, leaves: labels.map(leaf) });
+  return {
+    id: "sm_builtin_psychology",
+    topic: "Psychology",
+    builtin: true,
+    createdAt: Date.now(),
+    branches: [
+      branch("Chapter 1 · Introduction to Psychology", [
+        "1.1 What Is Psychology?",
+        "1.2 History of Psychology",
+        "1.3 Contemporary Psychology",
+        "1.4 Careers in Psychology"
+      ]),
+      branch("Chapter 2 · Psychological Research", [
+        "2.1 Why Is Research Important?",
+        "2.2 Approaches to Research",
+        "2.3 Analyzing Findings",
+        "2.4 Ethics"
+      ]),
+      branch("Chapter 3 · Biopsychology", [
+        "3.1 Human Genetics",
+        "3.2 Cells of the Nervous System",
+        "3.3 Parts of the Nervous System",
+        "3.4 The Brain and Spinal Cord",
+        "3.5 The Endocrine System"
+      ]),
+      branch("Chapter 4 · States of Consciousness", [
+        "4.1 What Is Consciousness?",
+        "4.2 Sleep and Why We Sleep",
+        "4.3 Stages of Sleep",
+        "4.4 Sleep Problems and Disorders",
+        "4.5 Substance Use and Abuse",
+        "4.6 Other States of Consciousness"
+      ]),
+      branch("Chapter 5 · Sensation and Perception", [
+        "5.1 Sensation versus Perception",
+        "5.2 Waves and Wavelengths",
+        "5.3 Vision",
+        "5.4 Hearing",
+        "5.5 The Other Senses",
+        "5.6 Gestalt Principles of Perception"
+      ]),
+      branch("Chapter 6 · Learning", [
+        "6.1 What Is Learning?",
+        "6.2 Classical Conditioning",
+        "6.3 Operant Conditioning",
+        "6.4 Observational Learning"
+      ]),
+      branch("Chapter 7 · Thinking and Intelligence", [
+        "7.1 What Is Cognition?",
+        "7.2 Language",
+        "7.3 Problem Solving",
+        "7.4 What Are Intelligence and Creativity?",
+        "7.5 Measures of Intelligence",
+        "7.6 The Source of Intelligence"
+      ]),
+      branch("Chapter 8 · Memory", [
+        "8.1 How Memory Functions",
+        "8.2 Parts of the Brain Involved in Memory",
+        "8.3 Problems with Memory",
+        "8.4 Ways to Enhance Memory"
+      ]),
+      branch("Chapter 9 · Lifespan Development", [
+        "9.1 What Is Lifespan Development?",
+        "9.2 Lifespan Theories",
+        "9.3 Stages of Development",
+        "9.4 Death and Dying"
+      ]),
+      branch("Chapter 10 · Emotion and Motivation", [
+        "10.1 Motivation",
+        "10.2 Hunger and Eating",
+        "10.3 Sexual Behavior",
+        "10.4 Emotion"
+      ]),
+      branch("Chapter 11 · Personality", [
+        "11.1 What Is Personality?",
+        "11.2 Freud and the Psychodynamic Perspective",
+        "11.3 Neo-Freudians",
+        "11.4 Learning Approaches",
+        "11.5 Humanistic Approaches",
+        "11.6 Biological Approaches",
+        "11.7 Trait Theorists",
+        "11.8 Cultural Understandings of Personality",
+        "11.9 Personality Assessment"
+      ]),
+      branch("Chapter 12 · Social Psychology", [
+        "12.1 What Is Social Psychology?",
+        "12.2 Self-presentation",
+        "12.3 Attitudes and Persuasion",
+        "12.4 Conformity, Compliance, and Obedience",
+        "12.5 Prejudice and Discrimination",
+        "12.6 Aggression",
+        "12.7 Prosocial Behavior"
+      ]),
+      branch("Chapter 13 · Industrial-Organizational Psychology", [
+        "13.1 What Is Industrial and Organizational Psychology?",
+        "13.2 Industrial Psychology: Selecting and Evaluating Employees",
+        "13.3 Organizational Psychology: The Social Dimension of Work",
+        "13.4 Human Factors Psychology"
+      ]),
+      branch("Chapter 14 · Stress, Lifestyle, and Health", [
+        "14.1 What Is Stress?",
+        "14.2 Stressors",
+        "14.3 Stress and Illness",
+        "14.4 Regulation of Stress",
+        "14.5 The Pursuit of Happiness"
+      ]),
+      branch("Chapter 15 · Psychological Disorders", [
+        "15.1 What Are Psychological Disorders?",
+        "15.2 Diagnosing and Classifying Disorders",
+        "15.3 Anxiety Disorders",
+        "15.4 Obsessive-Compulsive and Related Disorders",
+        "15.5 Posttraumatic Stress Disorder",
+        "15.6 Mood and Related Disorders",
+        "15.7 Schizophrenia",
+        "15.8 Dissociative Disorders",
+        "15.9 Personality Disorders",
+        "15.10 Disorders in Childhood"
+      ]),
+      branch("Chapter 16 · Therapy and Treatment", [
+        "16.1 Mental Health Treatment: Past and Present",
+        "16.2 Types of Treatment",
+        "16.3 Treatment Modalities",
+        "16.4 Substance-Related and Addictive Disorders",
+        "16.5 The Sociocultural Model and Therapy Utilization"
+      ])
+    ]
+  };
+}
+
 /** Ensure the built-in maps exist. Idempotent; each builtin seeds once (tracked by id),
  *  so deletes stick AND a newly-added builtin (Biology, Chemistry, AI) shows up for
  *  existing users too. Also runs the one-time legacy-duplicate cleanup above. */
@@ -1252,7 +1387,7 @@ export function seedBuiltInStudyMaps() {
     catch { seeded = []; }
     const maps = loadStudyMaps();
     let changed = dedupeLegacyBuiltins(maps);
-    [buildPrecalcMap, buildBiologyMap, buildChemistryMap, buildAIMap, buildEEMap, buildElectricianMap].forEach((fn) => {
+    [buildPrecalcMap, buildBiologyMap, buildChemistryMap, buildAIMap, buildPsychologyMap, buildEEMap, buildElectricianMap].forEach((fn) => {
       const m = fn();
       if (seeded.includes(m.id)) return;                     // already seeded before (or user deleted it)
       if (!maps.some((x) => x.id === m.id)) { maps.unshift(m); changed = true; }
