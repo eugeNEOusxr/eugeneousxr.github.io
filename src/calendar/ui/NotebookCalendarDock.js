@@ -66,11 +66,6 @@ export class NotebookCalendarDock {
     this._date = todayIso();
     this._miniCal = null;
     this._collapsed = false;
-    // Which day view a day-tap opens: "2d" schedule/notes (default) or "3d" cylinder day.
-    this._dayMode = (() => { try { return localStorage.getItem("inkling:dayMode") === "3d" ? "3d" : "2d"; } catch { return "2d"; } })();
-    // When shown as the Schedule popup, tapping a day opens it. Inside the full
-    // calendar-max wall, a tap just selects/syncs — so this stays false there.
-    this._openOnSelect = false;
 
     if (!this.el) {
       console.error("[NotebookCalendarDock] #notebook-calendar-dock not found — small calendar unavailable.");
@@ -90,14 +85,6 @@ export class NotebookCalendarDock {
     });
     this.el.querySelector("[data-open-notes]")?.addEventListener("click", () => void this._openNotes());
     this.el.querySelector("[data-open-writer]")?.addEventListener("click", () => void this._openWriter());
-    this.el.querySelector("[data-open-day]")?.addEventListener("click", () => void this.openCurrentDay());
-    this.el.querySelectorAll("[data-daymode]").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.setDayMode(btn.getAttribute("data-daymode"));
-      });
-    });
-    this._paintDayMode();
     this.sidebar?.querySelector("[data-calendar-maximize]")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.onMaximize();
@@ -202,8 +189,6 @@ export class NotebookCalendarDock {
       onSelect: (iso) => {
         this.setDate(iso);
         void this.onSyncMonth(iso);
-        // In the Schedule popup, tapping a day takes you straight into that day.
-        if (this._openOnSelect) void this.openCurrentDay();
       },
       onMonthChange: (y, m) => {
         const d = parseIso(this._date);
@@ -306,33 +291,6 @@ export class NotebookCalendarDock {
 
   async _openWriter() {
     await this.onOpenWriter(this._date);
-  }
-
-  /** Open the selected day in whichever view the 2D/3D toggle is set to. */
-  async openCurrentDay() {
-    if (this._dayMode === "3d") await this.onOpenDay(this._date);   // 3D cylinder day
-    else await this.onOpenWriter(this._date);                        // 2D schedule / notes
-  }
-
-  setDayMode(mode) {
-    this._dayMode = mode === "3d" ? "3d" : "2d";
-    try { localStorage.setItem("inkling:dayMode", this._dayMode); } catch { /* ignore */ }
-    this._paintDayMode();
-  }
-
-  getDayMode() {
-    return this._dayMode;
-  }
-
-  _paintDayMode() {
-    this.el?.querySelectorAll("[data-daymode]").forEach((btn) => {
-      btn.classList.toggle("is-active", btn.getAttribute("data-daymode") === this._dayMode);
-    });
-  }
-
-  /** When true, a day-tap in the mini month opens that day (Schedule popup mode). */
-  setOpenOnSelect(on) {
-    this._openOnSelect = Boolean(on);
   }
 
   _shift(delta) {
