@@ -21,7 +21,7 @@
   .top{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:18px}
   .brand{font:800 20px system-ui}
   .brand small{display:block;font:600 11px system-ui;color:var(--dim);margin-top:2px}
-  .nav{display:flex;gap:6px}
+  .nav{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .nav button{background:var(--panel);border:1px solid var(--line);color:var(--ink);
     border-radius:999px;padding:7px 13px;font:700 12px system-ui;cursor:pointer}
   .nav button.on{background:rgba(158,203,255,.16);border-color:rgba(158,203,255,.55);color:var(--blue)}
@@ -272,6 +272,59 @@ const FIELD_KW = {
   robotics:["robot","automation","motor","arm","plc","industrial control","machine","actuator","autonom"]
 };
 
+/* ============================================================
+   THE INKLING INTERPRETER — intelligence routing.
+   You just say something. Inkling reads it, decides what KIND of
+   thing it is, and files it in the right system. You never sort it.
+   Conversation → Interpreter → {knowledge, question, path, goal,
+   memory, story, reflection, flashcard}. Offline heuristic classifier.
+   ============================================================ */
+const ROUTES = {
+  knowledge:{icon:"🧠",label:"Knowledge node",color:"var(--blue)",system:"Knowledge graph",verb:"added to your knowledge graph"},
+  question:{icon:"❓",label:"Question",color:"var(--amber)",system:"Open questions",verb:"filed as an open question to chase"},
+  path:{icon:"🧭",label:"Learning path",color:"var(--green)",system:"Study maps",verb:"opened as a learning path"},
+  goal:{icon:"🎯",label:"Goal",color:"var(--green)",system:"Goals",verb:"set as a goal"},
+  memory:{icon:"📌",label:"Memory",color:"var(--amber)",system:"Memory",verb:"remembered about you"},
+  story:{icon:"📖",label:"Story event",color:"var(--violet)",system:"Storybook",verb:"added to your story"},
+  reflection:{icon:"🪞",label:"Reflection",color:"var(--violet)",system:"Reflection",verb:"kept as a reflection"},
+  flashcard:{icon:"🗂️",label:"Flashcard",color:"var(--pink)",system:"Flashcards",verb:"saved as a study item"}
+};
+const ROUTE_ORDER=["knowledge","question","path","goal","memory","story","reflection","flashcard"];
+
+function detectLinks(low){
+  const found=new Map();  // lowercase key → display label (dedupe case-insensitively)
+  const add=v=>{ const k=v.toLowerCase(); if(!found.has(k)) found.set(k,v); };
+  FIELDS.forEach(f=>{
+    (FIELD_KW[f.id]||[]).forEach(k=>{ if(low.includes(k)) add(f.name); });
+    f.questions.forEach(q=>{
+      if(low.includes(" "+q.concept.toLowerCase())) add(q.concept);
+      (q.reality.concepts||[]).forEach(c=>{ if(low.includes(c.toLowerCase())) add(c); });
+    });
+  });
+  return [...found.values()].slice(0,6);
+}
+function classify(t){
+  const s=t.trim(); const low=" "+s.toLowerCase().replace(/\s+/g," ")+" ";
+  const links=detectLinks(low); const has=re=>re.test(low);
+  let type="knowledge", reason="It introduces an idea, so Inkling stored it in your knowledge graph.";
+  if(has(/\b(i want to|i'd like to|i wanna|help me|i need to) (learn|study|master|understand how)\b/)||has(/\bteach me\b/)||has(/\bget (into|started with)\b/)||has(/\bwhere do i (start|begin)\b/)||has(/\bhow do i learn\b/)){
+    type="path"; reason="You're setting out to learn a subject, so Inkling opened a learning path.";
+  } else if(has(/\b[a-z]+ means [a-z]+/)||has(/\bstands for\b/)||/^[^?]{2,40}:\s+\S+/.test(s)||has(/\b(i keep|i always) (forget|forgetting|mixing up|confusing)\b/)){
+    type="flashcard"; reason="There's a term and a meaning here, so Inkling made it a study item.";
+  } else if(has(/\bmy goal\b/)||has(/\bi want to be\b/)||has(/\b(i want to|i'm trying to|i plan to|i hope to|i aim to|one day i|someday i|i will) (build|make|create|become|design|invent|solve|start|launch|work)\b/)){
+    type="goal"; reason="You named something you're working toward, so Inkling set it as a goal.";
+  } else if(has(/\bi (prefer|learn best|always|usually|tend to|work better)\b/)||has(/\bremember that i\b/)||has(/\bnote that i\b/)||has(/\bfor me,? [a-z]/)||has(/\bi'm the kind of\b/)){
+    type="memory"; reason="This is lasting context about you, so Inkling will remember it.";
+  } else if(has(/\bit clicked\b/)||has(/\bfinally (understand|get|got|clicked)\b/)||has(/\bnow i (understand|get|see|know)\b/)||has(/\bi used to think\b/)||has(/\bi connected\b/)||has(/\bchanged how i (see|think)\b/)||has(/\bmakes sense now\b/)){
+    type="story"; reason="This is a real shift in your understanding, so Inkling added it to your story.";
+  } else if(has(/\bi (feel|realized|realize|realised|noticed)\b/)||has(/\bi've been thinking\b/)||has(/\blately\b/)){
+    type="reflection"; reason="This reads as a reflection, so Inkling kept it as one.";
+  } else if(/\?\s*$/.test(s)||has(/^ (how|why|what|when|where|who|which|does|do|can|could|is|are|should|would|will|if)\b/)){
+    type="question"; reason="You asked something, so Inkling filed it as an open question to chase.";
+  }
+  return {type,links,reason};
+}
+
 /* ---- storage ---- */
 const KEY = "inkling-mind-v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; } }
@@ -282,6 +335,7 @@ DB.refine  = DB.refine  || {};   // {qid:{had:[i],new:[i]}}
 DB.openQs  = DB.openQs  || {};   // {qid:[str]}
 DB.breakthroughs = DB.breakthroughs || {};  // {qid:[timestamp,...]} — moments it clicked
 DB.profile = DB.profile || { answers:{}, fields:[], done:false, startedAt:0, completedAt:0 };
+DB.captures = DB.captures || [];  // interpreter output: [{id,text,type,links,reason,at}]
 function persist(){ save(DB); }
 
 /* ---- helpers ---- */
@@ -304,15 +358,17 @@ function chrome(inner, active){
   return `<div class="top">
       <div class="brand">🌱 Inkling<small>your evolving model of how the world works</small></div>
       <div class="nav">
-        <button class="${active==='onboard'?'on':''}" onclick="go({name:'onboard',step:0})">🌱 The Seed</button>
+        <button class="${active==='onboard'?'on':''}" onclick="go({name:'onboard',step:0})">🌱 Seed</button>
+        <button class="${active==='router'?'on':''}" onclick="go({name:'router'})">💬 Talk</button>
         <button class="${active==='home'?'on':''}" onclick="go({name:'home'})">⚡ Fields</button>
-        <button class="${active==='model'?'on':''}" onclick="go({name:'model'})">🧠 Your model</button>
+        <button class="${active==='model'?'on':''}" onclick="go({name:'model'})">🧠 Model</button>
       </div>
     </div>${inner}`;
 }
 
 function render(){
   if(view.name==="onboard") return renderOnboard();
+  if(view.name==="router") return renderRouter();
   if(view.name==="home") return renderHome();
   if(view.name==="field") return renderField();
   if(view.name==="question") return renderQuestion();
@@ -464,6 +520,56 @@ function addOpenQ(fid,qid){
   document.getElementById("realityHost").innerHTML=realityHTML(fieldById(fid),qById(fid,qid));
   const nx=document.getElementById("oq"); if(nx) nx.focus();
 }
+
+/* ---- THE INTERPRETER surface: say anything, Inkling routes it ---- */
+function renderRouter(){
+  const caps=DB.captures.slice().sort((a,b)=>b.at-a.at);
+  const counts={}; caps.forEach(c=>counts[c.type]=(counts[c.type]||0)+1);
+  const strip = caps.length? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:2px 0 16px">
+    ${ROUTE_ORDER.filter(t=>counts[t]).map(t=>`<span class="lk" style="border-color:${ROUTES[t].color}55;color:${ROUTES[t].color}">${ROUTES[t].icon} ${counts[t]} · ${ROUTES[t].system}</span>`).join("")}</div>`:"";
+  const feed = caps.length
+    ? caps.map(c=>capCard(c, window.__justCap===c.id)).join("")
+    : `<div class="empty">Nothing yet.<br><span style="opacity:.8">Type a thought above — a question, something you learned, a goal. Inkling decides where it belongs.</span></div>`;
+  app.innerHTML=chrome(
+    `<h1>💬 Talk to Inkling</h1>
+     <p class="sub">Say anything — a question, an idea, a thing that clicked, a goal. You never sort it: Inkling reads it and files it in the right system for you.</p>
+     <div class="panel">
+       <textarea id="capText" placeholder="e.g.  How does intelligence emerge from simple systems?   ·   I finally understand what a transistor does.   ·   I want to learn robotics." style="min-height:82px" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))interpret()"></textarea>
+       <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+         <button class="btn" onclick="interpret()">Interpret ›</button>
+         <span class="hint" style="margin:0">Routes to: knowledge · question · path · goal · memory · story · reflection · card</span>
+       </div>
+     </div>
+     ${strip}
+     ${feed}`, "router");
+}
+function capCard(c, fresh){
+  const R=ROUTES[c.type]||ROUTES.knowledge;
+  const links=(c.links||[]).map(l=>`<span class="lk">${esc(l)}</span>`).join("");
+  const reclass = ROUTE_ORDER.map(t=>`<span class="chip" title="${ROUTES[t].label}" style="padding:3px 8px;font-size:12px;${t===c.type?`background:${ROUTES[t].color}22;border-color:${ROUTES[t].color}`:''}" onclick="reclassify('${c.id}','${t}')">${ROUTES[t].icon}</span>`).join("");
+  return `<div class="node" style="${fresh?`border-color:${R.color};box-shadow:0 0 0 1px ${R.color}66`:''}">
+    <div class="nh"><span class="nn" style="color:${R.color}">${R.icon} ${R.label}</span><span class="nc">${R.verb} · ${daysAgo(c.at)}</span></div>
+    <div style="margin-top:7px;color:#dbe4ee;line-height:1.5">${esc(c.text)}</div>
+    ${fresh&&c.reason?`<div class="hint" style="margin-top:6px;color:${R.color}">✦ ${esc(c.reason)}</div>`:''}
+    ${links?`<div class="links" style="margin-top:8px">${links}</div>`:''}
+    <div style="margin-top:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+      <span class="hint" style="margin:0 3px 0 0">not right?</span>${reclass}
+      <button class="back" style="margin-left:auto;color:var(--dim)" onclick="deleteCapture('${c.id}')">remove</button>
+    </div>
+  </div>`;
+}
+function interpret(){
+  const el=document.getElementById("capText"); const t=(el.value||"").trim(); if(!t){ el.focus(); return; }
+  const r=classify(t); const id="c"+Date.now();
+  DB.captures.push({id,text:t,type:r.type,links:r.links,reason:r.reason,at:Date.now()});
+  persist(); window.__justCap=id; renderRouter(); window.scrollTo(0,0);
+}
+function reclassify(id,type){
+  const c=DB.captures.find(x=>x.id===id); if(!c) return;
+  c.type=type; c.reason="You reclassified this — Inkling moved it to "+ROUTES[type].system+".";
+  persist(); window.__justCap=id; renderRouter();
+}
+function deleteCapture(id){ DB.captures=DB.captures.filter(x=>x.id!==id); persist(); renderRouter(); }
 
 /* ---- THE SEED: the Initial Understanding Protocol ---- */
 function onbSteps(){
@@ -737,6 +843,8 @@ function renderModel(){
   // where curiosity keeps returning + unresolved threads across every concept
   const returns = nodes.slice().filter(n=>n.vs.length>1).sort((a,b)=>b.vs.length-a.vs.length).slice(0,5);
   const allOpen=[]; nodes.forEach(n=>(DB.openQs[n.q.id]||[]).forEach(o=>allOpen.push({o, c:n.q.concept, f:n.f})));
+  // shared user model: questions you routed through the Interpreter show up here too
+  DB.captures.filter(c=>c.type==="question").forEach(c=>allOpen.push({o:c.text, c:"via 💬 Talk", f:{icon:"💬"}}));
   let curiosity="";
   if(returns.length){
     curiosity += `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--violet);margin:0 0 9px;text-transform:uppercase;letter-spacing:.04em">Where your curiosity keeps returning</h3>
