@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inkling · your evolving model of how the world works</title>
+<style>
+  :root{
+    --bg:#070b14; --panel:rgba(255,255,255,0.04); --panel2:rgba(255,255,255,0.06);
+    --line:rgba(255,255,255,0.12); --ink:#e6edf3; --dim:#8b949e; --blue:#9ecbff;
+    --pink:#f0abfc; --green:#39d98a; --amber:#fbbf24; --violet:#a78bfa;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font:600 14px/1.5 system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  body{background:radial-gradient(1200px 700px at 80% -10%,rgba(120,90,255,.13),transparent 60%),
+        radial-gradient(900px 600px at 0% 110%,rgba(0,180,255,.10),transparent 55%),var(--bg)}
+  a{color:inherit}
+  .wrap{max-width:760px;margin:0 auto;padding:22px 16px 90px}
+  .top{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:18px}
+  .brand{font:800 20px system-ui}
+  .brand small{display:block;font:600 11px system-ui;color:var(--dim);margin-top:2px}
+  .nav{display:flex;gap:6px}
+  .nav button{background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    border-radius:999px;padding:7px 13px;font:700 12px system-ui;cursor:pointer}
+  .nav button.on{background:rgba(158,203,255,.16);border-color:rgba(158,203,255,.55);color:var(--blue)}
+  .back{background:transparent;border:0;color:var(--blue);font:700 12px system-ui;cursor:pointer;padding:0;margin-bottom:12px}
+  h1{font:800 22px system-ui;margin:0 0 4px}
+  .sub{color:var(--dim);font:600 12px system-ui;margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;
+    cursor:pointer;text-align:left;color:var(--ink);width:100%;transition:transform .08s,border-color .12s}
+  .card:hover{transform:translateY(-1px);border-color:rgba(158,203,255,.5)}
+  .card .ic{font-size:26px}
+  .card .nm{font:800 16px system-ui;margin:7px 0 3px}
+  .card .bl{color:var(--dim);font:600 12px system-ui;line-height:1.45}
+  .card .meta{margin-top:9px;font:700 11px system-ui;color:var(--blue)}
+  .qrow{display:flex;align-items:flex-start;gap:11px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:13px 14px;margin-bottom:9px;cursor:pointer;text-align:left;color:var(--ink);width:100%}
+  .qrow:hover{border-color:rgba(240,171,252,.5)}
+  .qrow .dot{flex:0 0 auto;width:10px;height:10px;border-radius:50%;margin-top:5px;background:#3b4252}
+  .qrow.done .dot{background:var(--green)}
+  .qrow.rev .dot{background:var(--violet)}
+  .qrow .qt{font:700 13px system-ui}
+  .qrow .qc{font:700 11px system-ui;color:var(--dim);margin-top:2px}
+  .qrow .st{margin-left:auto;flex:0 0 auto;font:700 10px system-ui;color:var(--dim);white-space:nowrap;padding-top:2px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+  .qbig{font:800 19px system-ui;line-height:1.35;margin:0 0 4px}
+  .concept-tag{display:inline-block;font:700 11px system-ui;color:var(--pink);
+    background:rgba(240,171,252,.12);border:1px solid rgba(240,171,252,.4);border-radius:999px;padding:3px 10px;margin-bottom:12px}
+  textarea{width:100%;min-height:110px;resize:vertical;background:rgba(0,0,0,.25);border:1px solid var(--line);
+    border-radius:11px;padding:12px;color:var(--ink);font:600 14px/1.5 system-ui;outline:none}
+  textarea:focus{border-color:rgba(158,203,255,.6)}
+  .conf{display:flex;align-items:center;gap:11px;margin:13px 0}
+  .conf input{flex:1}
+  .conf .lab{font:700 11px system-ui;color:var(--dim);min-width:96px}
+  .conf .val{font:800 12px system-ui;color:var(--amber);min-width:104px;text-align:right}
+  .btn{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:0;border-radius:11px;
+    padding:11px 18px;font:800 13px system-ui;cursor:pointer}
+  .btn.pink{background:linear-gradient(135deg,#db2777,#a21caf)}
+  .btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
+  .btn:disabled{opacity:.5;cursor:default}
+  .reality h3{font:800 13px system-ui;color:var(--green);margin:0 0 7px;text-transform:uppercase;letter-spacing:.04em}
+  .reality p{margin:0 0 12px;line-height:1.55;color:#dbe4ee}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 6px}
+  .chip{font:700 12px system-ui;border-radius:999px;padding:6px 12px;cursor:pointer;border:1px solid var(--line);
+    background:var(--panel2);color:var(--ink);user-select:none}
+  .chip.had{background:rgba(57,217,138,.16);border-color:rgba(57,217,138,.6);color:var(--green)}
+  .chip.new{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.55);color:var(--amber)}
+  .hint{font:600 11px system-ui;color:var(--dim);margin:2px 0 10px}
+  .timeline{border-left:2px solid var(--line);margin:6px 0 4px;padding-left:14px}
+  .tl{margin-bottom:12px}
+  .tl .when{font:700 11px system-ui;color:var(--violet)}
+  .tl .txt{margin-top:3px;color:#dbe4ee;line-height:1.5;white-space:pre-wrap}
+  .tl .cf{font:700 10px system-ui;color:var(--dim);margin-top:3px}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:10px}
+  .node .nh{display:flex;align-items:baseline;gap:8px;justify-content:space-between}
+  .node .nn{font:800 15px system-ui;color:var(--blue)}
+  .node .nc{font:700 10px system-ui;color:var(--dim)}
+  .node .links{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+  .node .lk{font:700 10px system-ui;color:var(--dim);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+  .empty{color:var(--dim);line-height:1.6;text-align:center;padding:34px 12px}
+  .jotwrap{margin-top:10px}
+  .jotwrap input{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);font:600 13px system-ui;outline:none}
+  .openq{font:600 12px system-ui;color:#cbd5e1;padding:6px 0 6px 16px;position:relative}
+  .openq:before{content:"?";position:absolute;left:0;color:var(--amber);font-weight:800}
+  .savedflash{color:var(--green);font:800 12px system-ui;opacity:0;transition:opacity .2s}
+  .savedflash.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+"use strict";
+
+/* ============================================================
+   INKLING — the core learning-intelligence loop.
+   Ask what you already think → capture it as a node → reveal the
+   reality layer → let you refine (had vs. new) → track how your
+   understanding evolves over time.  Self-contained, offline, guest-safe.
+   ============================================================ */
+
+const FIELDS = [
+  { id:"ee", icon:"⚡", name:"Electrical Engineering",
+    blurb:"From what electricity is, down to how a transistor thinks.",
+    questions:[
+      { id:"ee1", concept:"Electricity", q:"What do you think electricity actually is?",
+        reality:{ summary:"Electricity is the flow of electric charge — usually electrons drifting through a conductor, pushed by a difference in electric potential (voltage). The surprising part: the energy is carried by the electromagnetic field around the wire, not by electrons racing along inside it.",
+          concepts:["electric charge","electron","voltage","electric field","conductor"] } },
+      { id:"ee2", concept:"Voltage & Current", q:"What is the difference between voltage and current?",
+        reality:{ summary:"Voltage is the push — a difference in potential energy per unit charge, measured in volts. Current is the flow — how much charge moves per second, measured in amperes. Water helps: voltage is pressure, current is how fast the water flows. Resistance ties them together (Ohm's law: V = I × R).",
+          concepts:["potential difference","ampere","resistance","Ohm's law"] } },
+      { id:"ee3", concept:"Signal propagation", q:"Why does a light bulb turn on instantly when a switch is flipped?",
+        reality:{ summary:"The electrons themselves drift shockingly slowly — millimeters per second. But the electric field that pushes them propagates through the whole circuit at nearly the speed of light, so every electron 'feels the push' almost instantly. The bulb lights because the field arrives, not because an electron traveled from the switch.",
+          concepts:["drift velocity","electric field","energy transfer","speed of light"] } },
+      { id:"ee4", concept:"Conductors & insulators", q:"How do materials decide whether electricity can flow through them?",
+        reality:{ summary:"It comes down to how tightly a material holds its electrons. Conductors (metals) have loosely-bound 'free' electrons that move easily. Insulators hold electrons tightly. Semiconductors sit in between — and crucially, we can control whether they conduct, which is what makes computers possible.",
+          concepts:["free electrons","band gap","semiconductor","doping"] } },
+      { id:"ee5", concept:"Control & amplification", q:"How does a small electrical signal control something much larger?",
+        reality:{ summary:"A tiny signal changes a device's resistance or state at a control terminal — a transistor's gate, or a relay's coil — which gates a much larger current flowing elsewhere. That's amplification and control: little input, big controlled output. It's the idea behind every amplifier, motor controller, and logic gate.",
+          concepts:["transistor","gate","relay","amplification","gain"] } },
+      { id:"ee6", concept:"Transistor", q:"What do you think a transistor does inside a computer?",
+        reality:{ summary:"A transistor is an electrically-controlled switch. A small voltage on its gate either lets current flow (a 1) or blocks it (a 0) — no moving parts. Wire billions of them together and those on/off switches become logic gates, memory, and eventually every decision a computer makes.",
+          concepts:["switch","gate voltage","logic gate","on/off states"] } },
+      { id:"ee7", concept:"Information as electricity", q:"How does information become represented using electricity?",
+        reality:{ summary:"We agree on a convention: a high voltage means 1, a low voltage means 0. Patterns of those bits encode numbers, letters, and instructions. Logic gates transform the patterns, and that transformation IS computation — information becomes physical, then gets reshaped by electricity.",
+          concepts:["binary","bit","voltage threshold","encoding","logic"] } }
+    ] },
+
+  { id:"ai", icon:"🤖", name:"Artificial Intelligence",
+    blurb:"How a machine can 'learn' without ever understanding.",
+    questions:[
+      { id:"ai1", concept:"Machine learning", q:"What do you think 'learning' means for a machine?",
+        reality:{ summary:"Learning for a machine means adjusting a huge set of internal numbers (weights) so its output matches the examples it's shown, over and over. It isn't understanding — it's fitting patterns by nudging numbers to reduce error. Powerful, but mechanical.",
+          concepts:["weights","training data","error / loss","gradient"] } },
+      { id:"ai2", concept:"Neural network", q:"How does a neural network make a decision?",
+        reality:{ summary:"Inputs flow through layers of weighted sums followed by simple nonlinear functions. Each weight tilts the answer a little; stacked together, the layers can carve complex boundaries. The 'decision' is just the number that comes out the far end.",
+          concepts:["neuron","weight","activation","layer"] } },
+      { id:"ai3", concept:"Model parameters", q:"Where does an AI's 'knowledge' actually live?",
+        reality:{ summary:"Not in a database of facts — in the numbers (parameters) learned during training, smeared across the whole network. Knowledge is distributed: no single number holds a fact, the pattern of millions of them does.",
+          concepts:["parameters","distributed representation","training"] } },
+      { id:"ai4", concept:"Prediction vs understanding", q:"What's the difference between an AI predicting and understanding?",
+        reality:{ summary:"A model predicts the most likely next output from patterns it has seen. That can be extremely useful and still not be understanding — the model has no grasp of meaning, only of what tends to follow what. Keeping that distinction sharp is how you use AI wisely.",
+          concepts:["prediction","pattern","generalization"] } }
+    ] },
+
+  { id:"robotics", icon:"🦾", name:"Robotics & Automation",
+    blurb:"Sense, decide, move — and the industrial controls behind it.",
+    questions:[
+      { id:"rb1", concept:"Feedback & sensing", q:"How does a robot know where its arm is?",
+        reality:{ summary:"Sensors called encoders report each joint's position. A control loop constantly compares where the arm SHOULD be to where it IS, and corrects the difference. Without that feedback loop, a robot is blind to its own body.",
+          concepts:["encoder","feedback loop","actuator","error"] } },
+      { id:"rb2", concept:"Actuation", q:"How does a robot turn a decision into movement?",
+        reality:{ summary:"A controller sends signals to motors — often through drivers or variable-frequency drives (VFDs). Current through the motor's coils creates torque, which moves the joint. Decision → signal → current → torque → motion.",
+          concepts:["motor","controller","torque","VFD / driver"] } },
+      { id:"rb3", concept:"Autonomy", q:"What makes a robot 'autonomous'?",
+        reality:{ summary:"A robot is autonomous when it runs its own sense → decide → act loop using an internal model of the world, without a human steering each step. The intelligence is in that loop, not in any single part.",
+          concepts:["perception","planning","control loop"] } },
+      { id:"rb4", concept:"PLC / industrial control", q:"How does a PLC fit into industrial automation?",
+        reality:{ summary:"A PLC (Programmable Logic Controller) is a rugged industrial computer that reads sensor inputs and drives outputs on a fast, repeating scan cycle to control machinery. It's the backbone of industrial controls — the exact world an electrician moves toward in the later years of the trade.",
+          concepts:["PLC","ladder logic","I/O","scan cycle"] } }
+    ] },
+
+  { id:"cs", icon:"💻", name:"Computer Science",
+    blurb:"What a program really is, all the way down to the transistors.",
+    questions:[
+      { id:"cs1", concept:"Program", q:"What is a program, really?",
+        reality:{ summary:"A program is a precise list of instructions the CPU executes one step at a time. No magic — just an ordered recipe, followed exactly, very fast.",
+          concepts:["instruction","CPU","execution"] } },
+      { id:"cs2", concept:"Memory", q:"How does a computer remember things?",
+        reality:{ summary:"Data lives as bits in memory cells, each reachable by a numeric address. RAM is fast but forgets when powered off; storage is slower but persists. 'Remembering' is just reading the bits back from an address.",
+          concepts:["bit","RAM","address","storage"] } },
+      { id:"cs3", concept:"Execution", q:"What happens when you run code?",
+        reality:{ summary:"Your source is translated into machine instructions, loaded into memory, and executed by the CPU as a running process. The words you wrote become numbers the hardware knows how to obey.",
+          concepts:["compiler","machine code","process"] } },
+      { id:"cs4", concept:"Abstraction stack", q:"How does one line of code become electricity doing work?",
+        reality:{ summary:"Layers: your language → machine code → logic gates → transistors switching on and off. Every line you write is an abstraction sitting on top of electricity moving through silicon. This is where computer science and electrical engineering become the same story.",
+          concepts:["abstraction","machine code","logic gate","transistor"] } }
+    ] },
+
+  { id:"physics", icon:"🌌", name:"Physics",
+    blurb:"Energy, force, and fields — the rules underneath everything.",
+    questions:[
+      { id:"ph1", concept:"Energy", q:"What is energy?",
+        reality:{ summary:"Energy is the capacity to do work — to move or change something. It's never created or destroyed, only transformed between forms (motion, heat, electrical, chemical). That conservation is one of physics' deepest rules.",
+          concepts:["work","conservation","forms of energy"] } },
+      { id:"ph2", concept:"Gravity", q:"Why do things fall?",
+        reality:{ summary:"Mass warps spacetime, and objects follow that curvature — which we feel as a force. Near Earth's surface it accelerates everything at about 9.8 m/s² regardless of mass.",
+          concepts:["mass","acceleration","force","field"] } },
+      { id:"ph3", concept:"Field", q:"What is a field?",
+        reality:{ summary:"A field assigns a value to every point in space — electric, magnetic, or gravitational — and that value tells a nearby object what force it will feel. The electric field you meet in EE is the same kind of idea as gravity.",
+          concepts:["field","force","potential"] } },
+      { id:"ph4", concept:"Electromagnetism", q:"How does light carry energy?",
+        reality:{ summary:"Light is an oscillating electric and magnetic field propagating together as a wave — also describable as particles called photons. The same electromagnetism that lights your room runs your circuits.",
+          concepts:["wave","photon","EM spectrum"] } }
+    ] },
+
+  { id:"math", icon:"📐", name:"Mathematics",
+    blurb:"Functions, variables, graphs — the language of relationships.",
+    questions:[
+      { id:"ma1", concept:"Function", q:"What is a function?",
+        reality:{ summary:"A function is a rule that takes each input to exactly one output — a machine: put a number in, get a number out. Almost all of math and physics is really the study of functions.",
+          concepts:["input","output","mapping"] } },
+      { id:"ma2", concept:"Variables", q:"Why do we use variables like x?",
+        reality:{ summary:"A variable is a placeholder for an unknown or changing quantity. It lets you describe a relationship once and apply it to every case at once — that generality is the whole power of algebra.",
+          concepts:["variable","relationship","generalization"] } },
+      { id:"ma3", concept:"Graphs", q:"What does a graph actually show?",
+        reality:{ summary:"A graph is a picture of how one quantity changes as another changes. The shape of the curve IS the relationship — a steep line means fast change, a flat one means none.",
+          concepts:["axis","slope","relationship"] } },
+      { id:"ma4", concept:"Quadratics", q:"Where would 3x² + 2x show up in real life?",
+        reality:{ summary:"Anywhere acceleration, area, or optimization appears: a car's stopping distance grows with the square of speed, a thrown object traces a parabola, and a motor's power curve bends quadratically. The x² term is what makes the change speed up.",
+          concepts:["quadratic","rate of change","optimization"] } }
+    ] }
+];
+
+/* ---- storage ---- */
+const KEY = "inkling-mind-v1";
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; } }
+function save(d){ try{ localStorage.setItem(KEY, JSON.stringify(d)); }catch(e){} }
+let DB = load();
+DB.answers = DB.answers || {};   // {qid:[{text,conf,at}]}
+DB.refine  = DB.refine  || {};   // {qid:{had:[i],new:[i]}}
+DB.openQs  = DB.openQs  || {};   // {qid:[str]}
+function persist(){ save(DB); }
+
+/* ---- helpers ---- */
+const CONF = ["Just guessing","A rough idea","Fairly confident","I understand it","I could teach it"];
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fieldById(id){ return FIELDS.find(f=>f.id===id); }
+function qById(fid,qid){ return (fieldById(fid).questions||[]).find(q=>q.id===qid); }
+function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}); }
+function daysAgo(ts){ const d=Math.floor((Date.now()-ts)/86400000); return d<=0?"today":d===1?"1 day ago":d+" days ago"; }
+function answered(qid){ return (DB.answers[qid]||[]).length>0; }
+function versions(qid){ return DB.answers[qid]||[]; }
+
+/* ---- router ---- */
+let view = { name:"home", fid:null, qid:null };
+const app = document.getElementById("app");
+function go(v){ view=Object.assign({name:"home",fid:null,qid:null},v); render(); window.scrollTo(0,0); }
+
+function chrome(inner, activeModel){
+  return `<div class="top">
+      <div class="brand">🌱 Inkling<small>your evolving model of how the world works</small></div>
+      <div class="nav">
+        <button class="${activeModel?'':'on'}" onclick="go({name:'home'})">⚡ Fields</button>
+        <button class="${activeModel?'on':''}" onclick="go({name:'model'})">🧠 Your model</button>
+      </div>
+    </div>${inner}`;
+}
+
+function render(){
+  if(view.name==="home") return renderHome();
+  if(view.name==="field") return renderField();
+  if(view.name==="question") return renderQuestion();
+  if(view.name==="model") return renderModel();
+}
+
+/* ---- HOME: pick a field ---- */
+function renderHome(){
+  const cards = FIELDS.map(f=>{
+    const total=f.questions.length;
+    const done=f.questions.filter(q=>answered(q.id)).length;
+    const meta = done? `${done}/${total} captured` : `${total} discovery questions`;
+    return `<button class="card" onclick="go({name:'field',fid:'${f.id}'})">
+      <div class="ic">${f.icon}</div>
+      <div class="nm">${esc(f.name)}</div>
+      <div class="bl">${esc(f.blurb)}</div>
+      <div class="meta">${meta}</div>
+    </button>`;
+  }).join("");
+  app.innerHTML = chrome(
+    `<h1>Where do you want to begin?</h1>
+     <p class="sub">You don't need to know the answers. These are discovery questions — Inkling captures what you already think, then shows you how it really works, and remembers how your understanding changes.</p>
+     <div class="grid">${cards}</div>`, false);
+}
+
+/* ---- FIELD: list its discovery questions ---- */
+function renderField(){
+  const f=fieldById(view.fid);
+  const rows=f.questions.map(q=>{
+    const vs=versions(q.id);
+    const cls = vs.length>1?"qrow rev":vs.length===1?"qrow done":"qrow";
+    const st  = vs.length>1?`revisited ${vs.length}×`:vs.length===1?`captured ${daysAgo(vs[vs.length-1].at)}`:"not captured";
+    return `<button class="${cls}" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">
+      <span class="dot"></span>
+      <span><span class="qt">${esc(q.q)}</span><span class="qc">${esc(q.concept)}</span></span>
+      <span class="st">${st}</span>
+    </button>`;
+  }).join("");
+  app.innerHTML = chrome(
+    `<button class="back" onclick="go({name:'home'})">‹ All fields</button>
+     <h1>${f.icon} ${esc(f.name)}</h1>
+     <p class="sub">${esc(f.blurb)} · tap a question to capture what you think.</p>
+     ${rows}`, false);
+}
+
+/* ---- QUESTION: capture → reality → refine ---- */
+function renderQuestion(){
+  const f=fieldById(view.fid), q=qById(view.fid,view.qid);
+  const vs=versions(q.id);
+  const hasAns=vs.length>0;
+  const latest=hasAns?vs[vs.length-1]:null;
+
+  // prior-answer timeline (evolution)
+  let tl="";
+  if(hasAns){
+    tl=`<div class="panel"><h3 style="font:800 12px system-ui;color:var(--violet);margin:0 0 9px;text-transform:uppercase;letter-spacing:.04em">How your thinking has evolved</h3>
+      <div class="timeline">${vs.map(v=>`<div class="tl">
+        <div class="when">${fmtDate(v.at)} · ${daysAgo(v.at)}</div>
+        <div class="txt">${esc(v.text)}</div>
+        <div class="cf">confidence: ${CONF[v.conf]}</div></div>`).join("")}</div></div>`;
+  }
+
+  const promptTitle = hasAns ? "Explain it again — how do you see it now?" : "In your own words, what do you think?";
+  const startConf = latest? latest.conf : 1;
+
+  app.innerHTML = chrome(
+    `<button class="back" onclick="go({name:'field',fid:'${f.id}'})">‹ ${esc(f.name)}</button>
+     <div class="panel">
+       <div class="concept-tag">${esc(q.concept)}</div>
+       <div class="qbig">${esc(q.q)}</div>
+       <div class="hint" style="margin-top:8px">${promptTitle}</div>
+       <textarea id="ans" placeholder="Don't look anything up — just say what you believe right now. Being wrong here is the whole point.">${hasAns?"":""}</textarea>
+       <div class="conf">
+         <span class="lab">How sure are you?</span>
+         <input id="conf" type="range" min="0" max="4" value="${startConf}" oninput="document.getElementById('cv').textContent=window.__CONF[this.value]">
+         <span class="val" id="cv">${CONF[startConf]}</span>
+       </div>
+       <div style="display:flex;align-items:center;gap:12px">
+         <button class="btn" onclick="captureAnswer('${f.id}','${q.id}')">${hasAns?"Save new version":"Capture my thinking"}</button>
+         <span class="savedflash" id="saved">✓ saved to your model</span>
+       </div>
+     </div>
+     ${tl}
+     <div id="realityHost">${hasAns?realityHTML(f,q):""}</div>`, false);
+  window.__CONF=CONF;
+}
+
+function captureAnswer(fid,qid){
+  const t=document.getElementById("ans").value.trim();
+  if(!t){ document.getElementById("ans").focus(); return; }
+  const conf=parseInt(document.getElementById("conf").value,10)||0;
+  DB.answers[qid]=DB.answers[qid]||[];
+  DB.answers[qid].push({ text:t, conf:conf, at:Date.now() });
+  persist();
+  const f=fieldById(fid), q=qById(fid,qid);
+  const s=document.getElementById("saved"); s.classList.add("show"); setTimeout(()=>s.classList.remove("show"),1600);
+  // reveal reality layer + refresh evolution timeline
+  document.getElementById("ans").value="";
+  document.getElementById("realityHost").innerHTML=realityHTML(f,q);
+  document.getElementById("realityHost").scrollIntoView({behavior:"smooth",block:"start"});
+  // re-render dot state next time field is viewed (data already saved)
+}
+
+function realityHTML(f,q){
+  const rf=DB.refine[q.id]||{had:[],new:[]};
+  const chips=q.reality.concepts.map((c,i)=>{
+    const cls = rf.had.includes(i)?"chip had": rf.new.includes(i)?"chip new":"chip";
+    const badge = rf.had.includes(i)?" ✓": rf.new.includes(i)?" ✦":"";
+    return `<span class="${cls}" onclick="cycleChip('${f.id}','${q.id}',${i})">${esc(c)}${badge}</span>`;
+  }).join("");
+  const oqs=(DB.openQs[q.id]||[]);
+  const oqHTML = oqs.length? `<div style="margin-top:6px">${oqs.map((o,i)=>`<div class="openq">${esc(o)}</div>`).join("")}</div>`:"";
+  return `<div class="panel reality">
+    <h3>◈ The reality layer</h3>
+    <p>${esc(q.reality.summary)}</p>
+    <h3 style="color:var(--pink)">Concepts this introduces</h3>
+    <div class="hint">Tap each one: <b style="color:var(--green)">✓ I already had this</b> · tap again <b style="color:var(--amber)">✦ new to me</b>. This is your refinement — what shifted.</div>
+    <div class="chips">${chips}</div>
+    <h3 style="color:var(--amber);margin-top:14px">Questions this opens up</h3>
+    <div class="hint">What are you still wondering? These become threads to pull later.</div>
+    ${oqHTML}
+    <div class="jotwrap"><input id="oq" placeholder="I still don't get… / what about…" onkeydown="if(event.key==='Enter')addOpenQ('${f.id}','${q.id}')"></div>
+  </div>`;
+}
+
+function cycleChip(fid,qid,i){
+  const rf=DB.refine[qid]||{had:[],new:[]};
+  const inHad=rf.had.includes(i), inNew=rf.new.includes(i);
+  rf.had=rf.had.filter(x=>x!==i); rf.new=rf.new.filter(x=>x!==i);
+  if(!inHad&&!inNew) rf.had.push(i);        // none → had
+  else if(inHad) rf.new.push(i);            // had → new
+  // new → none
+  DB.refine[qid]=rf; persist();
+  document.getElementById("realityHost").innerHTML=realityHTML(fieldById(fid),qById(fid,qid));
+}
+function addOpenQ(fid,qid){
+  const el=document.getElementById("oq"); const t=el.value.trim(); if(!t) return;
+  DB.openQs[qid]=DB.openQs[qid]||[]; DB.openQs[qid].push(t); persist();
+  document.getElementById("realityHost").innerHTML=realityHTML(fieldById(fid),qById(fid,qid));
+  const nx=document.getElementById("oq"); if(nx) nx.focus();
+}
+
+/* ---- YOUR MODEL: every captured concept as a living node ---- */
+function renderModel(){
+  const nodes=[];
+  let totalAns=0, totalRevisits=0, openCount=0;
+  FIELDS.forEach(f=>f.questions.forEach(q=>{
+    const vs=versions(q.id); if(!vs.length) return;
+    totalAns++; totalRevisits+=Math.max(0,vs.length-1);
+    openCount+=(DB.openQs[q.id]||[]).length;
+    const rf=DB.refine[q.id]||{had:[],new:[]};
+    nodes.push({f,q,vs,rf});
+  }));
+
+  if(!nodes.length){
+    app.innerHTML=chrome(`<h1>🧠 Your model</h1>
+      <div class="empty">Nothing captured yet.<br><span style="opacity:.8">Answer a discovery question and it becomes a living node here — your own map of what you understand, and how it changes.</span><br><br>
+      <button class="btn" onclick="go({name:'home'})">Start with a field ›</button></div>`, true);
+    return;
+  }
+
+  // stat strip
+  const stat=`<div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px">
+    ${[["nodes",nodes.length,"var(--blue)"],["revisits",totalRevisits,"var(--violet)"],["open questions",openCount,"var(--amber)"]]
+      .map(([l,n,c])=>`<div style="flex:1;min-width:96px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px">
+        <div style="font:800 22px system-ui;color:${c}">${n}</div><div style="font:700 11px system-ui;color:var(--dim)">${l}</div></div>`).join("")}
+  </div>`;
+
+  const cards=nodes.map(({f,q,vs,rf})=>{
+    const latest=vs[vs.length-1];
+    const first=vs[0];
+    const evo = vs.length>1
+      ? `<div style="margin-top:9px;font:600 12px system-ui;color:#cbd5e1;line-height:1.5">
+           <span style="color:var(--dim)">then (${fmtDate(first.at)}):</span> “${esc(first.text.slice(0,120))}${first.text.length>120?"…":""}”<br>
+           <span style="color:var(--violet)">now (${fmtDate(latest.at)}):</span> “${esc(latest.text.slice(0,120))}${latest.text.length>120?"…":""}”</div>`
+      : `<div style="margin-top:9px;font:600 12px system-ui;color:#cbd5e1;line-height:1.5">“${esc(latest.text.slice(0,150))}${latest.text.length>150?"…":""}”</div>`;
+    const had=rf.had.map(i=>q.reality.concepts[i]).filter(Boolean);
+    const nw =rf.new.map(i=>q.reality.concepts[i]).filter(Boolean);
+    const links = q.reality.concepts.map(c=>`<span class="lk">${esc(c)}</span>`).join("");
+    const refined = (had.length||nw.length)? `<div style="margin-top:8px;font:700 11px system-ui">
+        ${had.length?`<span style="color:var(--green)">✓ had: ${had.map(esc).join(", ")}</span>`:""}
+        ${nw.length?`<span style="color:var(--amber);margin-left:8px">✦ new: ${nw.map(esc).join(", ")}</span>`:""}</div>`:"";
+    return `<button class="node" style="display:block;width:100%;text-align:left;cursor:pointer;color:var(--ink)" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">
+      <div class="nh"><span class="nn">${f.icon} ${esc(q.concept)}</span><span class="nc">${f.name} · ${vs.length>1?vs.length+" versions":"1 capture"}</span></div>
+      ${evo}
+      ${refined}
+      <div class="links">${links}</div>
+    </button>`;
+  }).join("");
+
+  app.innerHTML=chrome(
+    `<h1>🧠 Your model</h1>
+     <p class="sub">Every concept you've thought through, held as a living node. Tap one to revisit the question and see how far you've come.</p>
+     ${stat}${cards}`, true);
+}
+
+render();
+</script>
+</body>
+</html>
