@@ -350,34 +350,41 @@ function answered(qid){ return (DB.answers[qid]||[]).length>0; }
 function versions(qid){ return DB.answers[qid]||[]; }
 
 /* ---- router ---- */
-let view = { name:"home", fid:null, qid:null };
+let view = { name:"dashboard", fid:null, qid:null };
 const app = document.getElementById("app");
-function go(v){ view=Object.assign({name:"home",fid:null,qid:null},v); render(); window.scrollTo(0,0); }
+function go(v){ view=Object.assign({name:"dashboard",fid:null,qid:null},v); render(); window.scrollTo(0,0); }
 
 function chrome(inner, active){
   return `<div class="top">
-      <div class="brand">🌱 Inkling<small>your evolving model of how the world works</small></div>
+      <button onclick="go({name:'dashboard'})" style="background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;color:inherit">
+        <div class="brand">🌱 Inkling<small>your personal knowledge & growth system</small></div></button>
       <div class="nav">
-        <button class="${active==='onboard'?'on':''}" onclick="go({name:'onboard',step:0})">🌱 Seed</button>
-        <button class="${active==='router'?'on':''}" onclick="go({name:'router'})">💬 Talk</button>
-        <button class="${active==='home'?'on':''}" onclick="go({name:'home'})">⚡ Fields</button>
-        <button class="${active==='model'?'on':''}" onclick="go({name:'model'})">🧠 Model</button>
+        <button class="${active==='chat'?'on':''}" onclick="go({name:'router'})">🧠 Chat</button>
+        <button class="${active==='graph'?'on':''}" onclick="go({name:'model'})">🌐 Graph</button>
+        <button class="${active==='paths'?'on':''}" onclick="go({name:'paths'})">📚 Paths</button>
+        <button class="${active==='quiz'?'on':''}" onclick="go({name:'quiz'})">🎓 Quiz</button>
+        <button class="${active==='story'?'on':''}" onclick="go({name:'story'})">📖 Story</button>
+        <button class="${active==='memory'?'on':''}" onclick="go({name:'memory'})">🔔 Memory</button>
       </div>
     </div>${inner}`;
 }
 
 function render(){
+  if(view.name==="dashboard") return renderDashboard();
   if(view.name==="onboard") return renderOnboard();
   if(view.name==="router") return renderRouter();
-  if(view.name==="home") return renderHome();
+  if(view.name==="paths" || view.name==="home") return renderPaths();
   if(view.name==="field") return renderField();
   if(view.name==="question") return renderQuestion();
   if(view.name==="timeline") return renderTimeline();
   if(view.name==="model") return renderModel();
+  if(view.name==="quiz") return renderQuizSection();
+  if(view.name==="story") return renderStory();
+  if(view.name==="memory") return renderMemory();
 }
 
-/* ---- HOME: pick a field ---- */
-function renderHome(){
+/* ---- STUDY PATHS: pick a field, learn beginner → advanced ---- */
+function renderPaths(){
   const cards = FIELDS.map(f=>{
     const total=f.questions.length;
     const done=f.questions.filter(q=>answered(q.id)).length;
@@ -397,9 +404,9 @@ function renderHome(){
         <div class="meta">the initial understanding ›</div></button>`
     : "";
   app.innerHTML = chrome(
-    `<h1>Where do you want to begin?</h1>
-     <p class="sub">You don't need to know the answers. These are discovery questions — Inkling captures what you already think, then shows you how it really works, and remembers how your understanding changes.</p>
-     <div class="grid">${seedCTA}${cards}</div>`, "home");
+    `<h1>📚 Study Paths</h1>
+     <p class="sub">Learn a field from the ground up. Each path opens with discovery questions — Inkling captures what you already think, shows how it really works, and remembers how your understanding changes.</p>
+     <div class="grid">${seedCTA}${cards}</div>`, "paths");
 }
 
 /* ---- FIELD: list its discovery questions ---- */
@@ -416,10 +423,10 @@ function renderField(){
     </button>`;
   }).join("");
   app.innerHTML = chrome(
-    `<button class="back" onclick="go({name:'home'})">‹ All fields</button>
+    `<button class="back" onclick="go({name:'paths'})">‹ All paths</button>
      <h1>${f.icon} ${esc(f.name)}</h1>
      <p class="sub">${esc(f.blurb)} · tap a question to capture what you think.</p>
-     ${rows}`, "home");
+     ${rows}`, "paths");
 }
 
 /* ---- QUESTION: capture → reality → refine ---- */
@@ -462,7 +469,7 @@ function renderQuestion(){
        </div>
      </div>
      ${tl}
-     <div id="realityHost">${hasAns?realityHTML(f,q):""}</div>`, "home");
+     <div id="realityHost">${hasAns?realityHTML(f,q):""}</div>`, "paths");
   window.__CONF=CONF;
 }
 
@@ -521,6 +528,154 @@ function addOpenQ(fid,qid){
   const nx=document.getElementById("oq"); if(nx) nx.focus();
 }
 
+/* ---- shared snapshot of the one user model ---- */
+function snapshot(){
+  let concepts=0, revisits=0, openThreads=0, bt=0;
+  FIELDS.forEach(f=>f.questions.forEach(q=>{
+    const v=versions(q.id); if(v.length){ concepts++; revisits+=Math.max(0,v.length-1); }
+    openThreads+=(DB.openQs[q.id]||[]).length;
+    bt+=(DB.breakthroughs[q.id]||[]).length;
+  }));
+  const caps=DB.captures||[];
+  const capQ=caps.filter(c=>c.type==="question").length;
+  const story=caps.filter(c=>c.type==="story").length + bt;
+  const memCount=caps.filter(c=>c.type==="memory").length + (DB.profile.done?Object.keys(DB.profile.answers).length:0);
+  return { concepts, revisits, breakthroughs:bt, questions:openThreads+capQ, story, captures:caps.length, memory:memCount };
+}
+
+/* ---- DASHBOARD: the 10-second promise + the living state ---- */
+function renderDashboard(){
+  const P=DB.profile, s=snapshot();
+  const newUser = !P.done && s.captures===0 && s.concepts===0;
+  const sections=[
+    ["router","🧠","Chat","Think with Inkling",(DB.captures||[]).length+" thoughts routed"],
+    ["model","🌐","Knowledge graph","See how your ideas connect",s.concepts+" concepts"],
+    ["paths","📚","Study paths","Learn beginner → advanced",FIELDS.length+" fields open"],
+    ["quiz","🎓","Quiz","Strengthen understanding","graded, adaptive decks"],
+    ["story","📖","Storybook","Read your journey",s.story+" moments"],
+    ["memory","🔔","Memory","What Inkling remembers",s.memory+" things"]
+  ];
+  const cards=sections.map(([v,ic,nm,pp,meta])=>`<button class="card" onclick="go({name:'${v}'})">
+      <div class="ic">${ic}</div><div class="nm">${esc(nm)}</div><div class="bl">${esc(pp)}</div>
+      <div class="meta">${esc(meta)} ›</div></button>`).join("");
+
+  // hero
+  let hero=`<div style="text-align:center;padding:14px 4px 8px">
+     <div style="font-size:40px;line-height:1">🌱</div>
+     <h1 style="margin:10px 0 6px;font-size:26px">Inkling</h1>
+     <p class="sub" style="max-width:520px;margin:0 auto 4px;font-size:14px">Turn your conversations into <b style="color:var(--ink)">connected knowledge</b> — learn it, remember it, and watch your understanding grow into a living map and story of how you think.</p>
+   </div>`;
+
+  // new user → one clear front door
+  if(newUser){
+    return void (app.innerHTML=chrome(
+      hero +
+      `<button class="card" style="text-align:center;background:linear-gradient(135deg,rgba(57,217,138,.14),rgba(167,139,250,.14));border-color:rgba(167,139,250,.45);margin:6px 0 16px" onclick="go({name:'onboard',step:0})">
+         <div class="ic" style="font-size:30px">🌱</div>
+         <div class="nm" style="font-size:17px">Start here — plant your Seed</div>
+         <div class="bl">A short conversation so Inkling understands you: your curiosity, how you think, what you're chasing. It plants your first path.</div>
+         <div class="meta">the initial understanding ›</div></button>
+       <div class="sub" style="text-align:center;margin:0 0 10px">…or dive straight into a way of working:</div>
+       <div class="grid">${cards}</div>`, "dashboard"));
+  }
+
+  // returning user → snapshot + continue nudge + portals
+  const stat=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px">
+    ${[["🌐",s.concepts,"concepts","var(--blue)"],["🔗",s.revisits,"revisits","var(--violet)"],["✦",s.breakthroughs,"breakthroughs","var(--pink)"],["❓",s.questions,"open questions","var(--amber)"]]
+      .map(([ic,n,l,c])=>`<div style="flex:1;min-width:84px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px">
+        <div style="font:800 20px system-ui;color:${c}">${ic} ${n}</div><div style="font:700 10px system-ui;color:var(--dim)">${l}</div></div>`).join("")}</div>`;
+
+  // pick the single most useful next step
+  let nudge=null;
+  if(!P.done) nudge=["🌱","Plant your Seed","Let Inkling understand how you learn.",{name:"onboard",step:0}];
+  else if(s.questions>0) nudge=["❓",`You have ${s.questions} open question${s.questions>1?"s":""}`,"Pick one up in your graph and chase it.",{name:"model"}];
+  else if(s.concepts>0) nudge=["🔁","Revisit a concept","Explain it again and watch your understanding grow.",{name:"model"}];
+  else nudge=["📚","Answer your first discovery question","Start a study path — say what you already think.",{name:"paths"}];
+  const nudgeCard=`<button class="card" style="grid-column:1/-1;display:flex;align-items:center;gap:13px;text-align:left;background:linear-gradient(135deg,rgba(88,166,255,.10),transparent);border-color:rgba(88,166,255,.35)" onclick="go(${JSON.stringify(nudge[3]).replace(/"/g,'&quot;')})">
+      <div style="font-size:26px">${nudge[0]}</div>
+      <div><div class="nm" style="margin:0">${esc(nudge[1])}</div><div class="bl">${esc(nudge[2])}</div></div>
+      <div style="margin-left:auto;color:var(--blue);font:800 18px system-ui">›</div></button>`;
+
+  app.innerHTML=chrome(
+    hero + stat +
+    `<div class="grid" style="margin-bottom:12px">${nudgeCard}</div>
+     <div class="sub" style="margin:0 0 8px">Six ways to work with the same intelligence:</div>
+     <div class="grid">${cards}</div>`, "dashboard");
+}
+
+/* ---- QUIZ: the graded engine, embedded ---- */
+function renderQuizSection(){
+  app.innerHTML=chrome(
+    `<h1>🎓 Quiz</h1>
+     <p class="sub">Strengthen understanding — graded questions across recall, application, comparison, and prediction, from beginner to advanced.</p>
+     <div style="border:1px solid var(--line);border-radius:14px;overflow:hidden;height:76vh;background:#070b14">
+       <iframe src="./quiz.html" style="width:100%;height:100%;border:0;display:block" title="Inkling quiz"></iframe>
+     </div>
+     <div class="hint" style="margin-top:8px">The full graded deck engine, embedded in Inkling. A later stage wires each Study Path step straight to its quiz.</div>`, "quiz");
+}
+
+/* ---- STORYBOOK: meaningful moments woven into a narrative (Phase-1 seed) ---- */
+function renderStory(){
+  const moments=[];
+  FIELDS.forEach(f=>f.questions.forEach(q=>{
+    const v=versions(q.id); if(!v.length) return;
+    const bt=DB.breakthroughs[q.id]||[];
+    v.forEach(ver=>{ if(bt.includes(ver.at)) moments.push({at:ver.at, kind:"✦ breakthrough", color:"var(--pink)", txt:`${q.concept} clicked — “${ver.text.slice(0,130)}${ver.text.length>130?"…":""}”`}); });
+    if(v.length>1) moments.push({at:v[v.length-1].at, kind:"🌱 grew", color:"var(--green)", txt:`Your understanding of ${q.concept} grew — from “${v[0].text.slice(0,55)}…” to “${v[v.length-1].text.slice(0,55)}…”.`});
+    else moments.push({at:v[0].at, kind:"🔎 began", color:"var(--blue)", txt:`You began exploring ${q.concept} by asking “${q.q}”.`});
+  }));
+  (DB.captures||[]).filter(c=>c.type==="story").forEach(c=>moments.push({at:c.at, kind:"📖 moment", color:"var(--violet)", txt:c.text}));
+  moments.sort((a,b)=>a.at-b.at);
+
+  if(!moments.length){
+    app.innerHTML=chrome(`<h1>📖 Storybook</h1>
+      <div class="empty">Your story hasn't started yet.<br><span style="opacity:.8">As you explore concepts, mark breakthroughs, and revisit ideas, Inkling weaves the meaningful moments into a story of your growth.</span><br><br>
+      <button class="btn" onclick="go({name:'paths'})">Begin a study path ›</button></div>`, "story");
+    return;
+  }
+  const first=moments[0], last=moments[moments.length-1];
+  const intro=`<div class="panel" style="border-color:rgba(167,139,250,.35)"><div style="font:600 14px/1.6 system-ui;color:#dbe4ee">
+     Your journey began ${fmtDate(first.at)}. Since then, Inkling has watched you move through ${new Set(moments.map(m=>m.txt)).size} moments of thinking — questions asked, ideas that clicked, and understanding that deepened. This is the story so far.</div></div>`;
+  const list=moments.map(m=>`<div class="tl" style="border:0;padding:0;margin-bottom:13px">
+     <div class="when" style="color:${m.color}">${m.kind} · ${fmtDate(m.at)}</div>
+     <div class="txt">${esc(m.txt)}</div></div>`).join("");
+  app.innerHTML=chrome(
+    `<h1>📖 Storybook</h1>
+     <p class="sub">Not a copy of your conversations — the meaningful moments, woven into the story of how you grew.</p>
+     ${intro}
+     <div class="panel"><div class="timeline">${list}</div></div>
+     <div class="hint">A later stage turns this into flowing, chapter-by-chapter prose you can export as a real book.</div>`, "story");
+}
+
+/* ---- MEMORY: what Inkling remembers about you ---- */
+function renderMemory(){
+  const P=DB.profile, facts=[];
+  if(P.done){
+    const A=P.answers;
+    if(A.t1&&A.t1.choices&&A.t1.choices.length) facts.push(["learning style","Learns best through "+A.t1.choices.join(", ").toLowerCase()]);
+    if(A.t3&&A.t3.choices&&A.t3.choices.length) facts.push(["approach","Prefers the "+A.t3.choices.join(", ").toLowerCase()]);
+    if(A.m2&&A.m2.text) facts.push(["recurring interest",A.m2.text]);
+    if(A.q2&&A.q2.text) facts.push(["dream to master",A.q2.text]);
+    if(A.q3&&A.q3.text) facts.push(["wants to help",A.q3.text]);
+    if(A.p3&&A.p3.text) facts.push(["lifelong thread",A.p3.text]);
+  }
+  (DB.captures||[]).filter(c=>c.type==="memory").forEach(c=>facts.push(["you told Inkling",c.text]));
+  if(!facts.length){
+    app.innerHTML=chrome(`<h1>🔔 Memory</h1>
+      <div class="empty">Inkling doesn't know you yet.<br><span style="opacity:.8">Plant your Seed, or just tell Inkling things in Chat — preferences, goals, how you learn — and it remembers what matters.</span><br><br>
+      <button class="btn" onclick="go({name:'onboard',step:0})">🌱 Plant your Seed ›</button></div>`, "memory");
+    return;
+  }
+  const rows=facts.map(([k,v])=>`<div class="node" style="padding:12px 14px">
+     <div style="font:700 10px system-ui;color:var(--amber);text-transform:uppercase;letter-spacing:.04em">${esc(k)}</div>
+     <div style="margin-top:4px;color:#dbe4ee;line-height:1.5">${esc(v)}</div></div>`).join("");
+  app.innerHTML=chrome(
+    `<h1>🔔 Memory</h1>
+     <p class="sub">The lasting context Inkling holds about you — so it can teach you the way you actually learn.</p>
+     ${rows}
+     <div class="hint" style="margin-top:8px">From your Seed and anything you tell Inkling in Chat. A later stage lets you edit and add memories directly.</div>`, "memory");
+}
+
 /* ---- THE INTERPRETER surface: say anything, Inkling routes it ---- */
 function renderRouter(){
   const caps=DB.captures.slice().sort((a,b)=>b.at-a.at);
@@ -541,7 +696,7 @@ function renderRouter(){
        </div>
      </div>
      ${strip}
-     ${feed}`, "router");
+     ${feed}`, "chat");
 }
 function capCard(c, fresh){
   const R=ROUTES[c.type]||ROUTES.knowledge;
@@ -630,7 +785,7 @@ function renderOnboard(){
           <button class="btn" onclick="go({name:'onboard',step:${STEPS.length-1}})">See your first path ›</button>
           <div style="margin-top:10px"><button class="back" onclick="go({name:'onboard',step:1})">Answer the questions again</button></div>`
         : `<button class="btn" onclick="go({name:'onboard',step:1})">Plant the seed ›</button>
-          <div style="margin-top:12px"><button class="back" onclick="go({name:'home'})">Skip for now</button></div>`}
+          <div style="margin-top:12px"><button class="back" onclick="go({name:'dashboard'})">Skip for now</button></div>`}
       </div>`, "onboard");
     return;
   }
@@ -763,7 +918,7 @@ function renderTimeline(){
     ${openQ.length? openQ.map(o=>`<div class="openq">${esc(o)}</div>`).join("") : `<div class="hint">None jotted yet.</div>`}</div>`;
 
   app.innerHTML = chrome(
-    `<button class="back" onclick="go({name:'model'})">‹ Your model</button>
+    `<button class="back" onclick="go({name:'model'})">‹ Knowledge graph</button>
      <div class="concept-tag">${f.icon} ${esc(f.name)}</div>
      <h1 style="margin-bottom:2px">${esc(q.concept)}</h1>
      <p class="sub">First met ${fmtDate(first.at)} · ${vs.length} version${vs.length>1?"s":""} of your understanding</p>
@@ -778,7 +933,7 @@ function renderTimeline(){
      ${nowBlock}
      ${openBlock}
 
-     <button class="btn pink" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">Explain it again — add a new version ›</button>`, "model");
+     <button class="btn pink" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">Explain it again — add a new version ›</button>`, "graph");
 }
 
 function toggleBreakthrough(qid,at){
@@ -803,9 +958,9 @@ function renderModel(){
     const seedLine = DB.profile.done
       ? `<button class="btn" onclick="go({name:'onboard',step:${onbSteps().length-1}})">See your first path ›</button>`
       : `<button class="btn" onclick="go({name:'onboard',step:0})">🌱 Plant The Seed ›</button>`;
-    app.innerHTML=chrome(`<h1>🧠 Your model</h1>
+    app.innerHTML=chrome(`<h1>🌐 Knowledge graph</h1>
       <div class="empty">Nothing captured yet.<br><span style="opacity:.8">Answer a discovery question and it becomes a living node here — your own map of what you understand, and how it changes.</span><br><br>
-      ${seedLine}</div>`, "model");
+      ${seedLine}</div>`, "graph");
     return;
   }
 
@@ -871,9 +1026,9 @@ function renderModel(){
       ${bits.map(([k,v])=>`<div style="margin-top:6px;font:600 12px system-ui;color:#cbd5e1"><span style="color:var(--dim)">${k}:</span> ${esc(v)}</div>`).join("")}</button>`;
   }
   app.innerHTML=chrome(
-    `<h1>🧠 Your model</h1>
+    `<h1>🌐 Knowledge graph</h1>
      <p class="sub">Not what you know — <b>how you came to know it.</b> Every concept keeps its whole history: what you first thought, what changed it, and what's still open. Tap one to read its timeline.</p>
-     ${seed}${stat}${curiosity}${cards}`, "model");
+     ${seed}${stat}${curiosity}${cards}`, "graph");
 }
 
 render();
