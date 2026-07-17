@@ -336,6 +336,7 @@ DB.openQs  = DB.openQs  || {};   // {qid:[str]}
 DB.breakthroughs = DB.breakthroughs || {};  // {qid:[timestamp,...]} — moments it clicked
 DB.profile = DB.profile || { answers:{}, fields:[], done:false, startedAt:0, completedAt:0 };
 DB.captures = DB.captures || [];  // interpreter output: [{id,text,type,links,reason,at}]
+DB.chat = DB.chat || [];          // conversation transcript: [{role,text|html,route,links,actions,at}]
 function persist(){ save(DB); }
 
 /* ---- helpers ---- */
@@ -676,55 +677,127 @@ function renderMemory(){
      <div class="hint" style="margin-top:8px">From your Seed and anything you tell Inkling in Chat. A later stage lets you edit and add memories directly.</div>`, "memory");
 }
 
-/* ---- THE INTERPRETER surface: say anything, Inkling routes it ---- */
+/* ============================================================
+   THE CONVERSATION ENGINE (💬 Chat).
+   You talk; Inkling responds AND extracts. For a question about a
+   concept it does the signature move — asks what YOU think first,
+   never leading with the answer. Responses are heuristic + templated
+   now; inklingRespond() is the single seam where a real LLM drops in.
+   ============================================================ */
+function matchConcept(t){
+  const low=" "+t.toLowerCase()+" ";
+  for(const f of FIELDS){ for(const q of f.questions){
+    if(low.includes(" "+q.concept.toLowerCase()+" ")||low.includes(" "+q.concept.toLowerCase()+"s ")) return {fid:f.id,qid:q.id,concept:q.concept};
+  }}
+  for(const f of FIELDS){ for(const q of f.questions){
+    for(const c of (q.reality.concepts||[])){ if(low.includes(" "+c.toLowerCase())) return {fid:f.id,qid:q.id,concept:q.concept}; }
+  }}
+  return null;
+}
+function matchField(t){
+  const low=t.toLowerCase(); let best=null, score=0;
+  FIELDS.forEach(f=>{ let sc=0; (FIELD_KW[f.id]||[]).forEach(k=>{ if(low.includes(k)) sc++; }); if(sc>score){ score=sc; best=f; } });
+  return best;
+}
+// The response brain. Returns {html, route, links, actions[], capture?}.
+// Swap the body for an LLM call when signed in — the shell doesn't change.
+function inklingRespond(t, r){
+  const links=r.links, primary=links[0], target=matchConcept(t), field=matchField(t);
+  const linkPhrase = links.length? ` I connected it to ${links.slice(0,3).join(", ")}.` : "";
+  const act=(label,onclick,kind)=>({label,onclick,kind:kind||"ghost"});
+  switch(r.type){
+    case "question": {
+      const actions=[];
+      if(target) actions.push(act(`Explore ${target.concept} →`, `go({name:'question',fid:'${target.fid}',qid:'${target.qid}'})`, "pink"));
+      actions.push(act("See my open questions →", `go({name:'model'})`));
+      return { route:"question", links, actions,
+        html:`That's a great question${target?` about <b>${esc(target.concept)}</b>`:""} — and I've saved it. But before I weigh in: <b>what's your current hunch?</b> Even a rough guess is the most valuable thing here, because Inkling learns by watching how your answer changes.` };
+    }
+    case "knowledge": {
+      const actions=[act("See it in your graph →", `go({name:'model'})`)];
+      if(target) actions.push(act(`What do you think about ${target.concept}?`, `go({name:'question',fid:'${target.fid}',qid:'${target.qid}'})`, "pink"));
+      return { route:"knowledge", links, actions,
+        html:`Good — I added <b>${esc(primary||"that idea")}</b> to your knowledge graph.${linkPhrase} A concept isn't just a fact here; it's your evolving relationship with it. Want to capture what you understand so far?` };
+    }
+    case "path": {
+      const actions=[ field? act(`Start ${field.name} →`, `go({name:'field',fid:'${field.id}'})`, "pink") : act("Open study paths →", `go({name:'paths'})`) ];
+      return { route:"path", links, actions,
+        html: field
+          ? `Let's build that. I opened <b>${esc(field.name)}</b> as a study path — we'll start from what you already believe and grow it from there, step by step.`
+          : `Let's turn that into a path. Tell me the subject, or pick where to start.` };
+    }
+    case "goal": {
+      return { route:"goal", links, actions:[act("See what I remember →", `go({name:'memory'})`)],
+        html:`That's a real goal — I'm holding onto it.${linkPhrase} As Inkling grows, I'll help turn it into a roadmap with milestones and practice, and keep it connected to what you're learning.` };
+    }
+    case "memory": {
+      return { route:"memory", links, actions:[act("Your memory →", `go({name:'memory'})`)],
+        html:`Noted — I'll remember that about you, so I can meet you the way you actually learn.` };
+    }
+    case "story": {
+      return { route:"story", links, actions:[act("Read your story →", `go({name:'story'})`)],
+        html:`That sounds like a real shift.${linkPhrase} I added it to your Storybook as a moment in your journey — the kind of thing you'll want to look back on.` };
+    }
+    case "reflection": {
+      return { route:"reflection", links, actions:[],
+        html:`Thank you for sharing that. I kept it as a reflection — these quiet observations are often where the biggest patterns hide.` };
+    }
+    case "flashcard": {
+      return { route:"flashcard", links, actions:[act("Open the quiz →", `go({name:'quiz'})`)],
+        html:`I'll turn that into a study item so it sticks.${linkPhrase} We can test it as a definition, an application, or in your own words.` };
+    }
+  }
+  return { route:r.type, links, actions:[], html:esc(t) };
+}
+
 function renderRouter(){
-  const caps=DB.captures.slice().sort((a,b)=>b.at-a.at);
-  const counts={}; caps.forEach(c=>counts[c.type]=(counts[c.type]||0)+1);
-  const strip = caps.length? `<div style="display:flex;gap:7px;flex-wrap:wrap;margin:2px 0 16px">
-    ${ROUTE_ORDER.filter(t=>counts[t]).map(t=>`<span class="lk" style="border-color:${ROUTES[t].color}55;color:${ROUTES[t].color}">${ROUTES[t].icon} ${counts[t]} · ${ROUTES[t].system}</span>`).join("")}</div>`:"";
-  const feed = caps.length
-    ? caps.map(c=>capCard(c, window.__justCap===c.id)).join("")
-    : `<div class="empty">Nothing yet.<br><span style="opacity:.8">Type a thought above — a question, something you learned, a goal. Inkling decides where it belongs.</span></div>`;
+  const chat=DB.chat||[];
+  const thread = chat.length ? chat.map(chatBubble).join("") : chatEmpty();
   app.innerHTML=chrome(
-    `<h1>💬 Talk to Inkling</h1>
-     <p class="sub">Say anything — a question, an idea, a thing that clicked, a goal. You never sort it: Inkling reads it and files it in the right system for you.</p>
-     <div class="panel">
-       <textarea id="capText" placeholder="e.g.  How does intelligence emerge from simple systems?   ·   I finally understand what a transistor does.   ·   I want to learn robotics." style="min-height:82px" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))interpret()"></textarea>
-       <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-         <button class="btn" onclick="interpret()">Interpret ›</button>
-         <span class="hint" style="margin:0">Routes to: knowledge · question · path · goal · memory · story · reflection · card</span>
+    `<h1>🧠 Chat</h1>
+     <p class="sub">Think with Inkling. Ask a question, share an idea, name a goal — Inkling responds, and quietly turns what matters into your knowledge, questions, and story.</p>
+     <div class="panel" style="position:sticky;top:6px;z-index:5">
+       <textarea id="capText" placeholder="Ask something, or tell Inkling what's on your mind…" style="min-height:60px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();interpret();}"></textarea>
+       <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+         <button class="btn" onclick="interpret()">Send ›</button>
+         <span class="hint" style="margin:0">Enter to send · Inkling extracts concepts, questions & connections as you talk</span>
+         ${chat.length?`<button class="back" style="margin-left:auto" onclick="clearChat()">clear chat</button>`:""}
        </div>
      </div>
-     ${strip}
-     ${feed}`, "chat");
+     <div id="thread" style="margin-top:16px">${thread}</div>`, "chat");
+  if(document.getElementById("thread")) window.scrollTo(0, document.body.scrollHeight);
 }
-function capCard(c, fresh){
-  const R=ROUTES[c.type]||ROUTES.knowledge;
-  const links=(c.links||[]).map(l=>`<span class="lk">${esc(l)}</span>`).join("");
-  const reclass = ROUTE_ORDER.map(t=>`<span class="chip" title="${ROUTES[t].label}" style="padding:3px 8px;font-size:12px;${t===c.type?`background:${ROUTES[t].color}22;border-color:${ROUTES[t].color}`:''}" onclick="reclassify('${c.id}','${t}')">${ROUTES[t].icon}</span>`).join("");
-  return `<div class="node" style="${fresh?`border-color:${R.color};box-shadow:0 0 0 1px ${R.color}66`:''}">
-    <div class="nh"><span class="nn" style="color:${R.color}">${R.icon} ${R.label}</span><span class="nc">${R.verb} · ${daysAgo(c.at)}</span></div>
-    <div style="margin-top:7px;color:#dbe4ee;line-height:1.5">${esc(c.text)}</div>
-    ${fresh&&c.reason?`<div class="hint" style="margin-top:6px;color:${R.color}">✦ ${esc(c.reason)}</div>`:''}
-    ${links?`<div class="links" style="margin-top:8px">${links}</div>`:''}
-    <div style="margin-top:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-      <span class="hint" style="margin:0 3px 0 0">not right?</span>${reclass}
-      <button class="back" style="margin-left:auto;color:var(--dim)" onclick="deleteCapture('${c.id}')">remove</button>
-    </div>
-  </div>`;
+function chatEmpty(){
+  return chatBubble({ role:"inkling", html:`Hi — I'm Inkling. Ask me about something you're curious about, tell me what you learned today, or name a goal you're chasing. I'll respond, and quietly turn what matters into your knowledge graph, open questions, and story.<br><br><span style="color:var(--dim)">Try:</span> <i>"How does a transistor work?"</i> · <i>"I want to learn robotics."</i> · <i>"I finally understand voltage."</i>` });
+}
+function chatBubble(m){
+  if(m.role==="user"){
+    return `<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <div style="max-width:82%;background:rgba(88,166,255,.16);border:1px solid rgba(88,166,255,.35);border-radius:14px 14px 4px 14px;padding:10px 13px;color:#eaf2ff;line-height:1.5">${esc(m.text)}</div></div>`;
+  }
+  const R = m.route? ROUTES[m.route] : null;
+  const extraction = R? `<div class="hint" style="margin-top:8px;color:${R.color}">${R.icon} ${R.verb}</div>` : "";
+  const chips = (m.links&&m.links.length)? `<div class="links" style="margin-top:7px">${m.links.map(l=>`<span class="lk">${esc(l)}</span>`).join("")}</div>` : "";
+  const actions = (m.actions&&m.actions.length)? `<div style="margin-top:11px;display:flex;gap:7px;flex-wrap:wrap">${m.actions.map(a=>`<button class="btn ${a.kind==='pink'?'pink':'ghost'}" style="padding:7px 13px;font:800 11px system-ui" onclick="${a.onclick}">${esc(a.label)}</button>`).join("")}</div>` : "";
+  return `<div style="display:flex;gap:9px;margin-bottom:15px">
+    <div style="flex:0 0 auto;font-size:20px;line-height:1.4">🌱</div>
+    <div style="max-width:88%;background:var(--panel);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:11px 13px">
+      <div style="color:#dbe4ee;line-height:1.55">${m.html||esc(m.text||"")}</div>
+      ${extraction}${chips}${actions}</div></div>`;
 }
 function interpret(){
   const el=document.getElementById("capText"); const t=(el.value||"").trim(); if(!t){ el.focus(); return; }
-  const r=classify(t); const id="c"+Date.now();
-  DB.captures.push({id,text:t,type:r.type,links:r.links,reason:r.reason,at:Date.now()});
-  persist(); window.__justCap=id; renderRouter(); window.scrollTo(0,0);
+  DB.chat=DB.chat||[];
+  DB.chat.push({ role:"user", text:t, at:Date.now() });
+  const r=classify(t);
+  // extract a knowledge node from the conversation (don't save every sentence as its own node type — but do route it)
+  DB.captures.push({ id:"c"+Date.now(), text:t, type:r.type, links:r.links, reason:r.reason, at:Date.now() });
+  const resp=inklingRespond(t, r);
+  DB.chat.push(Object.assign({ role:"inkling", at:Date.now()+1 }, resp));
+  persist(); renderRouter();
 }
-function reclassify(id,type){
-  const c=DB.captures.find(x=>x.id===id); if(!c) return;
-  c.type=type; c.reason="You reclassified this — Inkling moved it to "+ROUTES[type].system+".";
-  persist(); window.__justCap=id; renderRouter();
-}
-function deleteCapture(id){ DB.captures=DB.captures.filter(x=>x.id!==id); persist(); renderRouter(); }
+// Clearing the transcript never deletes extracted knowledge — that stays in your graph.
+function clearChat(){ if(confirm("Clear the conversation? Your captured knowledge, questions and story stay.")){ DB.chat=[]; persist(); renderRouter(); } }
 
 /* ---- THE SEED: the Initial Understanding Protocol ---- */
 function onbSteps(){
