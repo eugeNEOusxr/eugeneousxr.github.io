@@ -160,9 +160,9 @@ export class CalendarApp {
 
     // Dock before WordWeaver so a weave error cannot block the small calendar.
     this.notebookCalendarDock = new NotebookCalendarDock({
-      onOpenDay: (date) => this.openDayCylinderByDate(date),     // month-view day click → 3D cylinder day
-      onOpenNotes: (date) => this.openDayCylinderByDate(date),
-      onOpenWriter: (date) => this.openNotebookDayByDate(date),
+      onOpenDay: (date) => { this._exitSchedulePop(); return this.openDayCylinderByDate(date); },   // day → 3D cylinder day
+      onOpenNotes: (date) => { this._exitSchedulePop(); return this.openDayCylinderByDate(date); },
+      onOpenWriter: (date) => { this._exitSchedulePop(); return this.openNotebookDayByDate(date); }, // day → 2D notes/schedule
       onSyncMonth: (date) => this.syncCalendarMonth(date),
       onMaximize: () => this.enterCalendarMaxLayer(),
       onSidebarChange: () => {}
@@ -610,6 +610,8 @@ export class CalendarApp {
     this.notebookWall.setOverviewDimmed(false);
     this.notebookWall.overviewWallGroup.scale.set(1.08, 1.08, 1.08);
     this.notebookCalendarDock?.show();
+    this.notebookCalendarDock?.setOpenOnSelect(false);
+    document.body.classList.remove("inkling-schedule-pop");
     this.controls.enabled = false;
     await this._frameOverviewCamera(true);
     this.controls.enabled = true;
@@ -950,7 +952,7 @@ export class CalendarApp {
     this.bottomNav?.show();
 
     const startTab = new URLSearchParams(window.location.search).get("tab");
-    const allowedTabs = new Set(["calendar", "writer", "wordweaver", "inkling", "alerts", "alarm", "mind", "connections", "goals"]);
+    const allowedTabs = new Set(["schedule", "calendar", "writer", "wordweaver", "inkling", "alerts", "alarm", "mind", "connections", "goals"]);
     if (allowedTabs.has(startTab)) {
       // Deep-linked (e.g. the ?tab=wordweaver share link) → go straight there.
       queueMicrotask(() => void this._handleBottomNavTab(startTab, { toggle: false }));
@@ -1082,9 +1084,22 @@ export class CalendarApp {
     this.inklingPanel?.alerts?.show();
   }
 
+  /** Leave the compact Schedule popup (small calendar) — used when a day opens. */
+  _exitSchedulePop() {
+    if (!document.body.classList.contains("inkling-schedule-pop")) return;
+    document.body.classList.remove("inkling-schedule-pop");
+    this.notebookCalendarDock?.setOpenOnSelect(false);
+    this.notebookCalendarDock?.hide();
+  }
+
   _closeBottomStage() {
     this.exitCalendarMaxLayer();
     this._clearBottomTabClasses();
+    this.notebookCalendarDock?.setOpenOnSelect(false);
+    if (document.body.classList.contains("inkling-schedule-pop")) {
+      this.notebookCalendarDock?.hide();
+      document.body.classList.remove("inkling-schedule-pop");
+    }
     this._showStageBackdrop(false);
     this.layerManager.closeAll();
     this.notebookWriterPanel.close();
@@ -1218,6 +1233,8 @@ export class CalendarApp {
     this._weaverGalaxy?.hide();
     this._cal2dDay?.close();
     this.layerManager.close("wordweaver");
+    this.notebookCalendarDock?.setOpenOnSelect(false);
+    document.body.classList.remove("inkling-schedule-pop");
 
     beginAppTabSurface(tab);
     this.bottomNav?.setActiveTab(tab);
@@ -1226,6 +1243,17 @@ export class CalendarApp {
     const time = getLastView()?.time ?? "09:00";
 
     switch (tab) {
+      case "schedule":
+        // The compact small-calendar popup: today highlighted, tap a day to jot
+        // notes (2D) or open the 3D day per the toggle; ⛶ expands to the full month.
+        document.body.classList.add("inkling-stage-open", "inkling-schedule-pop");
+        this._showStageBackdrop(true);
+        this.notebookCalendarDock?.setDate(this._getTodayDate());
+        this.notebookCalendarDock?.setOpenOnSelect(true);
+        this.notebookCalendarDock?.resetPanelPosition?.();
+        this.notebookCalendarDock?.expand(false);
+        this.notebookCalendarDock?.show();
+        break;
       case "calendar":
         this._showStageBackdrop(false);
         document.body.classList.add("inkling-stage-open");

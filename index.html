@@ -238,12 +238,15 @@
             <div class="notebook-calendar-dock__inner">
               <div id="notebook-calendar-dock-mini" class="notebook-calendar-dock-mini" aria-label="Month grid"></div>
               <span id="notebook-calendar-dock-date" class="notebook-calendar-dock__date">Today</span>
+              <div class="dock-daymode" role="group" aria-label="Which day view opens when you tap a day">
+                <button type="button" class="dock-daymode__btn is-active" data-daymode="2d" title="Tap a day → jot notes (2D schedule)">2D&nbsp;notes</button>
+                <button type="button" class="dock-daymode__btn" data-daymode="3d" title="Tap a day → 3D calendar day">3D&nbsp;day</button>
+              </div>
               <div class="notebook-calendar-dock__actions">
                 <button type="button" class="notebook-calendar-dock__btn" data-delta="-1" title="Previous day">‹</button>
                 <button type="button" class="notebook-calendar-dock__btn" data-today title="Today">Today</button>
                 <button type="button" class="notebook-calendar-dock__btn" data-delta="1" title="Next day">›</button>
-                <button type="button" class="notebook-calendar-dock__btn notebook-calendar-dock__btn--primary" data-open-notes title="Notes for this day">Notes</button>
-                <button type="button" class="notebook-calendar-dock__btn" data-open-writer title="Open Writer">Write</button>
+                <button type="button" class="notebook-calendar-dock__btn notebook-calendar-dock__btn--primary" data-open-day title="Open this day in the selected view">Open day →</button>
               </div>
             </div>
           </div>
@@ -590,12 +593,8 @@
   </aside>
 
   <nav id="inkling-bottom-nav" class="inkling-bottom-nav" aria-label="Main navigation">
-    <button type="button" class="inkling-bottom-nav__btn" data-tab="wordweaver" aria-pressed="false">
+    <button type="button" class="inkling-bottom-nav__btn" data-tab="schedule" aria-pressed="false" title="Small calendar — tap a day to jot notes; toggle 2D/3D; ⛶ expands to the full month">
       <span class="inkling-bottom-nav__icon" aria-hidden="true">📅</span>
-      <span class="inkling-bottom-nav__label">Calendar</span>
-    </button>
-    <button type="button" class="inkling-bottom-nav__btn" data-tab="writer" aria-pressed="false">
-      <span class="inkling-bottom-nav__icon" aria-hidden="true">🕐</span>
       <span class="inkling-bottom-nav__label">Schedule</span>
     </button>
     <button type="button" class="inkling-bottom-nav__btn" data-tab="alerts" aria-pressed="false">
@@ -622,6 +621,21 @@
       <span class="inkling-bottom-nav__label">Storybook</span>
     </button>
   </nav>
+
+  <style>
+    /* 2D/3D toggle inside the small calendar dock */
+    .dock-daymode{display:flex;gap:4px;margin:8px 0 6px;padding:3px;border-radius:999px;
+      background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12)}
+    .dock-daymode__btn{flex:1;border:0;border-radius:999px;padding:5px 8px;cursor:pointer;
+      background:transparent;color:#9aa4b2;font:700 11px system-ui;white-space:nowrap;transition:background .12s,color .12s}
+    .dock-daymode__btn.is-active{background:rgba(88,166,255,0.22);color:#cfe3ff;box-shadow:inset 0 0 0 1px rgba(88,166,255,0.45)}
+    /* Schedule tab shows the small calendar as a floating popup (not the full 3D wall) */
+    body.inkling-schedule-pop #calendar-sidebar{z-index:11090}
+    body.inkling-schedule-pop #calendar-sidebar.hidden{display:none}
+    @media (max-width:640px){
+      body.inkling-schedule-pop #calendar-sidebar-panel{left:50%!important;top:64px!important;transform:translateX(-50%)}
+    }
+  </style>
 
   <button type="button" id="inkling-fab" class="inkling-fab inkling-avatar" aria-label="Open Inkling assistant">✦</button>
 
