@@ -223,10 +223,12 @@ let DB = load();
 DB.answers = DB.answers || {};   // {qid:[{text,conf,at}]}
 DB.refine  = DB.refine  || {};   // {qid:{had:[i],new:[i]}}
 DB.openQs  = DB.openQs  || {};   // {qid:[str]}
+DB.breakthroughs = DB.breakthroughs || {};  // {qid:[timestamp,...]} — moments it clicked
 function persist(){ save(DB); }
 
 /* ---- helpers ---- */
 const CONF = ["Just guessing","A rough idea","Fairly confident","I understand it","I could teach it"];
+const CONF_COLOR = ["#64748b","#3b82f6","#22d3ee","#39d98a","#f0abfc"];
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function fieldById(id){ return FIELDS.find(f=>f.id===id); }
 function qById(fid,qid){ return (fieldById(fid).questions||[]).find(q=>q.id===qid); }
@@ -254,6 +256,7 @@ function render(){
   if(view.name==="home") return renderHome();
   if(view.name==="field") return renderField();
   if(view.name==="question") return renderQuestion();
+  if(view.name==="timeline") return renderTimeline();
   if(view.name==="model") return renderModel();
 }
 
@@ -306,7 +309,9 @@ function renderQuestion(){
   // prior-answer timeline (evolution)
   let tl="";
   if(hasAns){
-    tl=`<div class="panel"><h3 style="font:800 12px system-ui;color:var(--violet);margin:0 0 9px;text-transform:uppercase;letter-spacing:.04em">How your thinking has evolved</h3>
+    tl=`<div class="panel"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 9px">
+        <h3 style="font:800 12px system-ui;color:var(--violet);margin:0;text-transform:uppercase;letter-spacing:.04em">How your thinking has evolved</h3>
+        <button class="btn ghost" style="padding:6px 12px;font:800 11px system-ui" onclick="go({name:'timeline',fid:'${f.id}',qid:'${q.id}'})">📖 Full timeline ›</button></div>
       <div class="timeline">${vs.map(v=>`<div class="tl">
         <div class="when">${fmtDate(v.at)} · ${daysAgo(v.at)}</div>
         <div class="txt">${esc(v.text)}</div>
@@ -393,6 +398,79 @@ function addOpenQ(fid,qid){
   const nx=document.getElementById("oq"); if(nx) nx.focus();
 }
 
+/* ---- CONCEPT TIMELINE: the biography of one idea in your mind ----
+   First encounter → the path → breakthroughs → where you are now →
+   what's still open.  This is how you meet a past version of yourself. */
+function renderTimeline(){
+  const f=fieldById(view.fid), q=qById(view.fid,view.qid);
+  const vs=versions(q.id);
+  if(!vs.length) return go({name:"question",fid:view.fid,qid:view.qid});
+  const first=vs[0], now=vs[vs.length-1];
+  const bt=DB.breakthroughs[q.id]||[];
+  const openQ=DB.openQs[q.id]||[];
+  const rf=DB.refine[q.id]||{had:[],new:[]};
+
+  // confidence arc across every version
+  const arc = vs.map(v=>`<i title="${fmtDate(v.at)} · ${CONF[v.conf]}" style="width:14px;height:14px;border-radius:50%;background:${CONF_COLOR[v.conf]};box-shadow:0 0 0 3px ${CONF_COLOR[v.conf]}22;flex:0 0 auto"></i>`)
+    .join(`<span style="flex:1;height:2px;background:var(--line);min-width:12px"></span>`);
+  const arcRow = vs.length>1
+    ? `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--amber);margin:0 0 11px;text-transform:uppercase;letter-spacing:.04em">Confidence over time</h3>
+        <div style="display:flex;align-items:center;gap:0">${arc}</div>
+        <div style="display:flex;justify-content:space-between;font:700 10px system-ui;color:var(--dim);margin-top:7px">
+          <span>${CONF[first.conf]} · ${fmtDate(first.at)}</span><span>${CONF[now.conf]} · now</span></div></div>` : "";
+
+  // the path — every version, each markable as a breakthrough
+  const path = vs.map((v,i)=>{
+    const isBt=bt.includes(v.at);
+    const tag = i===0 ? "① first encounter" : (i===vs.length-1 && vs.length>1 ? "where you are now" : "revisited");
+    const tagColor = i===0 ? "var(--blue)" : (i===vs.length-1 && vs.length>1 ? "var(--green)" : "var(--violet)");
+    return `<div class="tl" style="${isBt?'background:rgba(240,171,252,.06);border-radius:10px;padding:9px 11px;margin-left:-11px':''}">
+      <div class="when" style="color:${tagColor}">${tag} · ${fmtDate(v.at)} · ${daysAgo(v.at)}${isBt?" · ✦ breakthrough":""}</div>
+      <div class="txt">${esc(v.text)}</div>
+      <div class="cf">confidence: ${CONF[v.conf]}
+        <button style="margin-left:10px;background:${isBt?'rgba(240,171,252,.16)':'var(--panel2)'};border:1px solid ${isBt?'rgba(240,171,252,.55)':'var(--line)'};color:${isBt?'var(--pink)':'var(--dim)'};border-radius:999px;padding:3px 10px;font:700 10px system-ui;cursor:pointer"
+          onclick="toggleBreakthrough('${q.id}',${v.at})">${isBt?"★ breakthrough moment":"✦ mark as breakthrough"}</button></div>
+    </div>`;
+  }).join("");
+
+  const btBlock = bt.length ? `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--pink);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Breakthrough moments</h3>
+    <div class="hint" style="margin:0 0 8px">The times it clicked — when a connection formed and your understanding jumped.</div>
+    ${vs.filter(v=>bt.includes(v.at)).map(v=>`<div class="openq" style="color:var(--pink)">${fmtDate(v.at)} — “${esc(v.text.slice(0,110))}${v.text.length>110?"…":""}”</div>`).join("")}</div>` : "";
+
+  const nowBlock = vs.length>1 ? `<div class="panel" style="border-color:rgba(57,217,138,.4)">
+    <h3 style="font:800 12px system-ui;color:var(--green);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Where you are now</h3>
+    <div class="txt" style="color:#dbe4ee;line-height:1.55">${esc(now.text)}</div>
+    <div class="cf" style="margin-top:6px">confidence: ${CONF[now.conf]} · you started at “${CONF[first.conf]}”</div></div>` : "";
+
+  const openBlock = `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--amber);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Questions & challenges this opened</h3>
+    <div class="hint" style="margin:0 0 8px">The gaps you noticed — threads to keep pulling.</div>
+    ${openQ.length? openQ.map(o=>`<div class="openq">${esc(o)}</div>`).join("") : `<div class="hint">None jotted yet.</div>`}</div>`;
+
+  app.innerHTML = chrome(
+    `<button class="back" onclick="go({name:'model'})">‹ Your model</button>
+     <div class="concept-tag">${f.icon} ${esc(f.name)}</div>
+     <h1 style="margin-bottom:2px">${esc(q.concept)}</h1>
+     <p class="sub">First met ${fmtDate(first.at)} · ${vs.length} version${vs.length>1?"s":""} of your understanding</p>
+
+     <div class="panel"><h3 style="font:800 12px system-ui;color:var(--blue);margin:0 0 7px;text-transform:uppercase;letter-spacing:.04em">The question that started it</h3>
+       <div style="font:700 15px system-ui;line-height:1.4">“${esc(q.q)}”</div></div>
+
+     ${arcRow}
+     <div class="panel"><h3 style="font:800 12px system-ui;color:var(--violet);margin:0 0 11px;text-transform:uppercase;letter-spacing:.04em">The path your understanding took</h3>
+       <div class="timeline">${path}</div></div>
+     ${btBlock}
+     ${nowBlock}
+     ${openBlock}
+
+     <button class="btn pink" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">Explain it again — add a new version ›</button>`, true);
+}
+
+function toggleBreakthrough(qid,at){
+  const arr=DB.breakthroughs[qid]||[];
+  DB.breakthroughs[qid]= arr.includes(at)? arr.filter(x=>x!==at) : arr.concat(at);
+  persist(); renderTimeline();
+}
+
 /* ---- YOUR MODEL: every captured concept as a living node ---- */
 function renderModel(){
   const nodes=[];
@@ -433,18 +511,35 @@ function renderModel(){
     const refined = (had.length||nw.length)? `<div style="margin-top:8px;font:700 11px system-ui">
         ${had.length?`<span style="color:var(--green)">✓ had: ${had.map(esc).join(", ")}</span>`:""}
         ${nw.length?`<span style="color:var(--amber);margin-left:8px">✦ new: ${nw.map(esc).join(", ")}</span>`:""}</div>`:"";
-    return `<button class="node" style="display:block;width:100%;text-align:left;cursor:pointer;color:var(--ink)" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">
-      <div class="nh"><span class="nn">${f.icon} ${esc(q.concept)}</span><span class="nc">${f.name} · ${vs.length>1?vs.length+" versions":"1 capture"}</span></div>
+    const btN=(DB.breakthroughs[q.id]||[]).length;
+    return `<button class="node" style="display:block;width:100%;text-align:left;cursor:pointer;color:var(--ink)" onclick="go({name:'timeline',fid:'${f.id}',qid:'${q.id}'})">
+      <div class="nh"><span class="nn">${f.icon} ${esc(q.concept)}</span><span class="nc">${f.name} · ${vs.length>1?vs.length+" versions":"1 capture"}${btN?" · ✦"+btN:""}</span></div>
       ${evo}
       ${refined}
       <div class="links">${links}</div>
+      <div style="margin-top:9px;font:700 11px system-ui;color:var(--violet)">📖 Read this concept's timeline ›</div>
     </button>`;
   }).join("");
 
+  // where curiosity keeps returning + unresolved threads across every concept
+  const returns = nodes.slice().filter(n=>n.vs.length>1).sort((a,b)=>b.vs.length-a.vs.length).slice(0,5);
+  const allOpen=[]; nodes.forEach(n=>(DB.openQs[n.q.id]||[]).forEach(o=>allOpen.push({o, c:n.q.concept, f:n.f})));
+  let curiosity="";
+  if(returns.length){
+    curiosity += `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--violet);margin:0 0 9px;text-transform:uppercase;letter-spacing:.04em">Where your curiosity keeps returning</h3>
+      ${returns.map(n=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font:700 13px system-ui">
+        <span>${n.f.icon} ${esc(n.q.concept)}</span><span style="color:var(--violet)">returned ${n.vs.length}×</span></div>`).join("")}</div>`;
+  }
+  if(allOpen.length){
+    curiosity += `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--amber);margin:0 0 9px;text-transform:uppercase;letter-spacing:.04em">Unresolved threads (${allOpen.length})</h3>
+      <div class="hint" style="margin:0 0 8px">The questions you left open — where understanding can keep expanding.</div>
+      ${allOpen.slice(0,10).map(t=>`<div class="openq">${esc(t.o)} <span style="color:var(--dim);font-weight:600">· ${esc(t.c)}</span></div>`).join("")}</div>`;
+  }
+
   app.innerHTML=chrome(
     `<h1>🧠 Your model</h1>
-     <p class="sub">Every concept you've thought through, held as a living node. Tap one to revisit the question and see how far you've come.</p>
-     ${stat}${cards}`, true);
+     <p class="sub">Not what you know — <b>how you came to know it.</b> Every concept keeps its whole history: what you first thought, what changed it, and what's still open. Tap one to read its timeline.</p>
+     ${stat}${curiosity}${cards}`, true);
 }
 
 render();
