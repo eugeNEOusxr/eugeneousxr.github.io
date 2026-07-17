@@ -215,6 +215,63 @@ const FIELDS = [
     ] }
 ];
 
+/* ============================================================
+   THE INITIAL UNDERSTANDING PROTOCOL
+   A guided onboarding conversation — not a personality test. Each
+   answer seeds a typed first node (curiosity / question / goal /
+   style / reasoning / future-question / personal-timeline). The goal
+   is to understand the LEARNER before guiding the learning.
+   ============================================================ */
+const PROTOCOL = [
+  { cat:"Your current mindset", color:"var(--violet)",
+    lead:"No right answers here — Inkling is learning who you are.",
+    items:[
+      { id:"m1", node:"curiosity",  q:"What is something you wish you understood deeply?" },
+      { id:"m2", node:"curiosity",  q:"What topics do you find yourself returning to, again and again?" },
+      { id:"m3", node:"question",   q:"What question has stayed with you for years?" },
+      { id:"m4", node:"discovery",  q:"What did you learn recently that changed how you see the world?" },
+      { id:"m5", node:"confusion",  q:"What feels obvious to everyone else, but confusing to you?" }
+    ] },
+  { cat:"How you think", color:"var(--blue)",
+    lead:"This shapes how Inkling explains things back to you.",
+    items:[
+      { id:"t1", node:"style", q:"When you learn something new, what works best for you?",
+        choices:["Examples","Explanations","Experiments","Visuals","Building things"], multi:true },
+      { id:"t2", node:"reasoning", q:"When something doesn't make sense, what usually helps you finally get it?" },
+      { id:"t3", node:"style", q:"Do you like the big picture first, or the small mechanisms first?",
+        choices:["Big picture first","Small mechanisms first","It depends"], multi:false },
+      { id:"t4", node:"reasoning", q:"Think of an explanation that finally made something click. What was it?" }
+    ] },
+  { cat:"What pulls at you", color:"var(--pink)", fieldsStep:true,
+    lead:"Pick the fields you're drawn to — this seeds your first map." },
+  { cat:"What you want to understand", color:"var(--amber)",
+    lead:"Reach as far as you want. These become questions to chase.",
+    items:[
+      { id:"q1", node:"future_question", q:"If one person could answer any question about reality, what would you ask?" },
+      { id:"q2", node:"goal", q:"If you could understand one technology completely, what would it be?" },
+      { id:"q3", node:"goal", q:"What problem in the world would you most want to help solve?" },
+      { id:"q4", node:"future_question", q:"What do you think humans still don't understand?" }
+    ] },
+  { cat:"The story that shaped you", color:"var(--green)",
+    lead:"How you learn was shaped by a life. This is part of the record.",
+    items:[
+      { id:"p1", node:"personal", q:"What experiences shaped the way you think?" },
+      { id:"p2", node:"personal", q:"What moment changed your perspective?" },
+      { id:"p3", node:"personal", q:"What interest has followed you your whole life?" },
+      { id:"p4", node:"personal", q:"What's an idea you've changed your mind about?" }
+    ] }
+];
+// canonical learning spine + field keyword signatures (offline recommendation)
+const SPINE = ["math","physics","ee","cs","ai","robotics"];
+const FIELD_KW = {
+  math:["math","algebra","calculus","equation","number","geometry","function","statistic"],
+  physics:["physic","energy","force","atom","matter","quantum","light","gravity","field","wave"],
+  ee:["electric","voltage","current","circuit","power","wire","transistor","signal","electronic"],
+  cs:["code","coding","program","software","computer","computing","algorithm","data"],
+  ai:["ai","artificial intelligence","machine learning","neural","intelligence","model","learn from data","llm"],
+  robotics:["robot","automation","motor","arm","plc","industrial control","machine","actuator","autonom"]
+};
+
 /* ---- storage ---- */
 const KEY = "inkling-mind-v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; } }
@@ -224,6 +281,7 @@ DB.answers = DB.answers || {};   // {qid:[{text,conf,at}]}
 DB.refine  = DB.refine  || {};   // {qid:{had:[i],new:[i]}}
 DB.openQs  = DB.openQs  || {};   // {qid:[str]}
 DB.breakthroughs = DB.breakthroughs || {};  // {qid:[timestamp,...]} — moments it clicked
+DB.profile = DB.profile || { answers:{}, fields:[], done:false, startedAt:0, completedAt:0 };
 function persist(){ save(DB); }
 
 /* ---- helpers ---- */
@@ -242,17 +300,19 @@ let view = { name:"home", fid:null, qid:null };
 const app = document.getElementById("app");
 function go(v){ view=Object.assign({name:"home",fid:null,qid:null},v); render(); window.scrollTo(0,0); }
 
-function chrome(inner, activeModel){
+function chrome(inner, active){
   return `<div class="top">
       <div class="brand">🌱 Inkling<small>your evolving model of how the world works</small></div>
       <div class="nav">
-        <button class="${activeModel?'':'on'}" onclick="go({name:'home'})">⚡ Fields</button>
-        <button class="${activeModel?'on':''}" onclick="go({name:'model'})">🧠 Your model</button>
+        <button class="${active==='onboard'?'on':''}" onclick="go({name:'onboard',step:0})">🌱 The Seed</button>
+        <button class="${active==='home'?'on':''}" onclick="go({name:'home'})">⚡ Fields</button>
+        <button class="${active==='model'?'on':''}" onclick="go({name:'model'})">🧠 Your model</button>
       </div>
     </div>${inner}`;
 }
 
 function render(){
+  if(view.name==="onboard") return renderOnboard();
   if(view.name==="home") return renderHome();
   if(view.name==="field") return renderField();
   if(view.name==="question") return renderQuestion();
@@ -273,10 +333,17 @@ function renderHome(){
       <div class="meta">${meta}</div>
     </button>`;
   }).join("");
+  const seedCTA = !DB.profile.done
+    ? `<button class="card" style="grid-column:1/-1;background:linear-gradient(135deg,rgba(57,217,138,.12),rgba(167,139,250,.12));border-color:rgba(167,139,250,.4)" onclick="go({name:'onboard',step:0})">
+        <div class="ic">🌱</div>
+        <div class="nm">Start with The Seed</div>
+        <div class="bl">Let Inkling get to know you first — your curiosity, how you think, what you're chasing. It plants your first path.</div>
+        <div class="meta">the initial understanding ›</div></button>`
+    : "";
   app.innerHTML = chrome(
     `<h1>Where do you want to begin?</h1>
      <p class="sub">You don't need to know the answers. These are discovery questions — Inkling captures what you already think, then shows you how it really works, and remembers how your understanding changes.</p>
-     <div class="grid">${cards}</div>`, false);
+     <div class="grid">${seedCTA}${cards}</div>`, "home");
 }
 
 /* ---- FIELD: list its discovery questions ---- */
@@ -296,7 +363,7 @@ function renderField(){
     `<button class="back" onclick="go({name:'home'})">‹ All fields</button>
      <h1>${f.icon} ${esc(f.name)}</h1>
      <p class="sub">${esc(f.blurb)} · tap a question to capture what you think.</p>
-     ${rows}`, false);
+     ${rows}`, "home");
 }
 
 /* ---- QUESTION: capture → reality → refine ---- */
@@ -339,7 +406,7 @@ function renderQuestion(){
        </div>
      </div>
      ${tl}
-     <div id="realityHost">${hasAns?realityHTML(f,q):""}</div>`, false);
+     <div id="realityHost">${hasAns?realityHTML(f,q):""}</div>`, "home");
   window.__CONF=CONF;
 }
 
@@ -396,6 +463,149 @@ function addOpenQ(fid,qid){
   DB.openQs[qid]=DB.openQs[qid]||[]; DB.openQs[qid].push(t); persist();
   document.getElementById("realityHost").innerHTML=realityHTML(fieldById(fid),qById(fid,qid));
   const nx=document.getElementById("oq"); if(nx) nx.focus();
+}
+
+/* ---- THE SEED: the Initial Understanding Protocol ---- */
+function onbSteps(){
+  const s=[{type:"welcome"}];
+  PROTOCOL.forEach(cat=>{
+    if(cat.fieldsStep){ s.push({type:"fields",cat:cat.cat,color:cat.color,lead:cat.lead}); return; }
+    cat.items.forEach(it=> s.push({type:"q",cat:cat.cat,color:cat.color,lead:cat.lead,it}));
+  });
+  s.push({type:"synth"});
+  return s;
+}
+function onbChip(val,multi){
+  let sel=window.__ONBSEL||[];
+  if(multi===false) sel=[val];
+  else sel = sel.includes(val)? sel.filter(x=>x!==val) : sel.concat(val);
+  window.__ONBSEL=sel;
+  document.querySelectorAll("[data-onbchip]").forEach(el=>{
+    const on=sel.includes(el.getAttribute("data-onbchip"));
+    el.className = on?"chip had":"chip";
+  });
+}
+function onbNext(i){
+  const STEPS=onbSteps(), step=STEPS[i], P=DB.profile;
+  if(step.type==="q"){
+    if(step.it.choices){ P.answers[step.it.id]={choices:(window.__ONBSEL||[]).slice(),node:step.it.node,at:Date.now()}; }
+    else { const t=(document.getElementById("onbText")||{}).value||""; if(t.trim()) P.answers[step.it.id]={text:t.trim(),node:step.it.node,at:Date.now()}; }
+  } else if(step.type==="fields"){ P.fields=(window.__ONBSEL||[]).slice(); }
+  persist(); go({name:"onboard",step:i+1});
+}
+function onbReflection(){
+  const P=DB.profile, A=P.answers;
+  const text=Object.values(A).map(a=>a.text||(a.choices||[]).join(" ")).join(" ").toLowerCase();
+  const chosen=new Set(P.fields||[]); const score={};
+  SPINE.forEach(f=>{ let s=chosen.has(f)?3:0; (FIELD_KW[f]||[]).forEach(k=>{ if(text.includes(k)) s+=1; }); score[f]=s; });
+  let rel=SPINE.filter(f=>score[f]>0);
+  if(!rel.length) rel = chosen.size? [...chosen] : ["ee"];
+  rel.sort((a,b)=>SPINE.indexOf(a)-SPINE.indexOf(b));
+  return { rel, score };
+}
+function renderOnboard(){
+  const STEPS=onbSteps(); let i=view.step||0; i=Math.max(0,Math.min(i,STEPS.length-1));
+  const step=STEPS[i], P=DB.profile;
+  if(!P.startedAt){ P.startedAt=Date.now(); persist(); }
+  const qTotal=STEPS.filter(s=>s.type==="q"||s.type==="fields").length;
+  const qIndex=STEPS.slice(0,i+1).filter(s=>s.type==="q"||s.type==="fields").length;
+  const pct = step.type==="welcome"?0 : step.type==="synth"?100 : Math.round(qIndex/qTotal*100);
+  const bar = step.type==="welcome"?"" : `<div style="height:5px;border-radius:99px;background:rgba(255,255,255,.1);margin:0 0 16px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#39d98a,#a78bfa)"></div></div>`;
+
+  // WELCOME
+  if(step.type==="welcome"){
+    const done=P.done;
+    app.innerHTML=chrome(
+      `<div class="panel" style="text-align:center;padding:28px 20px">
+        <div style="font-size:46px;line-height:1">🌱</div>
+        <h1 style="margin:10px 0 4px">The Seed</h1>
+        <p class="sub" style="margin:0 auto 16px;max-width:470px">Before Inkling guides your learning, it wants to understand <b>you</b> — what you're curious about, how you think, what you're chasing. This isn't a test. It's the conversation that plants the first nodes of your knowledge graph.</p>
+        ${done? `<div class="hint" style="margin-bottom:12px">You planted your seed on ${fmtDate(P.completedAt||P.startedAt)}. You can revisit and let it keep growing.</div>
+          <button class="btn" onclick="go({name:'onboard',step:${STEPS.length-1}})">See your first path ›</button>
+          <div style="margin-top:10px"><button class="back" onclick="go({name:'onboard',step:1})">Answer the questions again</button></div>`
+        : `<button class="btn" onclick="go({name:'onboard',step:1})">Plant the seed ›</button>
+          <div style="margin-top:12px"><button class="back" onclick="go({name:'home'})">Skip for now</button></div>`}
+      </div>`, "onboard");
+    return;
+  }
+
+  // SYNTHESIS — Inkling's first reflection + recommended path
+  if(step.type==="synth"){
+    if(!P.done){ P.done=true; P.completedAt=Date.now(); persist(); }
+    const A=P.answers;
+    const say=id=> A[id]&&A[id].text ? A[id].text : "";
+    const choiceOf=id=> A[id]&&A[id].choices ? A[id].choices.join(", ") : "";
+    const {rel}=onbReflection();
+    const relNames=rel.map(f=>`${fieldById(f).icon} ${fieldById(f).name}`);
+    // ordered concrete path: up to 2 opening concepts per relevant field, along the spine
+    const path=[]; rel.forEach(f=>{ const fd=fieldById(f); fd.questions.slice(0,2).forEach(q=>path.push({icon:fd.icon,c:q.concept,fid:f,qid:q.id})); });
+    const questions=[["q1"],["m3"],["q4"],["q3"]].map(([id])=>say(id)).filter(Boolean);
+    const reflect=[];
+    if(say("m1")) reflect.push(`You most want to understand <b>“${esc(say("m1"))}”</b>.`);
+    if(say("m2")) reflect.push(`Your curiosity keeps returning to <b>${esc(say("m2"))}</b>.`);
+    if(choiceOf("t1")) reflect.push(`You learn best through <b>${esc(choiceOf("t1")).toLowerCase()}</b>${choiceOf("t3")?`, and you prefer the <b>${esc(choiceOf("t3")).toLowerCase()}</b>`:""}.`);
+    if(say("q2")) reflect.push(`If you could master one technology, it'd be <b>${esc(say("q2"))}</b>.`);
+    if(say("q3")) reflect.push(`You'd want your learning to help <b>${esc(say("q3"))}</b>.`);
+    if(say("p3")) reflect.push(`An interest that has followed you your whole life: <b>${esc(say("p3"))}</b>.`);
+
+    app.innerHTML=chrome(
+      `${bar}
+       <div style="text-align:center;margin-bottom:6px"><div style="font-size:34px">🌱→🌿</div></div>
+       <h1 style="text-align:center;margin-bottom:2px">Your seed is planted</h1>
+       <p class="sub" style="text-align:center">Inkling's first reflection of you. This grows every time you learn.</p>
+
+       ${reflect.length? `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--violet);margin:0 0 9px;text-transform:uppercase;letter-spacing:.04em">Who you are, as a learner</h3>
+         ${reflect.map(r=>`<div style="padding:6px 0;border-bottom:1px solid var(--line);line-height:1.5;color:#dbe4ee">${r}</div>`).join("")}</div>`:""}
+
+       <div class="panel"><h3 style="font:800 12px system-ui;color:var(--blue);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Your strongest connection areas</h3>
+         <div style="font:800 16px system-ui;line-height:1.5">${relNames.join(' <span style="color:var(--dim)">→</span> ')}</div>
+         <div class="hint" style="margin-top:6px">These fields build on each other — the same ideas flow from one into the next.</div></div>
+
+       <div class="panel"><h3 style="font:800 12px system-ui;color:var(--green);margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em">Your first exploration path</h3>
+         ${path.map((p,n)=>`<button class="qrow" style="margin-bottom:7px" onclick="go({name:'question',fid:'${p.fid}',qid:'${p.qid}'})">
+            <span style="flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:rgba(57,217,138,.16);color:var(--green);font:800 11px system-ui;display:flex;align-items:center;justify-content:center">${n+1}</span>
+            <span><span class="qt">${p.icon} ${esc(p.c)}</span></span></button>`).join("")}</div>
+
+       ${questions.length? `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--amber);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Your first questions to chase</h3>
+         ${questions.map(q=>`<div class="openq">${esc(q)}</div>`).join("")}
+         <div class="hint" style="margin-top:8px">Inkling will hold these. As you learn, it'll show you where they get answered.</div></div>`:""}
+
+       <button class="btn" style="width:100%" onclick="go({name:'question',fid:'${path[0]?path[0].fid:'ee'}',qid:'${path[0]?path[0].qid:'ee1'}'})">Begin your first exploration ›</button>
+       <div style="text-align:center;margin-top:10px"><button class="back" onclick="go({name:'model'})">Or see your model</button></div>`, "onboard");
+    return;
+  }
+
+  // A QUESTION (free-text) or FIELDS picker or CHOICE question
+  let bodyHTML="";
+  if(step.type==="fields"){
+    window.__ONBSEL=(P.fields||[]).slice();
+    bodyHTML=`<div class="chips">${FIELDS.map(f=>`<span data-onbchip="${f.id}" class="${(P.fields||[]).includes(f.id)?'chip had':'chip'}" onclick="onbChip('${f.id}',true)">${f.icon} ${esc(f.name)}</span>`).join("")}</div>
+      <div class="hint" style="margin-top:8px">Pick as many as pull at you — you can always add more later.</div>`;
+  } else if(step.it.choices){
+    const prev=(P.answers[step.it.id]&&P.answers[step.it.id].choices)||[];
+    window.__ONBSEL=prev.slice();
+    bodyHTML=`<div class="chips">${step.it.choices.map(c=>`<span data-onbchip="${esc(c)}" class="${prev.includes(c)?'chip had':'chip'}" onclick="onbChip('${esc(c)}',${step.it.multi?'true':'false'})">${esc(c)}</span>`).join("")}</div>
+      <div class="hint" style="margin-top:8px">${step.it.multi?"Choose any that fit.":"Choose one."}</div>`;
+  } else {
+    const prev=(P.answers[step.it.id]&&P.answers[step.it.id].text)||"";
+    bodyHTML=`<textarea id="onbText" placeholder="Take your time. Whatever's true for you.">${esc(prev)}</textarea>`;
+  }
+  const qtext = step.type==="fields" ? "Which of these pull at you?" : step.it.q;
+  app.innerHTML=chrome(
+    `${bar}
+     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+       <span style="font:800 11px system-ui;color:${step.color};text-transform:uppercase;letter-spacing:.05em">${esc(step.cat)}</span>
+       <span class="hint" style="margin:0">${qIndex} of ${qTotal}</span></div>
+     <div class="panel">
+       <div class="qbig">${esc(qtext)}</div>
+       <div class="hint" style="margin:6px 0 12px">${esc(step.lead||"")}</div>
+       ${bodyHTML}
+       <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+         <button class="btn" onclick="onbNext(${i})">Continue ›</button>
+         <button class="back" onclick="go({name:'onboard',step:${i+1}})">Skip</button>
+       </div>
+     </div>
+     <button class="back" onclick="go({name:'onboard',step:${i-1}})">‹ Back</button>`, "onboard");
 }
 
 /* ---- CONCEPT TIMELINE: the biography of one idea in your mind ----
@@ -462,7 +672,7 @@ function renderTimeline(){
      ${nowBlock}
      ${openBlock}
 
-     <button class="btn pink" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">Explain it again — add a new version ›</button>`, true);
+     <button class="btn pink" onclick="go({name:'question',fid:'${f.id}',qid:'${q.id}'})">Explain it again — add a new version ›</button>`, "model");
 }
 
 function toggleBreakthrough(qid,at){
@@ -484,9 +694,12 @@ function renderModel(){
   }));
 
   if(!nodes.length){
+    const seedLine = DB.profile.done
+      ? `<button class="btn" onclick="go({name:'onboard',step:${onbSteps().length-1}})">See your first path ›</button>`
+      : `<button class="btn" onclick="go({name:'onboard',step:0})">🌱 Plant The Seed ›</button>`;
     app.innerHTML=chrome(`<h1>🧠 Your model</h1>
       <div class="empty">Nothing captured yet.<br><span style="opacity:.8">Answer a discovery question and it becomes a living node here — your own map of what you understand, and how it changes.</span><br><br>
-      <button class="btn" onclick="go({name:'home'})">Start with a field ›</button></div>`, true);
+      ${seedLine}</div>`, "model");
     return;
   }
 
@@ -536,10 +749,23 @@ function renderModel(){
       ${allOpen.slice(0,10).map(t=>`<div class="openq">${esc(t.o)} <span style="color:var(--dim);font-weight:600">· ${esc(t.c)}</span></div>`).join("")}</div>`;
   }
 
+  // "who you are" — carried from The Seed
+  let seed="";
+  if(DB.profile.done){
+    const A=DB.profile.answers;
+    const bits=[];
+    if(A.m1&&A.m1.text) bits.push(["wants to understand",A.m1.text]);
+    if(A.t1&&A.t1.choices&&A.t1.choices.length) bits.push(["learns best by",A.t1.choices.join(", ").toLowerCase()]);
+    if(A.q2&&A.q2.text) bits.push(["dream to master",A.q2.text]);
+    if(A.p3&&A.p3.text) bits.push(["lifelong thread",A.p3.text]);
+    if(bits.length) seed=`<button class="node" style="display:block;width:100%;text-align:left;cursor:pointer;color:var(--ink);background:linear-gradient(135deg,rgba(167,139,250,.10),transparent);border-color:rgba(167,139,250,.35)" onclick="go({name:'onboard',step:${onbSteps().length-1}})">
+      <div class="nh"><span class="nn" style="color:var(--violet)">🌱 Who you are, as a learner</span><span class="nc">from The Seed ›</span></div>
+      ${bits.map(([k,v])=>`<div style="margin-top:6px;font:600 12px system-ui;color:#cbd5e1"><span style="color:var(--dim)">${k}:</span> ${esc(v)}</div>`).join("")}</button>`;
+  }
   app.innerHTML=chrome(
     `<h1>🧠 Your model</h1>
      <p class="sub">Not what you know — <b>how you came to know it.</b> Every concept keeps its whole history: what you first thought, what changed it, and what's still open. Tap one to read its timeline.</p>
-     ${stat}${curiosity}${cards}`, true);
+     ${seed}${stat}${curiosity}${cards}`, "model");
 }
 
 render();
