@@ -1199,12 +1199,21 @@ function renderModel(){
 }
 
 // Boot: an ?import=<base64> handoff from the browser extension lands on the chooser.
+// The URL carries only the light stuff (digest + concepts); the bulky quiz deck
+// arrives right after via postMessage, so the URL never gets long enough to break.
 (function boot(){
   try{
     const p = new URLSearchParams(location.search).get("import");
     if(p){
       window.__pendingImport = JSON.parse(decodeURIComponent(escape(atob(p))));
       view = { name:"import" };
+      window.addEventListener("message", function(ev){
+        if(ev.data && ev.data.type==="inkling-import-quiz" && ev.data.quiz){
+          if(window.__pendingImport){ window.__pendingImport.quiz = ev.data.quiz; }
+          if(view.name==="import") render();
+        }
+      });
+      try{ if(window.opener) window.opener.postMessage({type:"inkling-import-ready"}, "*"); }catch(e){}
     }
   }catch(e){ /* ignore a malformed handoff */ }
   render();
