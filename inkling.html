@@ -337,6 +337,7 @@ DB.breakthroughs = DB.breakthroughs || {};  // {qid:[timestamp,...]} — moments
 DB.profile = DB.profile || { answers:{}, fields:[], done:false, startedAt:0, completedAt:0 };
 DB.captures = DB.captures || [];  // interpreter output: [{id,text,type,links,reason,at}]
 DB.chat = DB.chat || [];          // conversation transcript: [{role,text|html,route,links,actions,at}]
+DB.conversations = DB.conversations || []; // imported AI chats: [{id,title,provider,summary,concepts,relations,quiz,messageCount,at}]
 function persist(){ save(DB); }
 
 /* ---- helpers ---- */
@@ -382,6 +383,8 @@ function render(){
   if(view.name==="quiz") return renderQuizSection();
   if(view.name==="story") return renderStory();
   if(view.name==="memory") return renderMemory();
+  if(view.name==="import") return renderImportChooser(window.__pendingImport);
+  if(view.name==="imports") return renderImports();
 }
 
 /* ---- STUDY PATHS: pick a field, learn beginner → advanced ---- */
@@ -545,6 +548,96 @@ function snapshot(){
 }
 
 /* ---- DASHBOARD: the 10-second promise + the living state ---- */
+/* ---- IMPORT: the landing chooser (extension handoff) + saved imports ---- */
+function conceptLabels(arr){ return (arr||[]).map(c=> typeof c==="string"?c:(c&&c.label)).filter(Boolean); }
+
+function openQuizDeck(quiz){
+  try{
+    const deck={ id:quiz.id, title:quiz.title, questions:quiz.questions };
+    const b64=btoa(unescape(encodeURIComponent(JSON.stringify(deck))));
+    window.open("./quiz.html?deck="+encodeURIComponent(b64), "_blank");
+  }catch(e){}
+}
+function openConvQuiz(id){
+  const c=(DB.conversations||[]).find(x=>x.id===id);
+  if(c&&c.quiz) openQuizDeck(c.quiz);
+}
+
+// Persist the pending import as a conversation node (a future galaxy "star").
+function saveImport(){
+  const data=window.__pendingImport;
+  if(!data) return go({name:"dashboard"});
+  const conv={
+    id: data.importId || ("imp"+Date.now()),
+    title: data.title||"Conversation",
+    provider: data.provider||"ai",
+    summary: data.summary||"",
+    concepts: conceptLabels(data.concepts),
+    relations: data.relations||[],
+    quiz: (data.quiz && Array.isArray(data.quiz.questions) && data.quiz.questions.length) ? data.quiz : null,
+    messageCount: data.messageCount||0,
+    at: Date.now()
+  };
+  DB.conversations=(DB.conversations||[]).filter(c=>c.id!==conv.id);
+  DB.conversations.unshift(conv);
+  persist();
+  window.__pendingImport=null;
+  try{ history.replaceState(null,"",location.pathname); }catch(e){}  // so refresh won't re-trigger
+  go({name:"imports"});
+}
+
+function renderImportChooser(data){
+  if(!data) return go({name:"imports"});
+  const concepts=conceptLabels(data.concepts);
+  const quiz=(data.quiz && Array.isArray(data.quiz.questions) && data.quiz.questions.length) ? data.quiz : null;
+  const chips=concepts.map(c=>`<span class="lk">${esc(c)}</span>`).join("");
+  window.__importQuiz=quiz;
+  app.innerHTML=chrome(
+    `<div style="text-align:center;margin:8px 0 2px"><div style="font-size:30px">📥 → 🌱</div></div>
+     <h1 style="text-align:center;margin-bottom:2px">A conversation just arrived</h1>
+     <p class="sub" style="text-align:center">From ${esc(data.provider||"an AI chat")} · “${esc(data.title||"Conversation")}” · ${data.messageCount||0} messages</p>
+
+     <div class="panel"><h3 style="font:800 12px system-ui;color:var(--blue);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">◈ Digest — the short version</h3>
+       <p style="line-height:1.6;color:#dbe4ee;margin:0">${esc(data.summary||"(No summary was returned.)")}</p>
+       ${chips?`<div class="links" style="margin-top:10px">${chips}</div>`:""}</div>
+
+     <div class="sub" style="margin:2px 0 8px">What should this become? You can do more than one.</div>
+     <div class="grid">
+       <button class="card" onclick="saveImport()">
+         <div class="ic">🌐</div><div class="nm">Save to my knowledge</div>
+         <div class="bl">Keep it as a conversation node with its concepts — a star in your graph.</div>
+         <div class="meta">persist in Inkling ›</div></button>
+       ${quiz?`<button class="card" onclick="openQuizDeck(window.__importQuiz)">
+         <div class="ic">🎓</div><div class="nm">Study as quiz</div>
+         <div class="bl">Take the ${quiz.questions.length}-question graded deck built from this chat.</div>
+         <div class="meta">open the quiz ›</div></button>`:""}
+     </div>
+     <div style="text-align:center;margin-top:12px"><button class="back" onclick="go({name:'dashboard'})">Not now</button></div>`, "");
+}
+
+function renderImports(){
+  const list=(DB.conversations||[]).slice().sort((a,b)=>b.at-a.at);
+  if(!list.length){
+    app.innerHTML=chrome(`<h1>📥 Imports</h1>
+      <div class="empty">No imported conversations yet.<br><span style="opacity:.8">In the Inkling browser extension, open a ChatGPT/Claude/Gemini chat, click <b>Import</b>, then <b>Open in Inkling</b> — it lands here.</span></div>`, "imports");
+    return;
+  }
+  const cards=list.map(c=>{
+    const chips=(c.concepts||[]).slice(0,8).map(x=>`<span class="lk">${esc(x)}</span>`).join("");
+    const quizBtn=c.quiz?`<button class="btn pink" style="padding:7px 13px;font:800 11px system-ui" onclick="openConvQuiz('${c.id}')">🎓 Study as quiz (${c.quiz.questions.length})</button>`:"";
+    return `<div class="node">
+      <div class="nh"><span class="nn">${esc(c.title)}</span><span class="nc">${esc(c.provider)} · ${daysAgo(c.at)}</span></div>
+      <div style="margin-top:7px;color:#dbe4ee;line-height:1.55">${esc(c.summary||"")}</div>
+      ${chips?`<div class="links" style="margin-top:8px">${chips}</div>`:""}
+      ${quizBtn?`<div style="margin-top:10px">${quizBtn}</div>`:""}
+    </div>`;
+  }).join("");
+  app.innerHTML=chrome(
+    `<h1>📥 Imports</h1>
+     <p class="sub">Conversations you brought in from ChatGPT, Claude, and Gemini — each one a star in your knowledge graph.</p>
+     ${cards}`, "imports");
+}
+
 function renderDashboard(){
   const P=DB.profile, s=snapshot();
   const newUser = !P.done && s.captures===0 && s.concepts===0;
@@ -554,7 +647,8 @@ function renderDashboard(){
     ["paths","📚","Study paths","Learn beginner → advanced",FIELDS.length+" fields open"],
     ["quiz","🎓","Quiz","Strengthen understanding","graded, adaptive decks"],
     ["story","📖","Storybook","Read your journey",s.story+" moments"],
-    ["memory","🔔","Memory","What Inkling remembers",s.memory+" things"]
+    ["memory","🔔","Memory","What Inkling remembers",s.memory+" things"],
+    ["imports","📥","Imports","AI chats you brought in",(DB.conversations||[]).length+" conversations"]
   ];
   const cards=sections.map(([v,ic,nm,pp,meta])=>`<button class="card" onclick="go({name:'${v}'})">
       <div class="ic">${ic}</div><div class="nm">${esc(nm)}</div><div class="bl">${esc(pp)}</div>
@@ -1104,7 +1198,17 @@ function renderModel(){
      ${seed}${stat}${curiosity}${cards}`, "graph");
 }
 
-render();
+// Boot: an ?import=<base64> handoff from the browser extension lands on the chooser.
+(function boot(){
+  try{
+    const p = new URLSearchParams(location.search).get("import");
+    if(p){
+      window.__pendingImport = JSON.parse(decodeURIComponent(escape(atob(p))));
+      view = { name:"import" };
+    }
+  }catch(e){ /* ignore a malformed handoff */ }
+  render();
+})();
 </script>
 </body>
 </html>
