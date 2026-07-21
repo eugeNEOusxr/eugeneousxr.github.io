@@ -751,6 +751,21 @@ function convPage(c){
    (conv count) so it regenerates only when the chapter actually grows. Falls back
    to the structural chapter for guests / no API key. */
 let _writingAnchor=null, _narrNote=null, _bookScrollCh=null, _narrAll={running:false,stop:false};
+// Narration genres — the same real journey, told in different voices.
+const GENRES={
+  scifi:{ label:"🚀 Sci-fi", frame:"a science-fiction saga whose protagonist is the reader ('you') — an explorer charting the frontier of their own understanding. Render ideas with the atmosphere of great science fiction: learning as venturing into unmapped territory; concepts as systems, forces and signals; the mind as a universe being surveyed. Voice: cinematic, vivid, propulsive, a little awestruck.", line:"Write it as a chapter of a SCIENCE-FICTION novel — cinematic and atmospheric; ideas as systems, forces and signals; the mind as an expanding universe being charted." },
+  literary:{ label:"📖 Literary", frame:"a work of literary nonfiction — the intimate, reflective memoir of a mind growing over time. Voice: warm, curious, precise, humane.", line:"Write it as warm literary nonfiction — reflective, intimate, precise." },
+  documentary:{ label:"🎬 Documentary", frame:"a documentary charting a mind's development — clear, authoritative and quietly compelling, like a great science documentary. Voice: measured, lucid, observational.", line:"Write it as a documentary voiceover — measured, lucid, observational, quietly compelling." },
+  mythic:{ label:"⚔️ Mythic", frame:"an epic myth — the reader ('you') as a seeker on a legendary quest for understanding. Ideas are trials, thresholds and revelations. Voice: grand, timeless, elemental.", line:"Write it as an epic myth — grand and timeless; ideas as trials, thresholds and revelations." },
+  noir:{ label:"🕵️ Noir", frame:"a hardboiled noir — the reader ('you') as a detective chasing the truth through a case that keeps deepening. Ideas are clues, suspects and revelations in the dark. Voice: terse, atmospheric, wry.", line:"Write it as hardboiled noir — terse, atmospheric, wry; ideas as clues and revelations in the dark." },
+  adventure:{ label:"🧭 Adventure", frame:"a pulp adventure — the reader ('you') as an explorer on an expedition into uncharted knowledge. Voice: propulsive, vivid, exhilarating.", line:"Write it as a rollicking adventure — propulsive and vivid, an expedition into the unknown." },
+  fairytale:{ label:"🧚 Fable", frame:"a fable — the reader ('you') as a wanderer learning the deep rules of a wondrous world. Ideas are enchantments, riddles and gifts. Voice: gentle, wondrous, a little wise.", line:"Write it as a fable — gentle and wondrous; ideas as enchantments, riddles and gifts." }
+};
+function currentGenre(){ return (DB.narrationGenre && GENRES[DB.narrationGenre]) ? DB.narrationGenre : "scifi"; }
+// per-genre narration cache; legacy flat {text,sig,at} entries read as the 'literary' voice.
+function narrEntry(anchor){ const e=(DB.narration||{})[anchor]; if(!e) return null; if(typeof e.text==="string") return currentGenre()==="literary"?{text:e.text,sig:e.sig}:null; return e[currentGenre()]||null; }
+function saveNarr(anchor,obj){ DB.narration=DB.narration||{}; let e=DB.narration[anchor]; if(e&&typeof e.text==="string") e={literary:{text:e.text,sig:e.sig,at:e.at}}; if(!e||typeof e!=="object") e={}; e[currentGenre()]=obj; DB.narration[anchor]=e; }
+function setGenre(g){ if(!GENRES[g]||_narrAll.running) return; DB.narrationGenre=g; persist(); renderStorybook(); }
 async function chatLLM(message, context){
   const token=inkToken(); if(!token) return null;
   try{
@@ -763,13 +778,14 @@ async function chatLLM(message, context){
   }catch(e){ return null; }
 }
 async function narrateChapter(ch){
+  const g=GENRES[currentGenre()];
   const lines=ch.convs.slice(0,18).map(c=>`- ${c.title} (${fmtDate(c.at)})${c.summary?": "+String(c.summary).slice(0,90):""}`).join("\n");
-  const msg=`Write Chapter ${ch.n}, titled "${ch.title}", as a chapter of a SCIENCE-FICTION novel about a mind exploring the frontier of its own understanding. `+
+  const msg=`Write Chapter ${ch.n}, titled "${ch.title}". ${g.line} `+
     `Ground it entirely in these real conversations — do not invent facts, names, or events:\n${lines}\n\n`+
-    `Across ${ch.convs.length} transmission${ch.convs.length===1?"":"s"} between ${fmtSpan(ch.span[0],ch.span[1])}, you kept returning to ${ch.title}.`+
-    (ch.threads.length?` Recurring signals: ${ch.threads.join(", ")}.`:"")+
-    `\n\nWrite 2 to 4 short, cinematic paragraphs in second person ("you"): what pulled you toward this frontier, the obstacles and turns, how your understanding mutated and expanded, and where the horizon points next. Sci-fi atmosphere and imagery — ideas as systems, forces, architectures and signals; the mind as an expanding universe being charted — but every claim must stay faithful to the conversations above. No headings, no bullet points.`;
-  const context="You are the narrator of an ongoing science-fiction saga whose protagonist is the reader ('you') — an explorer charting the frontier of their own understanding. Render real ideas with the atmosphere of great science fiction: learning as venturing into unmapped territory, concepts as systems and forces and signals, the mind as a universe being surveyed. Voice: cinematic, vivid, propulsive, a little awestruck. NEVER fabricate events or facts — only the voice is science fiction; the substance stays true to the user's actual conversations. Second person, no headings or lists. You're chronicling Jeremy, a first-principles systems thinker whose paths span electronics, AI, and robotics.";
+    `Across ${ch.convs.length} conversation${ch.convs.length===1?"":"s"} between ${fmtSpan(ch.span[0],ch.span[1])}, you kept returning to ${ch.title}.`+
+    (ch.threads.length?` Recurring threads: ${ch.threads.join(", ")}.`:"")+
+    `\n\nWrite 2 to 4 short paragraphs in second person ("you"): what drew you in, the obstacles and turns, how your understanding changed and grew, and where it points next. Commit fully to the genre's atmosphere and imagery — but every claim must stay faithful to the conversations above. No headings, no bullet points.`;
+  const context=`You are the narrator of ${g.frame} NEVER fabricate events or facts — only the voice is stylized; the substance stays true to the user's actual conversations. Second person, no headings or lists. You're chronicling Jeremy, a first-principles systems thinker whose paths span electronics, AI, and robotics.`;
   return await chatLLM(msg, context);
 }
 async function writeChapter(anchor){
@@ -779,7 +795,7 @@ async function writeChapter(anchor){
   _narrNote=null; _writingAnchor=anchor; renderStorybook();
   const text=await narrateChapter(ch);
   _writingAnchor=null;
-  if(text){ DB.narration=DB.narration||{}; DB.narration[anchor]={ text, sig:ch.convs.length, at:Date.now() }; persist(); }
+  if(text){ saveNarr(anchor,{ text, sig:ch.convs.length, at:Date.now() }); persist(); }
   else { _narrNote=anchor; }
   _bookScrollCh=ch.n; renderStorybook();
 }
@@ -787,9 +803,9 @@ function narrationInline(ch){
   const jsA=attrJs(ch.anchor);
   if(_writingAnchor===ch.anchor)
     return `<p class="hint" style="text-align:center;margin:12px 0">✍️ Inkling is writing this chapter…</p>`;
-  const nar=(DB.narration||{})[ch.anchor], done=nar&&nar.sig===ch.convs.length;
+  const nar=narrEntry(ch.anchor), done=nar&&nar.sig===ch.convs.length;
   if(done)
-    return `<div style="text-align:center;margin:10px 0"><button class="back" onclick="writeChapter('${jsA}')">↻ Rewrite in Inkling's words</button></div>`;
+    return `<div style="text-align:center;margin:10px 0"><button class="back" onclick="writeChapter('${jsA}')">↻ Rewrite in ${esc(GENRES[currentGenre()].label)}</button></div>`;
   const label = inkToken() ? "✍️ Have Inkling write this chapter in prose" : "✍️ Write this chapter (sign in for AI)";
   return `<div style="text-align:center;margin:12px 0">
     <button class="btn" style="font:800 11px system-ui;padding:6px 13px" onclick="writeChapter('${jsA}')">${label}</button>
@@ -802,7 +818,7 @@ function bookEntry(c){
   return `<p style="font:400 15px/1.72 Georgia,serif;color:#c9d3e2;margin:0 0 10px;padding-left:14px;border-left:2px solid rgba(167,139,250,.16);cursor:pointer" onclick="openConvInGalaxy('${c.id}')"><span style="color:var(--violet);font-weight:700;font-size:12.5px">${fmtDate(c.at)}</span> — <b style="color:#e7edf6">${esc(c.title)}</b>${c.summary?`. ${esc(c.summary)}`:""}</p>`;
 }
 function bookChapter(ch, deepMap){
-  const nar=(DB.narration||{})[ch.anchor], narr=(nar&&nar.sig===ch.convs.length)?nar.text:null;
+  const nar=narrEntry(ch.anchor), narr=(nar&&nar.sig===ch.convs.length)?nar.text:null;
   const threadLine=ch.threads.length?` The ideas woven through it: <b>${ch.threads.map(esc).join(", ")}</b>.`:"";
   const opener=`Between ${fmtSpan(ch.span[0],ch.span[1])}, across ${ch.convs.length} conversation${ch.convs.length===1?"":"s"}, you kept returning to <b>${esc(ch.title)}</b>.${threadLine}`;
   const d=deepMap[ch.anchor];
@@ -836,7 +852,7 @@ function bookProgressDone(done,stopped){
                          : `✓ Wrote ${done} chapter${done===1?"":"s"}. <button class="back" style="margin:0" onclick="this.parentElement.remove()">✕</button>`;
   if(!stopped) setTimeout(()=>{ const e=document.getElementById("bookProgress"); if(e) e.remove(); }, 7000);
 }
-function chaptersToNarrate(book){ return book.chapters.filter(ch=>{ const n=(DB.narration||{})[ch.anchor]; return !(n&&n.sig===ch.convs.length); }); }
+function chaptersToNarrate(book){ return book.chapters.filter(ch=>{ const n=narrEntry(ch.anchor); return !(n&&n.sig===ch.convs.length); }); }
 async function writeWholeBook(){
   if(_narrAll.running) return;
   if(!inkToken()){ renderStorybook(); return; }
@@ -852,7 +868,7 @@ async function writeWholeBook(){
     _writingAnchor=ch.anchor; updateChapterDom(ch, deepMap);
     let text=null; try{ text=await narrateChapter(ch); }catch(e){ text=null; }
     _writingAnchor=null;
-    if(text){ DB.narration=DB.narration||{}; DB.narration[ch.anchor]={ text, sig:ch.convs.length, at:Date.now() }; persist(); }
+    if(text){ saveNarr(ch.anchor,{ text, sig:ch.convs.length, at:Date.now() }); persist(); }
     updateChapterDom(ch, deepMap);
     done++; bookProgress(done, todo.length);
     await new Promise(r=>setTimeout(r, 500));
@@ -861,13 +877,30 @@ async function writeWholeBook(){
   bookProgressDone(done, stopped);
   const bar=document.getElementById("bookWriteBar"); if(bar) bar.outerHTML=coverWriteBar(buildBook());
 }
-function rewriteWholeBook(){ if(confirm("Rewrite every chapter from scratch? This replaces all current AI narration.")){ DB.narration={}; persist(); writeWholeBook(); } }
+function rewriteWholeBook(){
+  if(!confirm(`Rewrite every chapter in the ${GENRES[currentGenre()].label} voice? This replaces the current genre's narration.`)) return;
+  const g=currentGenre();
+  Object.keys(DB.narration||{}).forEach(a=>{ const e=DB.narration[a];
+    if(e&&typeof e.text==="string"){ if(g==="literary") delete DB.narration[a]; }
+    else if(e){ delete e[g]; } });
+  persist(); writeWholeBook();
+}
+function genrePicker(){
+  const cur=currentGenre();
+  const pills=Object.entries(GENRES).map(([id,g])=>
+    `<button onclick="setGenre('${id}')" style="cursor:pointer;border-radius:999px;padding:5px 12px;font:800 11px system-ui;border:1px solid ${id===cur?'rgba(167,139,250,.8)':'var(--line)'};background:${id===cur?'rgba(167,139,250,.22)':'transparent'};color:${id===cur?'#ddd6fe':'var(--dim)'}">${g.label}</button>`).join("");
+  return `<div style="margin:6px 0 4px"><div class="hint" style="margin:0 0 6px">Read your book as…</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">${pills}</div></div>`;
+}
 function coverWriteBar(book){
   if(!book.chapters.length) return `<div id="bookWriteBar"></div>`;
   const todo=chaptersToNarrate(book).length;
-  if(!inkToken()) return `<div id="bookWriteBar" style="text-align:center;margin:4px 0 14px"><span class="hint">✍️ Sign in on the main app + set an API key on Render to have Inkling write the whole book in prose.</span></div>`;
-  if(!todo) return `<div id="bookWriteBar" style="text-align:center;margin:4px 0 14px"><span class="hint">✅ Every chapter is written. </span><button class="back" onclick="rewriteWholeBook()">↻ Rewrite the whole book</button></div>`;
-  return `<div id="bookWriteBar" style="text-align:center;margin:4px 0 14px"><button class="btn" style="font:800 12px system-ui" onclick="writeWholeBook()">✍️ Have Inkling write the whole book — ${todo} chapter${todo===1?"":"s"}</button></div>`;
+  const gLabel=GENRES[currentGenre()].label;
+  let action;
+  if(!inkToken()) action=`<span class="hint">✍️ Sign in on the main app + set an API key on Render to have Inkling write your book in prose.</span>`;
+  else if(!todo) action=`<span class="hint">✅ Written in ${gLabel}. </span><button class="back" onclick="rewriteWholeBook()">↻ Rewrite</button>`;
+  else action=`<button class="btn" style="font:800 12px system-ui" onclick="writeWholeBook()">✍️ Write the whole book in ${gLabel} — ${todo} chapter${todo===1?"":"s"}</button>`;
+  return `<div id="bookWriteBar" style="margin:4px 0 14px">${genrePicker()}<div style="text-align:center;margin-top:8px">${action}</div></div>`;
 }
 
 // The whole book, read straight through — cover, then every chapter in sequence.
