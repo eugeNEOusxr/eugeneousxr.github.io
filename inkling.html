@@ -911,6 +911,67 @@ function importJourney(){
   go({name:"galaxy"});
 }
 
+/* ---- BULK IMPORT: your ChatGPT export (conversations-*.json), parsed locally ----
+   Nothing leaves the browser. We keep only compact records (title, concepts,
+   summary, date) — never full message text — so 900+ chats fit in localStorage. */
+const CG_STOP=new Set("the a an and or but if then else of to in on for with as at by from into about over under is are was were be been being do does did will would can could should may might must have has had this that these those it its i you he she they we me my your our their his her them us not no yes so just really very much many more most some any all cant dont didnt im youre lets what which who whom whose when where why how get got make made want need know think see say said tell told use used using like also thanks thank please okay sure yeah yep nope hey hi hello chatgpt gpt able way ways thing things stuff lot lots one two three first second next new good great best better help kind sort right left going go come came take took give gave put set find found feel felt look looked here there now today etc via per vs let create creating created build building built work working works given show shows based needs add added following below above example examples note step steps section part parts full".split(" "));
+const CG_NOISE=new Set("http https www com net org html css json xml sql termux aarch64 sudo apt npm npx node cd mkdir chmod git cli bash sh cmd pkg pip run script log error null undefined const var function return true false def print import export div span src href png jpg svg amp lt gt nbsp quot code file files line lines output input value values type types name names usr lib bin out".split(" "));
+const CG_GENERIC=new Set("app website project system page setup request conversation design guide idea ideas concept home environment portfolio platform platforms feature features version update question answer response overview explanation exploration thing user users data process method approach content result results option options info detail details".split(" "));
+function cgStrip(s){ return String(s||"").replace(/```[\s\S]*?```/g," ").replace(/`[^`]*`/g," ").replace(/https?:\/\/\S+/g," ").replace(/^[#>*\-\s]+/gm," ").replace(/[*_#>|~]+/g," "); }
+function cgClean(s){ return cgStrip(s).toLowerCase().replace(/[^a-z0-9+\s-]/g," ").replace(/\s+/g," ").trim(); }
+function cgBase(w){ return /[a-z]/.test(w)&&/^[a-z][a-z0-9+-]*[a-z0-9]$/.test(w)&&w.length>=3&&w.length<=22&&!CG_STOP.has(w)&&!CG_NOISE.has(w); }
+function cgTok(s){ return cgClean(s).split(" ").filter(cgBase); }
+function cgConvText(c){
+  let user=[], asst=[], first="";
+  for(const nd of Object.values(c.mapping||{})){ const m=nd.message; if(!m||!m.content||m.content.content_type!=="text")continue;
+    const role=m.author&&m.author.role; if(role!=="user"&&role!=="assistant")continue;
+    const t=(m.content.parts||[]).filter(p=>typeof p==="string").join(" ").trim(); if(!t)continue;
+    if(role==="user"){ user.push(t); if(!first) first=t; } else asst.push(t); }
+  return { user:user.join("\n").slice(0,14000), asst:asst.join("\n").slice(0,16000), first, n:user.length+asst.length };
+}
+function cgTopTerms(text){ const w=cgTok(text); const uni={}, bi={};
+  for(let i=0;i<w.length;i++){ if(!CG_GENERIC.has(w[i])) uni[w[i]]=(uni[w[i]]||0)+1;
+    if(i+1<w.length && w[i]!==w[i+1]) bi[w[i]+" "+w[i+1]]=(bi[w[i]+" "+w[i+1]]||0)+1; }
+  return { biTop:Object.entries(bi).filter(([k,v])=>v>=2).sort((a,b)=>b[1]-a[1]).map(x=>x[0]),
+           uniTop:Object.entries(uni).filter(([k,v])=>v>=2).sort((a,b)=>b[1]-a[1]).map(x=>x[0]) }; }
+function cgConcepts(c, txt){ const weighted=(txt.user+"\n").repeat(3)+txt.asst; const {biTop,uniTop}=cgTopTerms(weighted);
+  const tc=cgTok(c.title).filter(w=>!CG_GENERIC.has(w)); const tp=tc.slice(0,4).join(" ");
+  const out=[], seen=new Set(); const add=t=>{ t=String(t||"").trim(); if(!t||t.split(" ").length>4||seen.has(t))return; seen.add(t); out.push(t); };
+  biTop.slice(0,3).forEach(add); if(tp && tp.split(" ").length>=2) add(tp); tc.forEach(add);
+  uniTop.forEach(t=>{ if(out.length<6) add(t); });
+  return out.slice(0,6);
+}
+function cgRecord(c){
+  const txt=cgConvText(c); const concepts=cgConcepts(c, txt);
+  const at=Math.round(((c.create_time||c.update_time|| (Date.now()/1000)))*1000);
+  return { id: c.conversation_id||c.id||("cg"+at+Math.random().toString(36).slice(2,6)),
+    title: (c.title&&c.title.trim())||"Untitled conversation", provider:"chatgpt",
+    summary: (txt.first||"").replace(/\s+/g," ").slice(0,180),
+    concepts, messageCount: txt.n, at,
+    provenance:null, messages:null, digest:null, quiz:null, relations:[] };
+}
+const cgReadText=f=>new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsText(f); });
+function cgStatus(msg){ const el=document.getElementById("cgStatus"); if(el) el.innerHTML=msg; }
+async function importChatGPT(fileList){
+  const files=[...fileList].filter(f=>/\.json$/i.test(f.name)); if(!files.length){ cgStatus("Pick your <b>conversations-*.json</b> files (inside the ChatGPT export .zip)."); return; }
+  const have=new Set((DB.conversations||[]).map(c=>c.id)); let added=0, seen=0;
+  for(let fi=0; fi<files.length; fi++){
+    cgStatus(`Parsing file ${fi+1}/${files.length}… <span style="color:var(--dim)">${added} conversations so far</span>`);
+    await new Promise(r=>setTimeout(r,10));
+    let arr; try{ arr=JSON.parse(await cgReadText(files[fi])); }catch(e){ continue; }
+    if(!Array.isArray(arr)) arr=[arr];
+    for(const c of arr){ if(!c||!c.mapping)continue; seen++;
+      const rec=cgRecord(c); if(have.has(rec.id))continue; have.add(rec.id);
+      DB.conversations.push(rec); added++; }
+    arr=null;
+  }
+  DB.conversations.sort((a,b)=>b.at-a.at);
+  try{ persist(); }catch(e){ cgStatus("⚠ Storage is full — imported what fit. Try fewer files."); }
+  cgStatus(`✅ Imported <b>${added}</b> conversation${added===1?"":"s"} (${seen} scanned). Opening your galaxy…`);
+  setTimeout(()=>go({name:"galaxy"}), 900);
+}
+function triggerChatGPTImport(){ const el=document.getElementById("cgFile"); if(el) el.click(); }
+
 function renderImports(){
   const list=(DB.conversations||[]).slice().sort((a,b)=>b.at-a.at);
   const remaining=journeyRemaining();
@@ -919,10 +980,20 @@ function renderImports(){
       <div style="margin-top:7px;color:#dbe4ee;line-height:1.55">${remaining} real learning moment${remaining>1?"s":""} from building Inkling together — the transistor reframe, current vs. drift velocity, "edges &gt; flashcards," the CSP wall, and more. They fill your galaxy, story, and city map at once.</div>
       <div style="margin-top:10px"><button class="btn" style="font:800 12px system-ui" onclick="importJourney()">➕ Add my journey (${remaining})</button></div>
     </div>` : "";
+  const cgCard = `<div class="node" style="border-color:rgba(57,217,138,.4)">
+      <div class="nh"><span class="nn">📦 Import your ChatGPT history</span></div>
+      <div style="margin-top:7px;color:#dbe4ee;line-height:1.55">Unzip your ChatGPT export and pick the <b>conversations-*.json</b> files. Inkling reads them <b>locally in your browser</b> — nothing is uploaded — and turns each chat into a star in your galaxy, a tower in your atlas, and a chapter in your story.</div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="btn" style="font:800 12px system-ui" onclick="triggerChatGPTImport()">📂 Choose export files…</button>
+        <input id="cgFile" type="file" multiple accept=".json,application/json" style="display:none" onchange="importChatGPT(this.files)">
+        <span id="cgStatus" class="hint" style="margin:0"></span>
+      </div>
+    </div>`;
   if(!list.length){
     app.innerHTML=chrome(`<h1>📥 Imports</h1>
+      ${cgCard}
       ${journeyCard}
-      <div class="empty">No imported conversations yet.<br><span style="opacity:.8">In the Inkling browser extension, open a ChatGPT/Claude/Gemini chat, click <b>Import</b>, then <b>Open in Inkling</b> — it lands here.</span></div>`, "imports");
+      <div class="empty">No imported conversations yet.<br><span style="opacity:.8">Import your ChatGPT export above, or use the browser extension on any ChatGPT/Claude/Gemini chat.</span></div>`, "imports");
     return;
   }
   const cards=list.map(c=>{
@@ -940,6 +1011,7 @@ function renderImports(){
   app.innerHTML=chrome(
     `<h1>📥 Imports</h1>
      <p class="sub">Conversations you brought in from ChatGPT, Claude, and Gemini — each one a star in your knowledge graph.</p>
+     ${cgCard}
      ${journeyCard}
      ${galaxyBtn}
      ${cards}`, "imports");
@@ -1014,15 +1086,22 @@ function drawGalaxy(convs){
   const spot = window.__spotlightConcept || null;
   const matched = (i)=> spot ? keys[i].has(spot) : true;
 
-  // edges between chats sharing concepts
+  // edges between chats sharing concepts. With a big import (hundreds of chats) the
+  // O(n²) line pass would freeze the canvas, so require stronger sharing and cap it.
+  const need = n>250 ? 2 : 1, MAXL = 4000;
+  let drawn=0;
+  outer:
   for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
     let shared=0; for(const k of keys[j]){ if(keys[i].has(k)) shared++; }
-    if(shared>0){
+    if(shared>=need){
       const both=matched(i)&&matched(j);
+      // when spotlighting in a large map, only draw the matched threads
+      if(spot && n>250 && !both) continue;
       ctx.strokeStyle = spot ? (both?"rgba(240,171,252,.6)":"rgba(150,130,255,.05)")
                              : "rgba(150,130,255,"+Math.min(.4,.14*shared)+")";
       ctx.lineWidth = spot&&both?1.6:1;
       ctx.beginPath(); ctx.moveTo(stars[i].x,stars[i].y); ctx.lineTo(stars[j].x,stars[j].y); ctx.stroke();
+      if(++drawn>=MAXL) break outer;
     }
   }
   // cluster labels = most common concept
