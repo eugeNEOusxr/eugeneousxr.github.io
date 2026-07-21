@@ -1260,6 +1260,48 @@ function inklingRespond(t, r){
   return { route:r.type, links, actions:[], html:esc(t) };
 }
 
+/* ---- REAL AI: call the Inkling backend LLM (signed-in), fall back to local ---- */
+const INK_API = (typeof window!=="undefined" && window.__EUGENEOUS_API__) || "https://inkling-15yf.onrender.com";
+function inkToken(){ try{ const s=JSON.parse(localStorage.getItem("eugeneousxr:session")||"null"); return (s&&s.token)?s.token:null; }catch(e){ return null; } }
+function stripHtml(h){ const d=document.createElement("div"); d.innerHTML=String(h||""); return (d.textContent||d.innerText||"").trim(); }
+function mdToHtml(s){
+  let h=esc(String(s||""));
+  h=h.replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/`([^`]+)`/g,"<code>$1</code>");
+  h=h.replace(/^(?:[-*]\s+)(.*)$/gm,"• $1").replace(/\n/g,"<br>");
+  return h;
+}
+// Compact snapshot of the user's graph so the model answers in context — plus a
+// LEARNING-MODE frame (the backend prompt is calendar-flavored; this re-aims it).
+function mindSummaryForChat(){
+  const parts=["INKLING LEARNING MODE: the user is exploring ideas to understand them (a learning/knowledge app, not a calendar). Be a curious, encouraging mentor and thinking partner. When they ask about a concept, briefly ask what they already think, then explain clearly and accurately and connect it to what they know. Answer meta/product questions directly. Do NOT propose calendar events, appointments, or reminders unless they explicitly ask."];
+  const convs=DB.conversations||[];
+  if(convs.length) parts.push("Imported conversations ("+convs.length+"): "+convs.slice(0,12).map(c=>c.title+((c.concepts&&c.concepts.length)?(" ["+c.concepts.slice(0,4).join(", ")+"]"):"")).join("; "));
+  const oq=[]; Object.values(DB.openQs||{}).forEach(arr=>(arr||[]).forEach(q=>oq.push(q)));
+  if(oq.length) parts.push("Open questions: "+oq.slice(0,8).join("; "));
+  if(DB.profile&&DB.profile.fields&&DB.profile.fields.length) parts.push("Focus fields: "+DB.profile.fields.join(", "));
+  return parts.join("\n").slice(0,1900);
+}
+// Returns the LLM result {reply,...} only when the server actually used a model.
+async function askInklingAI(t){
+  const token=inkToken(); if(!token) return null;
+  const history=(DB.chat||[])
+    .filter(m=>(m.role==="user"||m.role==="inkling") && !m.thinking)
+    .slice(-16)
+    .map(m=>({ role:m.role==="user"?"user":"assistant", content:m.role==="user"?String(m.text||""):(m.plain||stripHtml(m.html)||m.text||"") }))
+    .filter(m=>m.content);
+  try{
+    const res=await fetch(INK_API+"/api/inkling/chat",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+token },
+      body:JSON.stringify({ message:t, history, mindSummary:mindSummaryForChat(),
+        userName:(DB.profile&&DB.profile.name)||undefined, referenceDate:new Date().toISOString().slice(0,10) })
+    });
+    if(!res.ok) return null;
+    const data=await res.json();
+    return (data && data.source==="llm" && data.reply) ? data : null;  // guest/mock/capped/etc → local
+  }catch(e){ return null; }
+}
+
 function renderRouter(){
   const chat=DB.chat||[];
   const thread = chat.length ? chat.map(chatBubble).join("") : chatEmpty();
@@ -1270,7 +1312,7 @@ function renderRouter(){
        <textarea id="capText" placeholder="Ask something, or tell Inkling what's on your mind…" style="min-height:60px" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();interpret();}"></textarea>
        <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
          <button class="btn" onclick="interpret()">Send ›</button>
-         <span class="hint" style="margin:0">Enter to send · Inkling extracts concepts, questions & connections as you talk</span>
+         <span class="hint" style="margin:0">${inkToken()?"✦ AI connected · Enter to send":"Quick mode · <b>sign in on the main app</b> for full AI · Enter to send"}</span>
          ${chat.length?`<button class="back" style="margin-left:auto" onclick="clearChat()">clear chat</button>`:""}
        </div>
      </div>
@@ -1285,7 +1327,14 @@ function chatBubble(m){
     return `<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
       <div style="max-width:82%;background:rgba(88,166,255,.16);border:1px solid rgba(88,166,255,.35);border-radius:14px 14px 4px 14px;padding:10px 13px;color:#eaf2ff;line-height:1.5">${esc(m.text)}</div></div>`;
   }
+  if(m.thinking){
+    return `<div style="display:flex;gap:9px;margin-bottom:15px">
+      <div style="flex:0 0 auto;font-size:20px;line-height:1.4">🌱</div>
+      <div style="max-width:88%;background:var(--panel);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:11px 13px">
+        <span class="hint" style="margin:0">Inkling is thinking… <span style="opacity:.7">(first reply can take a moment)</span></span></div></div>`;
+  }
   const R = m.route? ROUTES[m.route] : null;
+  const srcTag = m.source==="llm" ? `<div class="hint" style="margin-top:8px;color:var(--violet)">✦ Inkling AI</div>` : "";
   const extraction = R? `<div class="hint" style="margin-top:8px;color:${R.color}">${R.icon} ${R.verb}</div>` : "";
   const chips = (m.links&&m.links.length)? `<div class="links" style="margin-top:7px">${m.links.map(l=>`<span class="lk">${esc(l)}</span>`).join("")}</div>` : "";
   const actions = (m.actions&&m.actions.length)? `<div style="margin-top:11px;display:flex;gap:7px;flex-wrap:wrap">${m.actions.map(a=>`<button class="btn ${a.kind==='pink'?'pink':'ghost'}" style="padding:7px 13px;font:800 11px system-ui" onclick="${a.onclick}">${esc(a.label)}</button>`).join("")}</div>` : "";
@@ -1293,17 +1342,34 @@ function chatBubble(m){
     <div style="flex:0 0 auto;font-size:20px;line-height:1.4">🌱</div>
     <div style="max-width:88%;background:var(--panel);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:11px 13px">
       <div style="color:#dbe4ee;line-height:1.55">${m.html||esc(m.text||"")}</div>
-      ${extraction}${chips}${actions}</div></div>`;
+      ${srcTag}${extraction}${chips}${actions}</div></div>`;
 }
-function interpret(){
+async function interpret(){
   const el=document.getElementById("capText"); const t=(el.value||"").trim(); if(!t){ el.focus(); return; }
   DB.chat=DB.chat||[];
   DB.chat.push({ role:"user", text:t, at:Date.now() });
   const r=classify(t);
   // extract a knowledge node from the conversation (don't save every sentence as its own node type — but do route it)
   DB.captures.push({ id:"c"+Date.now(), text:t, type:r.type, links:r.links, reason:r.reason, at:Date.now() });
-  const resp=inklingRespond(t, r);
-  DB.chat.push(Object.assign({ role:"inkling", at:Date.now()+1 }, resp));
+
+  // Signed in? Try the real model, showing a thinking bubble (cold start can be slow).
+  if(inkToken()){
+    const thinkId="think"+Date.now();
+    DB.chat.push({ role:"inkling", thinking:true, id:thinkId, at:Date.now()+1 });
+    persist(); renderRouter();
+    let ai=null; try{ ai=await askInklingAI(t); }catch(e){ ai=null; }
+    DB.chat=(DB.chat||[]).filter(m=>m.id!==thinkId);
+    if(ai){
+      const tmpl=inklingRespond(t, r);   // reuse the template's helpful nav buttons
+      DB.chat.push({ role:"inkling", html:mdToHtml(ai.reply), plain:ai.reply, route:r.type, links:r.links, actions:tmpl.actions, source:"llm", at:Date.now()+2 });
+    } else {
+      DB.chat.push(Object.assign({ role:"inkling", source:"local", at:Date.now()+2 }, inklingRespond(t, r)));
+    }
+    persist(); renderRouter(); return;
+  }
+
+  // Guest → local responder (sign in on the main app for full AI).
+  DB.chat.push(Object.assign({ role:"inkling", source:"local", at:Date.now()+1 }, inklingRespond(t, r)));
   persist(); renderRouter();
 }
 // Clearing the transcript never deletes extracted knowledge — that stays in your graph.
