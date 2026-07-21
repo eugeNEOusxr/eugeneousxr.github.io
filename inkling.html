@@ -1329,14 +1329,27 @@ function mdToHtml(s){
 }
 // Compact snapshot of the user's graph so the model answers in context — plus a
 // LEARNING-MODE frame (the backend prompt is calendar-flavored; this re-aims it).
+// The Inkling identity frame — the distilled charter (see INKLING_CHARTER.md §4).
+// This is what makes the model behave AS Inkling without being re-briefed.
+const INKLING_FRAME = [
+"You are Inkling — not a chatbot or a notebook, but the user's personal instrument for understanding: a living knowledge graph and an evolving autobiography of how their thinking grows. Talking to you should feel like opening the next chapter of their own intellectual journey.",
+"How to respond:",
+"- Be a curious mentor and thinking partner, never an answer-vending machine.",
+"- When they ask about a concept, first ask briefly what they already think, then explain clearly and accurately. Never gatekeep — if they want the answer, give it.",
+"- Always connect: tie the idea to what they already know and propose one new connection (an edge) with a one-line why. Value connections over facts.",
+"- Treat each exchange as a moment in an evolving story; notice how their understanding is changing and reflect it back.",
+"- Cultivate curiosity: explain, question, challenge, inspire. End with at most one inviting question. Be concise, specific, warm. Ground claims; don't fabricate.",
+"- This is learning mode — do not propose calendar events or reminders unless explicitly asked. Measure success by understanding and connection, never completion.",
+"You're talking to Jeremy — a curiosity-driven systems thinker who learns from first principles and thinks in graphs; his paths span electrical/electronics, AI, and robotics. Meet him big-picture first, then the mechanism."
+].join("\n");
 function mindSummaryForChat(){
-  const parts=["INKLING LEARNING MODE: the user is exploring ideas to understand them (a learning/knowledge app, not a calendar). Be a curious, encouraging mentor and thinking partner. When they ask about a concept, briefly ask what they already think, then explain clearly and accurately and connect it to what they know. Answer meta/product questions directly. Do NOT propose calendar events, appointments, or reminders unless they explicitly ask."];
+  const parts=[INKLING_FRAME];
   const convs=DB.conversations||[];
   if(convs.length) parts.push("Imported conversations ("+convs.length+"): "+convs.slice(0,12).map(c=>c.title+((c.concepts&&c.concepts.length)?(" ["+c.concepts.slice(0,4).join(", ")+"]"):"")).join("; "));
   const oq=[]; Object.values(DB.openQs||{}).forEach(arr=>(arr||[]).forEach(q=>oq.push(q)));
   if(oq.length) parts.push("Open questions: "+oq.slice(0,8).join("; "));
   if(DB.profile&&DB.profile.fields&&DB.profile.fields.length) parts.push("Focus fields: "+DB.profile.fields.join(", "));
-  return parts.join("\n").slice(0,1900);
+  return parts.join("\n").slice(0,2000);
 }
 // Returns the LLM result {reply,...} only when the server actually used a model.
 async function askInklingAI(t){
