@@ -357,7 +357,11 @@ const app = document.getElementById("app");
 function go(v){ view=Object.assign({name:"dashboard",fid:null,qid:null},v); render(); window.scrollTo(0,0); }
 
 function chrome(inner, active){
-  return `<div class="top">
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
+      <a href="/" style="display:inline-flex;align-items:center;gap:5px;color:var(--dim);font:700 12px system-ui;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px">‹ Back to your app</a>
+      <a href="/inkling.html?view=imports" style="color:var(--blue);font:700 12px system-ui;text-decoration:none">📥 My imports</a>
+    </div>
+    <div class="top">
       <button onclick="go({name:'dashboard'})" style="background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;color:inherit">
         <div class="brand">🌱 Inkling<small>your personal knowledge & growth system</small></div></button>
       <div class="nav">
