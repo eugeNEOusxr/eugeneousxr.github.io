@@ -572,9 +572,11 @@ function saveImport(){
     title: data.title||"Conversation",
     provider: data.provider||"ai",
     summary: data.summary||"",
+    digest: Array.isArray(data.digest) ? data.digest : null,
     concepts: conceptLabels(data.concepts),
     relations: data.relations||[],
     quiz: (data.quiz && Array.isArray(data.quiz.questions) && data.quiz.questions.length) ? data.quiz : null,
+    messages: Array.isArray(data.messages) ? data.messages : null,
     messageCount: data.messageCount||0,
     at: Date.now()
   };
@@ -597,8 +599,10 @@ function renderImportChooser(data){
      <h1 style="text-align:center;margin-bottom:2px">A conversation just arrived</h1>
      <p class="sub" style="text-align:center">From ${esc(data.provider||"an AI chat")} · “${esc(data.title||"Conversation")}” · ${data.messageCount||0} messages</p>
 
-     <div class="panel"><h3 style="font:800 12px system-ui;color:var(--blue);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">◈ Digest — the short version</h3>
-       <p style="line-height:1.6;color:#dbe4ee;margin:0">${esc(data.summary||"(No summary was returned.)")}</p>
+     <div class="panel"><h3 style="font:800 12px system-ui;color:var(--blue);margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em">◈ Digest — the short version</h3>
+       ${data.digest && data.digest.length
+         ? bubblesHTML(data.digest, false)
+         : `<p style="line-height:1.6;color:#dbe4ee;margin:0">${esc(data.summary||"(No summary was returned.)")}</p>`}
        ${chips?`<div class="links" style="margin-top:10px">${chips}</div>`:""}</div>
 
      <div class="sub" style="margin:2px 0 8px">What should this become? You can do more than one.</div>
@@ -743,17 +747,45 @@ function drawGalaxy(convs){
   };
 }
 
-function showGalaxyInfo(conv){
+// Render a list of {role,text} as chat bubbles (user right, AI left).
+function bubblesHTML(arr, scroll){
+  const mx = scroll ? "max-height:44vh;overflow:auto;padding-right:4px;" : "";
+  return `<div style="display:flex;flex-direction:column;gap:8px;${mx}">${(arr||[]).map(d=>{
+    const user=(d.role==="user"||d.role==="you");
+    return `<div style="align-self:${user?'flex-end':'flex-start'};max-width:84%;padding:8px 11px;border-radius:12px;`+
+      (user?'border-top-right-radius:4px;background:rgba(88,166,255,.16);border:1px solid rgba(88,166,255,.35);color:#eaf2ff'
+           :'border-top-left-radius:4px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:#dbe4ee')+
+      `;line-height:1.5;font-size:13px;white-space:pre-wrap">${esc(d.text)}</div>`;
+  }).join("")}</div>`;
+}
+function convModes(conv){
+  const m=[];
+  if(conv.digest && conv.digest.length) m.push(["digest","Digest"]);
+  m.push(["summary","Summary"]);
+  if(conv.messages && conv.messages.length) m.push(["full","Full chat"]);
+  return m;
+}
+
+// Star / import detail: a "conversation piece" with a Digest / Summary / Full toggle.
+function showGalaxyInfo(conv, mode){
   const el=document.getElementById("galaxyInfo"); if(!el) return;
+  window.__gConv=conv;
+  const modes=convModes(conv);
+  if(!mode || !modes.some(m=>m[0]===mode)) mode=modes[0][0];
   const chips=(conv.concepts||[]).slice(0,6).map(x=>`<span class="lk">${esc(x)}</span>`).join("");
-  const quizBtn=conv.quiz?`<button class="btn pink" style="padding:6px 12px;font:800 11px system-ui;margin-top:8px" onclick="openConvQuiz('${conv.id}')">🎓 Study as quiz</button>`:"";
-  el.innerHTML=`<div class="panel" style="margin:0;background:rgba(8,12,22,.96)">
+  const quizBtn=conv.quiz?`<button class="btn pink" style="padding:6px 12px;font:800 11px system-ui" onclick="openConvQuiz('${conv.id}')">🎓 Study as quiz</button>`:"";
+  const tabs=modes.map(([k,label])=>`<button onclick="showGalaxyInfo(window.__gConv,'${k}')" style="padding:4px 11px;border-radius:999px;font:700 11px system-ui;cursor:pointer;border:1px solid ${mode===k?'rgba(158,203,255,.6)':'var(--line)'};background:${mode===k?'rgba(158,203,255,.18)':'transparent'};color:${mode===k?'var(--blue)':'var(--dim)'}">${label}</button>`).join("");
+  let body="";
+  if(mode==="digest") body=bubblesHTML(conv.digest,false);
+  else if(mode==="full") body=bubblesHTML((conv.messages||[]).map(m=>({role:m.role,text:m.markdown||m.text||""})),true);
+  else body=`<div style="color:#dbe4ee;line-height:1.55;font-size:13px">${esc(conv.summary||"")}</div>${chips?`<div class="links" style="margin-top:8px">${chips}</div>`:""}`;
+  el.innerHTML=`<div class="panel" style="margin:0;background:rgba(8,12,22,.97)">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
       <span class="nn" style="color:var(--blue)">${esc(conv.title)}</span>
       <button class="back" style="margin:0" onclick="document.getElementById('galaxyInfo').style.display='none'">✕</button></div>
-    <div style="margin-top:6px;color:#dbe4ee;line-height:1.5;font-size:13px">${esc(conv.summary||"")}</div>
-    ${chips?`<div class="links" style="margin-top:8px">${chips}</div>`:""}
-    ${quizBtn}
+    <div style="display:flex;gap:6px;margin:9px 0 10px;flex-wrap:wrap">${tabs}</div>
+    ${body}
+    ${quizBtn?`<div style="margin-top:10px">${quizBtn}</div>`:""}
   </div>`;
   el.style.display="block";
 }
@@ -1328,8 +1360,11 @@ function renderModel(){
       window.__pendingImport = JSON.parse(decodeURIComponent(escape(atob(p))));
       view = { name:"import" };
       window.addEventListener("message", function(ev){
-        if(ev.data && ev.data.type==="inkling-import-quiz" && ev.data.quiz){
-          if(window.__pendingImport){ window.__pendingImport.quiz = ev.data.quiz; }
+        if(ev.data && ev.data.type==="inkling-import-extra"){
+          if(window.__pendingImport){
+            if(ev.data.quiz) window.__pendingImport.quiz = ev.data.quiz;
+            if(Array.isArray(ev.data.messages)) window.__pendingImport.messages = ev.data.messages;
+          }
           if(view.name==="import") render();
         }
       });
