@@ -764,10 +764,107 @@ function renderImportChooser(data){
      <div style="text-align:center;margin-top:12px"><button class="back" onclick="go({name:'dashboard'})">Not now</button></div>`, "");
 }
 
+/* ---- YOUR JOURNEY WITH CLAUDE: real learning curves from building Inkling ----
+   Authored from our actual collaboration (reconstructed, not verbatim logs) so the
+   map has real substance. Each is a moment your understanding moved. Same shape as
+   an import → flows into Galaxy, Story, AND the City (which reads this same store). */
+const JD = 864e5;
+const JOURNEY_SEED = [
+  { id:"jr_charge", title:"What electric current actually is", at:Date.now()-170*JD,
+    summary:"You pushed on an assumption — that current means electrons racing to the bulb. We separated three things: electrons drift at millimeters per second, the electric field propagates near light speed, and energy rides the field. That's why the light turns on 'instantly' even though the electrons barely move.",
+    concepts:["electric charge","electron","current","drift velocity","electric field","voltage","energy transfer"],
+    digest:[{role:"user",text:"If I flip a switch, are electrons flying to the bulb at light speed?"},{role:"assistant",text:"No — the electrons drift at millimeters per second. What moves near light speed is the electric field. The field is the messenger; the electrons are the crowd it nudges."},{role:"user",text:"So voltage is the push, and current is how many actually move past a point?"}],
+    provenance:{ "drift velocity":[{i:1,role:"assistant",snippet:"the electrons drift at millimeters per second — what moves near light speed is the electric field"}], "electric field":[{i:1,role:"assistant",snippet:"The field is the messenger; the electrons are the crowd it nudges"}] }, messageCount:12 },
+
+  { id:"jr_transistor_switch", title:"Transistors aren't really just switches", at:Date.now()-150*JD,
+    summary:"You started with 'a transistor is a switch.' We kept going until the switch dissolved into physics: a voltage on the gate builds an electric field, the field pulls a channel of charge into existence in doped silicon, and current flows. The switch was a useful lie that hid the field.",
+    concepts:["transistor","switch","gate voltage","electric field","semiconductor","doping","channel","abstraction"],
+    digest:[{role:"user",text:"Isn't a transistor basically just a switch?"},{role:"assistant",text:"That's the useful lie. Underneath, a voltage on the gate makes an electric field, and the field conjures a conducting channel in doped silicon. 'Switch' is the abstraction that lets you forget the field once you trust it."},{role:"user",text:"So the abstraction is hiding the interesting part."}],
+    provenance:{ "abstraction":[{i:1,role:"assistant",snippet:"'Switch' is the abstraction that lets you forget the field once you trust it"}], "doping":[{i:1,role:"assistant",snippet:"the field conjures a conducting channel in doped silicon"}] }, messageCount:15 },
+
+  { id:"jr_mosfet", title:"From one MOSFET gate up to a CPU", at:Date.now()-148*JD,
+    summary:"We climbed the ladder from device to computation: one gate is a switch, millions of gates become logic, logic becomes binary arithmetic, binary becomes a CPU. You saw abstraction as the thing that lets you stop thinking about the field once you trust it — and how a relay does the same job clumsily.",
+    concepts:["mosfet","logic gate","cpu","abstraction","binary","transistor"],
+    digest:[{role:"user",text:"How does one tiny transistor become a computer?"},{role:"assistant",text:"Stack the abstraction: gate → logic gate → binary arithmetic → CPU. Each layer forgets the one below. A relay could do it too — just enormous, slow, and loud."}],
+    provenance:{ "cpu":[{i:1,role:"assistant",snippet:"gate → logic gate → binary arithmetic → CPU. Each layer forgets the one below"}] }, messageCount:11 },
+
+  { id:"jr_circuits", title:"Ohm's law and what resistance really is", at:Date.now()-140*JD,
+    summary:"Resistance stopped being a number and became a picture: how hard the atomic lattice pushes back on drifting charge. V = IR tied the three together — push (voltage), flow (current), and friction (resistance) — so changing one tells you what the others must do.",
+    concepts:["resistance","ohm's law","ampere","current","conductor","voltage"],
+    digest:[{role:"user",text:"What is resistance, physically?"},{role:"assistant",text:"How hard the material's lattice resists the drifting charge. V=IR just says: for a given push, more friction means less flow."}], messageCount:8 },
+
+  { id:"jr_precalc", title:"Functions: domain, range, and mapping", at:Date.now()-120*JD,
+    summary:"A function became a machine: it maps each allowed input to exactly one output. Domain is the set of inputs it's allowed to eat; range is what comes out. Naming that made graphs stop being decoration and start being the behavior of the machine.",
+    concepts:["function","domain","range","mapping","variable","relationship"],
+    digest:[{role:"user",text:"Why does domain vs range matter?"},{role:"assistant",text:"A function is a machine that maps inputs to outputs. Domain = what it's allowed to eat; range = what it can produce. The graph is just a portrait of that mapping."}], messageCount:9 },
+
+  { id:"jr_nn", title:"How a neural network learns", at:Date.now()-110*JD,
+    summary:"The weights are the memory. Learning is nothing mystical — it's nudging weights so the network's prediction lands closer to the truth, measured as error. Once 'learning = shrinking error by adjusting weights' clicked, the rest was mechanism.",
+    concepts:["neural network","weights","training data","activation","error","prediction"],
+    digest:[{role:"user",text:"What actually changes when a network 'learns'?"},{role:"assistant",text:"The weights. They're the memory. Training nudges them so the prediction gets closer to the answer — 'learning' is just shrinking the error."}],
+    provenance:{ "weights":[{i:1,role:"assistant",snippet:"The weights. They're the memory. Training nudges them so the prediction gets closer to the answer"}] }, messageCount:13 },
+
+  { id:"jr_gradient", title:"Gradient descent, intuitively", at:Date.now()-108*JD,
+    summary:"You reframed training as walking downhill on an error surface in the dark. The derivative is the slope under your feet — it tells you which way is down and how steep. Gradient descent is just: feel the slope, step downhill, repeat. That's when the AI and math districts joined for you.",
+    concepts:["gradient","optimization","derivative","error","rate of change","learning rate"],
+    digest:[{role:"user",text:"Gradient descent sounds like calculus I don't have yet."},{role:"assistant",text:"It's simpler than it sounds: the derivative is the slope under your feet. Feel which way is downhill, take a step, repeat until the ground is flat."}], messageCount:10 },
+
+  { id:"jr_psych", title:"How psychology tests an idea", at:Date.now()-75*JD,
+    summary:"Research methods turned a vague question into something testable: operationalize it into variables, hold confounds still with a control group, and let the evidence — not the story you wanted — decide. It's the same discipline as grounding a concept in its source.",
+    concepts:["experiment","variable","research methods","evidence","hypothesis","control group"],
+    digest:[{role:"user",text:"How do psychologists actually test something so fuzzy?"},{role:"assistant",text:"Turn the fuzzy question into variables you can measure, control everything else, and let the evidence rule — even when it disagrees with you."}], messageCount:11 },
+
+  { id:"jr_graph", title:"Inkling is a graph, not a flashcard app", at:Date.now()-90*JD,
+    summary:"The turning point in how you think about Inkling: stop counting cards, start counting edges. A concept only means something through what it connects to. You decided success is the density of connections — that one idea reorganized the whole project.",
+    concepts:["knowledge graph","node","edge","connection","abstraction","relationship"],
+    digest:[{role:"user",text:"Maybe Inkling shouldn't be a flashcard app at all."},{role:"assistant",text:"Right — the value isn't the cards, it's the edges. A concept means something only through what it connects to. Measure Inkling by connections, not counts."},{role:"user",text:"Then edges are the product."}],
+    provenance:{ "edge":[{i:1,role:"assistant",snippet:"the value isn't the cards, it's the edges. A concept means something only through what it connects to"}], "knowledge graph":[{i:2,role:"user",snippet:"Then edges are the product"}] }, messageCount:14 },
+
+  { id:"jr_threejs", title:"Building a 3D city from data", at:Date.now()-60*JD,
+    summary:"Nothing in the city is hand-placed. It's a pure function of the knowledge graph: buildings, heights, and windows all fall out of the data. Instancing was the trick that let it scale — draw thousands of the same shape in one call.",
+    concepts:["three.js","procedural generation","instancing","mesh","3d","knowledge graph"],
+    digest:[{role:"user",text:"Can the city just build itself from my graph?"},{role:"assistant",text:"That's the whole idea — nothing placed by hand. The generator reads the graph and the buildings fall out. Instancing keeps it fast enough to scale."}], messageCount:12 },
+
+  { id:"jr_extension", title:"Why the browser extension kept breaking", at:Date.now()-45*JD,
+    summary:"A real wall: the Import button stayed greyed out and nothing worked. The cause was invisible — ChatGPT's Content-Security-Policy blocked the dynamic imports the extension used. We rebuilt it as classic content scripts in an isolated world. The lesson that stuck: the browser's security model is a set of walls you only learn by hitting them.",
+    concepts:["content script","csp","manifest v3","permission","abstraction"],
+    digest:[{role:"user",text:"It's not importing — the button is greyed out."},{role:"assistant",text:"The page's Content-Security-Policy is blocking our dynamic imports — invisible from the outside. Switching to classic content scripts in an isolated world gets us around the wall."}],
+    provenance:{ "csp":[{i:1,role:"assistant",snippet:"The page's Content-Security-Policy is blocking our dynamic imports — invisible from the outside"}] }, messageCount:16 },
+
+  { id:"jr_provenance", title:"Grounding every idea in its source", at:Date.now()-30*JD,
+    summary:"The principle that now runs through Inkling: every concept must point back to the sentence that earned it. Understanding you can't trace to a source isn't yet yours — it's borrowed. That's why each window in the city opens a real snippet.",
+    concepts:["provenance","evidence","grounding","source","understanding"],
+    digest:[{role:"user",text:"How do I know the summary isn't just making things up?"},{role:"assistant",text:"Every concept links back to the exact sentence it came from. If it can't be traced to something you actually said or read, it doesn't count as understood."}],
+    provenance:{ "provenance":[{i:1,role:"assistant",snippet:"Every concept links back to the exact sentence it came from"}] }, messageCount:9 }
+];
+function journeyRemaining(){
+  const have=new Set((DB.conversations||[]).map(c=>c.id));
+  return JOURNEY_SEED.filter(s=>!have.has(s.id)).length;
+}
+function importJourney(){
+  const have=new Set((DB.conversations||[]).map(c=>c.id));
+  let added=0;
+  JOURNEY_SEED.forEach(seed=>{
+    if(have.has(seed.id)) return;
+    DB.conversations.push(Object.assign({ provider:"claude", relations:[], quiz:null, messages:null }, seed));
+    added++;
+  });
+  DB.conversations.sort((a,b)=>b.at-a.at);
+  persist();
+  go({name:"galaxy"});
+}
+
 function renderImports(){
   const list=(DB.conversations||[]).slice().sort((a,b)=>b.at-a.at);
+  const remaining=journeyRemaining();
+  const journeyCard = remaining ? `<div class="node" style="border-color:rgba(167,139,250,.4)">
+      <div class="nh"><span class="nn">✨ Your journey with Claude</span></div>
+      <div style="margin-top:7px;color:#dbe4ee;line-height:1.55">${remaining} real learning moment${remaining>1?"s":""} from building Inkling together — the transistor reframe, current vs. drift velocity, "edges &gt; flashcards," the CSP wall, and more. They fill your galaxy, story, and city map at once.</div>
+      <div style="margin-top:10px"><button class="btn" style="font:800 12px system-ui" onclick="importJourney()">➕ Add my journey (${remaining})</button></div>
+    </div>` : "";
   if(!list.length){
     app.innerHTML=chrome(`<h1>📥 Imports</h1>
+      ${journeyCard}
       <div class="empty">No imported conversations yet.<br><span style="opacity:.8">In the Inkling browser extension, open a ChatGPT/Claude/Gemini chat, click <b>Import</b>, then <b>Open in Inkling</b> — it lands here.</span></div>`, "imports");
     return;
   }
@@ -786,6 +883,7 @@ function renderImports(){
   app.innerHTML=chrome(
     `<h1>📥 Imports</h1>
      <p class="sub">Conversations you brought in from ChatGPT, Claude, and Gemini — each one a star in your knowledge graph.</p>
+     ${journeyCard}
      ${galaxyBtn}
      ${cards}`, "imports");
 }
