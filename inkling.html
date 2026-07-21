@@ -1337,6 +1337,12 @@ function renderModel(){
         }
       });
       try{ if(window.opener) window.opener.postMessage({type:"inkling-import-ready"}, "*"); }catch(e){}
+    } else {
+      // Deep link straight to a section, e.g. ?view=galaxy or ?view=imports.
+      const vw = new URLSearchParams(location.search).get("view");
+      if(vw && ["dashboard","galaxy","imports","model","router","paths","quiz","story","memory"].includes(vw)){
+        view = { name: vw };
+      }
     }
   }catch(e){ /* ignore a malformed handoff */ }
   render();
