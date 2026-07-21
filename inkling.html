@@ -1757,10 +1757,17 @@ function renderModel(){
       });
       try{ if(window.opener) window.opener.postMessage({type:"inkling-import-ready"}, "*"); }catch(e){}
     } else {
+      const qs = new URLSearchParams(location.search);
       // Deep link straight to a section, e.g. ?view=galaxy or ?view=imports.
-      const vw = new URLSearchParams(location.search).get("view");
+      const vw = qs.get("view");
       if(vw && ["dashboard","galaxy","imports","storybook","model","router","paths","quiz","story","memory"].includes(vw)){
         view = { name: vw };
+      }
+      // Ask from the Atlas: ?ask=<question> opens Chat and sends it (closes the loop).
+      const ask = qs.get("ask");
+      if(ask){
+        view = { name:"router" };
+        setTimeout(()=>{ const el=document.getElementById("capText"); if(el){ el.value=ask; interpret(); } try{ history.replaceState(null,"",location.pathname); }catch(e){} }, 60);
       }
     }
   }catch(e){ /* ignore a malformed handoff */ }
