@@ -1080,22 +1080,64 @@ function cgRecord(c){
 }
 const cgReadText=f=>new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(r.error); r.readAsText(f); });
 function cgStatus(msg){ const el=document.getElementById("cgStatus"); if(el) el.innerHTML=msg; }
+// Minimal in-browser ZIP reader (reads the central directory; inflates DEFLATE via
+// the native DecompressionStream). Lets you pick the export .zip directly.
+async function cgZipEntries(file){
+  const buf=new Uint8Array(await file.arrayBuffer());
+  const dv=new DataView(buf.buffer);
+  let eocd=-1;
+  for(let i=buf.length-22; i>=Math.max(0,buf.length-65557); i--){ if(dv.getUint32(i,true)===0x06054b50){ eocd=i; break; } }
+  if(eocd<0) throw new Error("no EOCD");
+  const cdOffset=dv.getUint32(eocd+16,true), cdCount=dv.getUint16(eocd+10,true);
+  const entries=[]; let p=cdOffset;
+  for(let n=0;n<cdCount;n++){
+    if(dv.getUint32(p,true)!==0x02014b50) break;
+    const method=dv.getUint16(p+10,true), compSize=dv.getUint32(p+20,true);
+    const nameLen=dv.getUint16(p+28,true), extraLen=dv.getUint16(p+30,true), commentLen=dv.getUint16(p+32,true);
+    const lho=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(buf.subarray(p+46,p+46+nameLen));
+    entries.push({ name, method, compSize, lho });
+    p+=46+nameLen+extraLen+commentLen;
+  }
+  return { buf, dv, entries };
+}
+async function cgEntryText(buf, dv, e){
+  if(dv.getUint32(e.lho,true)!==0x04034b50) throw new Error("bad local header");
+  const nameLen=dv.getUint16(e.lho+26,true), extraLen=dv.getUint16(e.lho+28,true);
+  const start=e.lho+30+nameLen+extraLen;
+  const data=buf.subarray(start, start+e.compSize);
+  if(e.method===0) return new TextDecoder().decode(data);
+  const ds=new DecompressionStream("deflate-raw");
+  const ab=await new Response(new Blob([data]).stream().pipeThrough(ds)).arrayBuffer();
+  return new TextDecoder().decode(ab);
+}
 async function importChatGPT(fileList){
-  const files=[...fileList].filter(f=>/\.json$/i.test(f.name)); if(!files.length){ cgStatus("Pick your <b>conversations-*.json</b> files (inside the ChatGPT export .zip)."); return; }
-  const have=new Set((DB.conversations||[]).map(c=>c.id)); let added=0, seen=0;
-  for(let fi=0; fi<files.length; fi++){
-    cgStatus(`Parsing file ${fi+1}/${files.length}… <span style="color:var(--dim)">${added} conversations so far</span>`);
+  const files=[...fileList]; const sources=[]; // {name, get:()=>Promise<string>}
+  for(const f of files){
+    if(/\.zip$/i.test(f.name)){
+      if(typeof DecompressionStream==="undefined"){ cgStatus("⚠ This browser can't open the .zip in-page — unzip it first (right-click → Extract All), then pick the <b>conversations-*.json</b> files."); return; }
+      cgStatus(`Opening ${esc(f.name)}…`); await new Promise(r=>setTimeout(r,10));
+      let z; try{ z=await cgZipEntries(f); }catch(err){ cgStatus("⚠ Couldn't read that .zip. Try unzipping it and picking the conversations-*.json files."); return; }
+      z.entries.filter(e=>/(^|\/)conversations(-\d+)?\.json$/i.test(e.name)).forEach(e=>sources.push({ name:e.name, get:()=>cgEntryText(z.buf,z.dv,e) }));
+    } else if(/\.json$/i.test(f.name)){
+      sources.push({ name:f.name, get:()=>cgReadText(f) });
+    }
+  }
+  if(!sources.length){ cgStatus("No conversations found — pick your <b>chatgptconvo.zip</b> (or the <b>conversations-*.json</b> files inside it)."); return; }
+  const have=new Set((DB.conversations||[]).map(c=>c.id)); let added=0, scanned=0;
+  for(let i=0;i<sources.length;i++){
+    cgStatus(`Reading ${i+1}/${sources.length} — ${esc(sources[i].name)}… <span style="color:var(--dim)">${added} conversations so far</span>`);
     await new Promise(r=>setTimeout(r,10));
-    let arr; try{ arr=JSON.parse(await cgReadText(files[fi])); }catch(e){ continue; }
+    let arr; try{ arr=JSON.parse(await sources[i].get()); }catch(e){ continue; }
     if(!Array.isArray(arr)) arr=[arr];
-    for(const c of arr){ if(!c||!c.mapping)continue; seen++;
+    for(const c of arr){ if(!c||!c.mapping)continue; scanned++;
       const rec=cgRecord(c); if(have.has(rec.id))continue; have.add(rec.id);
       DB.conversations.push(rec); added++; }
     arr=null;
   }
   DB.conversations.sort((a,b)=>b.at-a.at);
-  try{ persist(); }catch(e){ cgStatus("⚠ Storage is full — imported what fit. Try fewer files."); }
-  cgStatus(`✅ Imported <b>${added}</b> conversation${added===1?"":"s"} (${seen} scanned). Opening your galaxy…`);
+  try{ persist(); }catch(e){ cgStatus("⚠ Storage got full — imported what fit."); }
+  cgStatus(`✅ Imported <b>${added}</b> conversation${added===1?"":"s"} (${scanned} scanned). Opening your galaxy…`);
   setTimeout(()=>go({name:"galaxy"}), 900);
 }
 function triggerChatGPTImport(){ const el=document.getElementById("cgFile"); if(el) el.click(); }
@@ -1110,10 +1152,10 @@ function renderImports(){
     </div>` : "";
   const cgCard = `<div class="node" style="border-color:rgba(57,217,138,.4)">
       <div class="nh"><span class="nn">📦 Import your ChatGPT history</span></div>
-      <div style="margin-top:7px;color:#dbe4ee;line-height:1.55">Unzip your ChatGPT export and pick the <b>conversations-*.json</b> files. Inkling reads them <b>locally in your browser</b> — nothing is uploaded — and turns each chat into a star in your galaxy, a tower in your atlas, and a chapter in your story.</div>
+      <div style="margin-top:7px;color:#dbe4ee;line-height:1.55">Pick your <b>chatgptconvo.zip</b> straight from Downloads — Inkling opens it <b>locally in your browser</b> (nothing is uploaded) and turns each chat into a star in your galaxy, a tower in your atlas, and a chapter in your story. <span style="color:var(--dim)">(Or the unzipped conversations-*.json files.)</span></div>
       <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <button class="btn" style="font:800 12px system-ui" onclick="triggerChatGPTImport()">📂 Choose export files…</button>
-        <input id="cgFile" type="file" multiple accept=".json,application/json" style="display:none" onchange="importChatGPT(this.files)">
+        <button class="btn" style="font:800 12px system-ui" onclick="triggerChatGPTImport()">📂 Choose your export (.zip)…</button>
+        <input id="cgFile" type="file" multiple accept=".zip,.json,application/zip,application/json" style="display:none" onchange="importChatGPT(this.files)">
         <span id="cgStatus" class="hint" style="margin:0"></span>
       </div>
     </div>`;
