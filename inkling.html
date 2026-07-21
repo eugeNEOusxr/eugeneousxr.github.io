@@ -670,6 +670,53 @@ function openConvInGalaxy(id){
   go({name:"galaxy"});
   setTimeout(()=>{ const c=(DB.conversations||[]).find(x=>x.id===id); if(c) showGalaxyInfo(c); }, 70);
 }
+/* ---- LIVING STORY: revisit old chapters as understanding deepens ----
+   A concept met in an early conversation, then met again later alongside NEW
+   ideas, is understanding that grew. We surface that then→now shift, grounded in
+   your own words. Nothing is rewritten; the old chapters stay — this is the diff. */
+function deepenings(){
+  const convs=(DB.conversations||[]).slice().sort((a,b)=>a.at-b.at); // oldest first
+  if(convs.length<2) return [];
+  const byConcept={};
+  convs.forEach(c=>{ const seen=new Set();
+    (c.concepts||[]).forEach(x=>{ const k=String(x).toLowerCase().trim(); if(!k||seen.has(k))return; seen.add(k);
+      (byConcept[k]=byConcept[k]||[]).push(c); }); });
+  const out=[];
+  Object.keys(byConcept).forEach(k=>{
+    const list=byConcept[k]; if(list.length<2) return;
+    const first=list[0], recent=list[list.length-1];
+    if(recent.at===first.at) return;
+    const then=new Set((first.concepts||[]).map(x=>String(x).toLowerCase()).filter(x=>x!==k));
+    const nowCount={};
+    list.slice(1).forEach(c=>(c.concepts||[]).forEach(x=>{ const kk=String(x).toLowerCase(); if(kk!==k && !then.has(kk)) nowCount[kk]=(nowCount[kk]||0)+1; }));
+    const gained=Object.keys(nowCount).sort((a,b)=>nowCount[b]-nowCount[a]);
+    if(!gained.length) return; // no real deepening — skip
+    const label=(first.concepts||[]).find(x=>String(x).toLowerCase()===k)||k;
+    const spanDays=Math.max(1,Math.round((recent.at-first.at)/864e5));
+    out.push({ key:k, label, first, recent, list, count:list.length,
+      then:[...then], gained, spanDays, score:gained.length*2+list.length+Math.min(6,spanDays/20) });
+  });
+  return out.sort((a,b)=>b.score-a.score);
+}
+function deepeningCard(d, hero){
+  const thenSnip=conceptSnippet(d.first, d.key), nowSnip=conceptSnippet(d.recent, d.key);
+  const thenNb=d.then.slice(0,4), gained=d.gained.slice(0,5);
+  const q=s=>s?` <span style="color:var(--dim)">“${esc(s)}”</span>`:"";
+  const btns=`<div style="margin-top:10px;display:flex;gap:7px;flex-wrap:wrap">
+      <button class="btn ghost" style="padding:7px 12px;font:800 11px system-ui" onclick="openConvInGalaxy('${d.first.id}')">↩ Revisit the first chapter</button>
+      <button class="btn ghost" style="padding:7px 12px;font:800 11px system-ui" onclick="openConvInGalaxy('${d.recent.id}')">→ Where it stands now</button></div>`;
+  if(hero){
+    return `<div class="panel" style="border-color:rgba(57,217,138,.4);background:rgba(57,217,138,.05)">
+      <h3 style="font:800 12px system-ui;color:#39d98a;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">🌱 Inkling revisits · ${esc(d.label)}</h3>
+      <p style="line-height:1.75;color:#dbe4ee;margin:0 0 8px">When you first met <b>${esc(d.label)}</b> — ${fmtDate(d.first.at)}, in <i>${esc(d.first.title)}</i> — it sat among ${esc(thenNb.join(", ")||"a few first ideas")}.${q(thenSnip)}</p>
+      <p style="line-height:1.75;color:#dbe4ee;margin:0 0 8px">${d.spanDays} days later, across ${d.count} conversations, you've grown it toward <b>${esc(gained.join(", "))}</b>.${q(nowSnip)}</p>
+      <p style="line-height:1.75;color:var(--dim);margin:0">That's the shift worth noticing: <b>${esc(d.label)}</b> went from a single thread to a hub linking ${d.count} of your conversations.</p>${btns}</div>`;
+  }
+  return `<div class="node">
+    <div class="nh"><span class="nn">${esc(d.label)}</span><span class="nc">${d.count} chapters · ${d.spanDays}d</span></div>
+    <div style="margin-top:6px;color:#dbe4ee;line-height:1.55">Then <span style="color:var(--dim)">(${fmtDate(d.first.at)})</span>: ${esc(thenNb.slice(0,3).join(", ")||"first mention")} → Now: <b>${esc(gained.slice(0,3).join(", "))}</b>.</div>${btns}</div>`;
+}
+
 function renderStorybook(){
   const convs=(DB.conversations||[]).slice().sort((a,b)=>a.at-b.at);
   if(!convs.length){
@@ -699,12 +746,22 @@ function renderStorybook(){
   const closing = clusters.length>1
     ? `<div class="panel"><p style="line-height:1.75;color:#dbe4ee;margin:0">From <b>${esc(clusters[0].theme)}</b> to <b>${esc(clusters[clusters.length-1].theme)}</b>, your curiosity has spanned ${clusters.length} territories — and Inkling is watching the threads between them grow.</p></div>` : "";
 
+  // Living story: how understanding has deepened over time (revisited chapters)
+  const deep=deepenings();
+  const deepSection = deep.length
+    ? `<div style="margin:22px 0 8px"><h2 style="font:800 15px system-ui;color:#39d98a;margin:0">🌱 How your understanding has deepened</h2>
+       <p class="sub" style="margin:4px 0 0">Ideas you've circled back to — and how far they've come since. The old chapters stay; this is the distance travelled.</p></div>
+       ${deepeningCard(deep[0], true)}
+       ${deep.slice(1,4).map(d=>deepeningCard(d,false)).join("")}` : "";
+
   app.innerHTML=chrome(
     `<h1>📖 Your story so far</h1>
      <p class="sub">Your imported conversations, read as a book — chapters by theme, written from what you brought in.</p>
      <div class="panel" style="border-color:rgba(167,139,250,.35)"><p style="font:600 15px/1.75 system-ui;color:#e6edf3;margin:0">${intro}</p></div>
+     ${deepSection}
+     <div style="margin:22px 0 8px"><h2 style="font:800 15px system-ui;color:var(--violet);margin:0">Chapters by theme</h2></div>
      ${chapters}${closing}
-     <div class="hint">A living story — it grows and re-chapters itself every time you import.</div>`, "storybook");
+     <div class="hint">A living story — it grows, re-chapters, and revisits itself every time you import.</div>`, "storybook");
 }
 
 // Persist the pending import as a conversation node (a future galaxy "star").
