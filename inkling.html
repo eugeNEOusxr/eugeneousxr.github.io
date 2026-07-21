@@ -385,6 +385,7 @@ function render(){
   if(view.name==="memory") return renderMemory();
   if(view.name==="import") return renderImportChooser(window.__pendingImport);
   if(view.name==="imports") return renderImports();
+  if(view.name==="galaxy") return renderGalaxy();
 }
 
 /* ---- STUDY PATHS: pick a field, learn beginner → advanced ---- */
@@ -632,10 +633,120 @@ function renderImports(){
       ${quizBtn?`<div style="margin-top:10px">${quizBtn}</div>`:""}
     </div>`;
   }).join("");
+  const galaxyBtn = list.length>=1
+    ? `<button class="btn" style="margin-bottom:14px" onclick="go({name:'galaxy'})">🌌 View as galaxy</button>` : "";
   app.innerHTML=chrome(
     `<h1>📥 Imports</h1>
      <p class="sub">Conversations you brought in from ChatGPT, Claude, and Gemini — each one a star in your knowledge graph.</p>
+     ${galaxyBtn}
      ${cards}`, "imports");
+}
+
+/* ---- GALAXY: imported conversations as stars, clustered by shared concepts ---- */
+function conceptKey(s){ return String(s||"").toLowerCase().trim(); }
+
+function renderGalaxy(){
+  const convs=(DB.conversations||[]).slice();
+  if(!convs.length){
+    app.innerHTML=chrome(`<button class="back" onclick="go({name:'imports'})">‹ Imports</button>
+      <h1>🌌 Galaxy</h1><div class="empty">No conversations yet.<br><span style="opacity:.8">Import a few from ChatGPT/Claude/Gemini and Save them — they become stars here.</span></div>`, "imports");
+    return;
+  }
+  app.innerHTML=chrome(
+    `<button class="back" onclick="go({name:'imports'})">‹ Imports</button>
+     <h1>🌌 Your conversation galaxy</h1>
+     <p class="sub">Each star is a conversation you imported. Shared concepts pull them into clusters. Tap a star to open its digest.</p>
+     <div style="position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:radial-gradient(1000px 520px at 50% 25%,rgba(90,70,180,.18),transparent 62%),#05070e">
+       <canvas id="galaxy" style="display:block;width:100%;height:68vh;cursor:pointer"></canvas>
+       <div id="galaxyInfo" style="position:absolute;left:12px;right:12px;bottom:12px;display:none"></div>
+     </div>
+     <div class="hint" style="margin-top:8px">${convs.length} conversation${convs.length===1?"":"s"} · lines connect chats that share a concept.</div>`, "imports");
+  setTimeout(()=>drawGalaxy(convs), 30);
+}
+
+function drawGalaxy(convs){
+  const canvas=document.getElementById("galaxy"); if(!canvas) return;
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  const W=rect.width, H=rect.height;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  const ctx=canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  const n=convs.length;
+  const keys=convs.map(c=>new Set((c.concepts||[]).map(conceptKey)));
+  // union-find: chats sharing ≥1 concept join the same cluster
+  const parent=convs.map((_,i)=>i);
+  const find=x=>{ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; };
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    let shared=false; for(const k of keys[j]){ if(keys[i].has(k)){ shared=true; break; } }
+    if(shared) parent[find(i)]=find(j);
+  }
+  const clusters={}; convs.forEach((c,i)=>{ const r=find(i); (clusters[r]=clusters[r]||[]).push(i); });
+  const roots=Object.keys(clusters);
+
+  const cx=W/2, cy=H/2, R=Math.min(W,H)*0.30;
+  const centers={};
+  roots.forEach((r,idx)=>{
+    centers[r] = roots.length===1 ? {x:cx,y:cy}
+      : {x:cx+Math.cos(idx/roots.length*Math.PI*2)*R, y:cy+Math.sin(idx/roots.length*Math.PI*2)*R};
+  });
+
+  const stars=[];
+  roots.forEach(r=>{
+    const m=clusters[r], c=centers[r];
+    m.forEach((idx,k)=>{
+      const ang=k*2.399, rad=m.length===1?0:10+Math.sqrt(k)*18;
+      stars[idx]={ x:c.x+Math.cos(ang)*rad, y:c.y+Math.sin(ang)*rad, conv:convs[idx] };
+    });
+  });
+
+  // edges between chats sharing concepts
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    let shared=0; for(const k of keys[j]){ if(keys[i].has(k)) shared++; }
+    if(shared>0){
+      ctx.strokeStyle="rgba(150,130,255,"+Math.min(.4,.14*shared)+")";
+      ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(stars[i].x,stars[i].y); ctx.lineTo(stars[j].x,stars[j].y); ctx.stroke();
+    }
+  }
+  // cluster labels = most common concept
+  ctx.textAlign="center"; ctx.font="600 12px system-ui";
+  roots.forEach(r=>{
+    const m=clusters[r], counts={};
+    m.forEach(idx=>(convs[idx].concepts||[]).forEach(cc=>{ counts[cc]=(counts[cc]||0)+1; }));
+    const top=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+    if(top){ const c=centers[r]; ctx.fillStyle="rgba(200,190,255,.65)";
+      ctx.fillText(top, c.x, c.y-(m.length===1?26:Math.sqrt(m.length)*18+34)); }
+  });
+  // stars
+  stars.forEach(s=>{
+    const size=4+Math.min(7,(s.conv.concepts||[]).length);
+    const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,size*2.6);
+    g.addColorStop(0,"rgba(180,215,255,1)"); g.addColorStop(.4,"rgba(120,150,255,.65)"); g.addColorStop(1,"rgba(120,150,255,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(s.x,s.y,size*2.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#eaf2ff"; ctx.beginPath(); ctx.arc(s.x,s.y,size*0.6,0,Math.PI*2); ctx.fill();
+  });
+
+  canvas.onclick=e=>{
+    const rct=canvas.getBoundingClientRect(), mx=e.clientX-rct.left, my=e.clientY-rct.top;
+    let best=null,bd=1e9; stars.forEach(s=>{ const d=Math.hypot(s.x-mx,s.y-my); if(d<bd){bd=d;best=s;} });
+    if(best && bd<26) showGalaxyInfo(best.conv); else { const el=document.getElementById("galaxyInfo"); if(el) el.style.display="none"; }
+  };
+}
+
+function showGalaxyInfo(conv){
+  const el=document.getElementById("galaxyInfo"); if(!el) return;
+  const chips=(conv.concepts||[]).slice(0,6).map(x=>`<span class="lk">${esc(x)}</span>`).join("");
+  const quizBtn=conv.quiz?`<button class="btn pink" style="padding:6px 12px;font:800 11px system-ui;margin-top:8px" onclick="openConvQuiz('${conv.id}')">🎓 Study as quiz</button>`:"";
+  el.innerHTML=`<div class="panel" style="margin:0;background:rgba(8,12,22,.96)">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+      <span class="nn" style="color:var(--blue)">${esc(conv.title)}</span>
+      <button class="back" style="margin:0" onclick="document.getElementById('galaxyInfo').style.display='none'">✕</button></div>
+    <div style="margin-top:6px;color:#dbe4ee;line-height:1.5;font-size:13px">${esc(conv.summary||"")}</div>
+    ${chips?`<div class="links" style="margin-top:8px">${chips}</div>`:""}
+    ${quizBtn}
+  </div>`;
+  el.style.display="block";
 }
 
 function renderDashboard(){
