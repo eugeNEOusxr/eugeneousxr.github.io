@@ -367,6 +367,7 @@ function chrome(inner, active){
       <div class="nav">
         <button class="${active==='imports'?'on':''}" onclick="go({name:'imports'})">📥 Imports</button>
         <button class="${active==='galaxy'?'on':''}" onclick="go({name:'galaxy'})">🌌 Galaxy</button>
+        <button class="${active==='storybook'?'on':''}" onclick="go({name:'storybook'})">📖 Story</button>
       </div>
     </div>${inner}`;
 }
@@ -386,6 +387,7 @@ function render(){
   if(view.name==="import") return renderImportChooser(window.__pendingImport);
   if(view.name==="imports") return renderImports();
   if(view.name==="galaxy") return renderGalaxy();
+  if(view.name==="storybook") return renderStorybook();
 }
 
 /* ---- STUDY PATHS: pick a field, learn beginner → advanced ---- */
@@ -552,6 +554,44 @@ function snapshot(){
 /* ---- IMPORT: the landing chooser (extension handoff) + saved imports ---- */
 function conceptLabels(arr){ return (arr||[]).map(c=> typeof c==="string"?c:(c&&c.label)).filter(Boolean); }
 
+/* ---- PROVENANCE SPINE (Phase 0): ground each concept to its source snippet ---- */
+// A readable snippet around a match — the sentence it lives in, trimmed.
+function snippetAround(text, idx, len){
+  const s=String(text);
+  let a=idx; while(a>0 && !/[.!?\n]/.test(s[a-1]) && idx-a<160) a--;
+  let b=idx+len; while(b<s.length && !/[.!?\n]/.test(s[b]) && b-idx<160) b++;
+  let snip=s.slice(a,Math.min(b+1,s.length)).trim().replace(/\s+/g," ");
+  if(a>0) snip="…"+snip;
+  if(b<s.length-1) snip=snip+"…";
+  return snip.slice(0,220);
+}
+// For each concept, find the message(s) that mention it + a verbatim snippet.
+// Returns { conceptLower: [{ i, role, snippet }] } — the concept's provenance.
+function groundConcepts(concepts, messages){
+  const prov={};
+  (concepts||[]).forEach(label=>{
+    const key=String(label).toLowerCase().trim(); if(!key) return;
+    const hits=[];
+    (messages||[]).forEach((m,i)=>{
+      const text=String(m.markdown||m.text||"");
+      const idx=text.toLowerCase().indexOf(key);
+      if(idx>=0) hits.push({ i, role:m.role, snippet:snippetAround(text,idx,key.length) });
+    });
+    if(hits.length) prov[key]=hits.slice(0,3);
+  });
+  return prov;
+}
+// The best source snippet for a concept inside one conversation (stored, or grounded on the fly).
+function conceptSnippet(conv, conceptLower){
+  const stored=(conv.provenance||{})[conceptLower];
+  if(stored && stored.length) return stored[0].snippet;
+  if(Array.isArray(conv.messages) && conv.messages.length){
+    const g=groundConcepts([conceptLower], conv.messages)[conceptLower];
+    if(g && g.length) return g[0].snippet;
+  }
+  return null;
+}
+
 function openQuizDeck(quiz){
   try{
     const deck={ id:quiz.id, title:quiz.title, questions:quiz.questions };
@@ -593,8 +633,12 @@ function throughLine(concept, convs){
 }
 function showThroughLine(concept, convs){
   const el=document.getElementById("galaxyInfo"); if(!el) return;
-  const list=convs.map(c=>`<button class="qrow" style="margin:0 0 6px;padding:8px 11px" onclick="openConvDetail('${c.id}')">
-     <span class="dot done"></span><span><span class="qt">${esc(c.title)}</span></span></button>`).join("");
+  const cl=String(concept).toLowerCase().trim();
+  const list=convs.map(c=>{
+    const snip=conceptSnippet(c, cl);
+    return `<button class="qrow" style="margin:0 0 6px;padding:8px 11px" onclick="openConvDetail('${c.id}')">
+     <span class="dot done"></span><span><span class="qt">${esc(c.title)}</span>${snip?`<div class="hint" style="margin:3px 0 0;color:var(--dim)">“${esc(snip)}”</div>`:""}</span></button>`;
+  }).join("");
   el.innerHTML=`<div class="panel" style="margin:0;background:rgba(8,12,22,.97)">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
       <span class="nn" style="color:var(--pink)">🧵 ${esc(concept)}</span>
@@ -603,6 +647,63 @@ function showThroughLine(concept, convs){
     <div style="margin-top:10px;max-height:32vh;overflow:auto">${list}</div>
   </div>`;
   el.style.display="block";
+}
+
+/* ---- STORYBOOK: the imported conversations, narrated as chapters by theme ---- */
+function clusterConvs(convs){
+  const n=convs.length;
+  const keys=convs.map(c=>new Set((c.concepts||[]).map(x=>x.toLowerCase())));
+  const parent=convs.map((_,i)=>i);
+  const find=x=>{ while(parent[x]!==x){ parent[x]=parent[parent[x]]; x=parent[x]; } return x; };
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){ for(const k of keys[j]){ if(keys[i].has(k)){ parent[find(i)]=find(j); break; } } }
+  const groups={}; convs.forEach((c,i)=>{ const r=find(i); (groups[r]=groups[r]||[]).push(c); });
+  return Object.values(groups).map(members=>{
+    const counts={}; members.forEach(c=>(c.concepts||[]).forEach(x=>{ counts[x]=(counts[x]||0)+1; }));
+    const theme=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0]||"Notes";
+    const shared=Object.keys(counts).filter(k=>counts[k]>=2).sort((a,b)=>counts[b]-counts[a]);
+    return { theme, members, shared };
+  }).sort((a,b)=>b.members.length-a.members.length);
+}
+// Jump from a chapter into the galaxy with that conversation opened.
+function openConvInGalaxy(id){
+  go({name:"galaxy"});
+  setTimeout(()=>{ const c=(DB.conversations||[]).find(x=>x.id===id); if(c) showGalaxyInfo(c); }, 70);
+}
+function renderStorybook(){
+  const convs=(DB.conversations||[]).slice().sort((a,b)=>a.at-b.at);
+  if(!convs.length){
+    app.innerHTML=chrome(`<h1>📖 Your story so far</h1>
+      <div class="empty">Your story hasn't started yet.<br><span style="opacity:.8">Import a few conversations and Save them — Inkling weaves them into chapters here.</span></div>`, "storybook");
+    return;
+  }
+  const clusters=clusterConvs(convs);
+  const cc={}; convs.forEach(c=>(c.concepts||[]).forEach(x=>{ cc[x]=(cc[x]||0)+1; }));
+  const recurring=Object.keys(cc).filter(k=>cc[k]>=2).sort((a,b)=>cc[b]-cc[a]).slice(0,5);
+  const providers=[...new Set(convs.map(c=>c.provider))];
+  const intro = `Since ${fmtDate(convs[0].at)}, you've brought ${convs.length} conversation${convs.length>1?"s":""} into Inkling`+
+    (providers.length?` from ${providers.join(", ")}`:"")+`. Read together, they trace what you've been turning over.`+
+    (recurring.length?` The ideas you keep returning to: <b>${recurring.map(esc).join(", ")}</b>.`:"");
+
+  const chapters=clusters.map((cl,i)=>{
+    const titles=cl.members.map(c=>c.title);
+    let p=`You explored <b>${esc(cl.theme)}</b> across ${cl.members.length} conversation${cl.members.length>1?"s":""} — ${titles.map(esc).join(", ")}.`;
+    if(cl.shared.length>1) p+=` The thread running through them: ${esc(cl.shared.slice(0,4).join(", "))}.`;
+    const withSummary=cl.members.find(c=>c.summary);
+    if(withSummary && withSummary.summary) p+=` <span style="color:var(--dim)">${esc(withSummary.summary)}</span>`;
+    const list=cl.members.map(c=>`<button class="qrow" style="margin:0 0 6px" onclick="openConvInGalaxy('${c.id}')"><span class="dot done"></span><span class="qt">${esc(c.title)}</span></button>`).join("");
+    return `<div class="panel"><h3 style="font:800 12px system-ui;color:var(--violet);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Chapter ${i+1} · ${esc(cl.theme)}</h3>
+      <p style="line-height:1.75;color:#dbe4ee;margin:0 0 8px">${p}</p>${list}</div>`;
+  }).join("");
+
+  const closing = clusters.length>1
+    ? `<div class="panel"><p style="line-height:1.75;color:#dbe4ee;margin:0">From <b>${esc(clusters[0].theme)}</b> to <b>${esc(clusters[clusters.length-1].theme)}</b>, your curiosity has spanned ${clusters.length} territories — and Inkling is watching the threads between them grow.</p></div>` : "";
+
+  app.innerHTML=chrome(
+    `<h1>📖 Your story so far</h1>
+     <p class="sub">Your imported conversations, read as a book — chapters by theme, written from what you brought in.</p>
+     <div class="panel" style="border-color:rgba(167,139,250,.35)"><p style="font:600 15px/1.75 system-ui;color:#e6edf3;margin:0">${intro}</p></div>
+     ${chapters}${closing}
+     <div class="hint">A living story — it grows and re-chapters itself every time you import.</div>`, "storybook");
 }
 
 // Persist the pending import as a conversation node (a future galaxy "star").
@@ -619,6 +720,7 @@ function saveImport(){
     relations: data.relations||[],
     quiz: (data.quiz && Array.isArray(data.quiz.questions) && data.quiz.questions.length) ? data.quiz : null,
     messages: Array.isArray(data.messages) ? data.messages : null,
+    provenance: (Array.isArray(data.messages) && data.messages.length) ? groundConcepts(conceptLabels(data.concepts), data.messages) : null,
     messageCount: data.messageCount||0,
     at: Date.now()
   };
@@ -1435,7 +1537,7 @@ function renderModel(){
     } else {
       // Deep link straight to a section, e.g. ?view=galaxy or ?view=imports.
       const vw = new URLSearchParams(location.search).get("view");
-      if(vw && ["dashboard","galaxy","imports","model","router","paths","quiz","story","memory"].includes(vw)){
+      if(vw && ["dashboard","galaxy","imports","storybook","model","router","paths","quiz","story","memory"].includes(vw)){
         view = { name: vw };
       }
     }
