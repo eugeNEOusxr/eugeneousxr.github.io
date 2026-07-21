@@ -352,26 +352,20 @@ function answered(qid){ return (DB.answers[qid]||[]).length>0; }
 function versions(qid){ return DB.answers[qid]||[]; }
 
 /* ---- router ---- */
-let view = { name:"dashboard", fid:null, qid:null };
+let view = { name:"imports", fid:null, qid:null };
 const app = document.getElementById("app");
-function go(v){ view=Object.assign({name:"dashboard",fid:null,qid:null},v); render(); window.scrollTo(0,0); }
+function go(v){ view=Object.assign({name:"imports",fid:null,qid:null},v); render(); window.scrollTo(0,0); }
 
 function chrome(inner, active){
   return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px">
       <a href="/" style="display:inline-flex;align-items:center;gap:5px;color:var(--dim);font:700 12px system-ui;text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 13px">‹ Back to your app</a>
-      <a href="/inkling.html?view=imports" style="color:var(--blue);font:700 12px system-ui;text-decoration:none">📥 My imports</a>
     </div>
     <div class="top">
-      <button onclick="go({name:'dashboard'})" style="background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;color:inherit">
-        <div class="brand">🌱 Inkling<small>your personal knowledge & growth system</small></div></button>
+      <button onclick="go({name:'imports'})" style="background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:left;color:inherit">
+        <div class="brand">🌱 Inkling<small>your imported conversations</small></div></button>
       <div class="nav">
-        <button class="${active==='chat'?'on':''}" onclick="go({name:'router'})">🧠 Chat</button>
-        <button class="${active==='graph'?'on':''}" onclick="go({name:'model'})">🌐 Graph</button>
-        <button class="${active==='paths'?'on':''}" onclick="go({name:'paths'})">📚 Paths</button>
-        <button class="${active==='quiz'?'on':''}" onclick="go({name:'quiz'})">🎓 Quiz</button>
-        <button class="${active==='story'?'on':''}" onclick="go({name:'story'})">📖 Story</button>
-        <button class="${active==='memory'?'on':''}" onclick="go({name:'memory'})">🔔 Memory</button>
         <button class="${active==='imports'?'on':''}" onclick="go({name:'imports'})">📥 Imports</button>
+        <button class="${active==='galaxy'?'on':''}" onclick="go({name:'galaxy'})">🌌 Galaxy</button>
       </div>
     </div>${inner}`;
 }
@@ -653,19 +647,17 @@ function conceptKey(s){ return String(s||"").toLowerCase().trim(); }
 function renderGalaxy(){
   const convs=(DB.conversations||[]).slice();
   if(!convs.length){
-    app.innerHTML=chrome(`<button class="back" onclick="go({name:'imports'})">‹ Imports</button>
-      <h1>🌌 Galaxy</h1><div class="empty">No conversations yet.<br><span style="opacity:.8">Import a few from ChatGPT/Claude/Gemini and Save them — they become stars here.</span></div>`, "imports");
+    app.innerHTML=chrome(`<h1>🌌 Galaxy</h1><div class="empty">No conversations yet.<br><span style="opacity:.8">Import a few from ChatGPT/Claude/Gemini and Save them — they become stars here.</span></div>`, "galaxy");
     return;
   }
   app.innerHTML=chrome(
-    `<button class="back" onclick="go({name:'imports'})">‹ Imports</button>
-     <h1>🌌 Your conversation galaxy</h1>
+    `<h1>🌌 Your conversation galaxy</h1>
      <p class="sub">Each star is a conversation you imported. Shared concepts pull them into clusters. Tap a star to open its digest.</p>
      <div style="position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:radial-gradient(1000px 520px at 50% 25%,rgba(90,70,180,.18),transparent 62%),#05070e">
        <canvas id="galaxy" style="display:block;width:100%;height:68vh;cursor:pointer"></canvas>
        <div id="galaxyInfo" style="position:absolute;left:12px;right:12px;bottom:12px;display:none"></div>
      </div>
-     <div class="hint" style="margin-top:8px">${convs.length} conversation${convs.length===1?"":"s"} · lines connect chats that share a concept.</div>`, "imports");
+     <div class="hint" style="margin-top:8px">${convs.length} conversation${convs.length===1?"":"s"} · lines connect chats that share a concept.</div>`, "galaxy");
   setTimeout(()=>drawGalaxy(convs), 30);
 }
 
