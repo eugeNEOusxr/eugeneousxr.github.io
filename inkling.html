@@ -725,7 +725,19 @@ function drawGalaxy(convs){
     g.addColorStop(0,"rgba(180,215,255,1)"); g.addColorStop(.4,"rgba(120,150,255,.65)"); g.addColorStop(1,"rgba(120,150,255,0)");
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(s.x,s.y,size*2.6,0,Math.PI*2); ctx.fill();
     ctx.fillStyle="#eaf2ff"; ctx.beginPath(); ctx.arc(s.x,s.y,size*0.6,0,Math.PI*2); ctx.fill();
+    s._r=size*2.6;
   });
+  // star labels = the conversation's subject (its title). Shown when the sky
+  // isn't too crowded; otherwise the title still appears on tap.
+  if(n<=40){
+    ctx.textAlign="center"; ctx.font="600 11px system-ui";
+    stars.forEach(s=>{
+      let t=String(s.conv.title||"");
+      if(t.length>26) t=t.slice(0,25)+"…";
+      ctx.fillStyle="rgba(230,237,243,.9)";
+      ctx.fillText(t, s.x, s.y + s._r + 13);
+    });
+  }
 
   canvas.onclick=e=>{
     const rct=canvas.getBoundingClientRect(), mx=e.clientX-rct.left, my=e.clientY-rct.top;
