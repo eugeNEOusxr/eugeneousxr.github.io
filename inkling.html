@@ -746,6 +746,61 @@ function convPage(c){
      <span><span class="qt">${esc(c.title)}</span> <span style="color:var(--dim);font-weight:600">· ${fmtDate(c.at)}</span>${sum}</span></button>`;
 }
 
+/* ---- AI-NARRATED CHAPTERS: let Inkling write each chapter as real prose ----
+   On demand (per chapter), cached in DB.narration keyed by anchor + a signature
+   (conv count) so it regenerates only when the chapter actually grows. Falls back
+   to the structural chapter for guests / no API key. */
+let _writingAnchor=null, _narrNote=null;
+async function chatLLM(message, context){
+  const token=inkToken(); if(!token) return null;
+  try{
+    const res=await fetch(INK_API+"/api/inkling/chat",{ method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+token },
+      body:JSON.stringify({ message:String(message).slice(0,3000), history:[], mindSummary:String(context).slice(0,2000), referenceDate:new Date().toISOString().slice(0,10) }) });
+    if(!res.ok) return null;
+    const d=await res.json();
+    return (d && d.source==="llm" && d.reply) ? d.reply : null;
+  }catch(e){ return null; }
+}
+async function narrateChapter(ch){
+  const lines=ch.convs.slice(0,18).map(c=>`- ${c.title} (${fmtDate(c.at)})${c.summary?": "+String(c.summary).slice(0,90):""}`).join("\n");
+  const msg=`Write Chapter ${ch.n} of my intellectual autobiography, titled "${ch.title}". `+
+    `I explored this across ${ch.convs.length} conversation${ch.convs.length===1?"":"s"} between ${fmtSpan(ch.span[0],ch.span[1])}.`+
+    (ch.threads.length?` Recurring threads: ${ch.threads.join(", ")}.`:"")+
+    `\nThe conversations:\n${lines}\n\n`+
+    `Write it as flowing, engaging nonfiction prose — 2 to 4 short paragraphs, second person ("you"), telling the story of how my understanding of ${ch.title} developed: what drew me in, what I wrestled with, how my thinking evolved, and where it points next. Weave the conversations together; don't list them. Warm, curious, specific, grounded in what's above. No headings, no bullet points.`;
+  const context="You are Inkling, writing a chapter of the user's evolving intellectual autobiography — the story of how their understanding grows over time. Voice: warm, curious, precise literary nonfiction; second person; no headings or lists. You're writing about Jeremy, a first-principles systems thinker whose paths span electronics, AI, and robotics.";
+  return await chatLLM(msg, context);
+}
+async function writeChapter(anchor){
+  const ch=buildBook().chapters.find(c=>c.anchor===anchor); if(!ch) return;
+  if(!inkToken()){ _narrNote=anchor; renderStorybook(); return; }
+  _narrNote=null; _writingAnchor=anchor; renderStorybook();
+  const text=await narrateChapter(ch);
+  _writingAnchor=null;
+  if(text){ DB.narration=DB.narration||{}; DB.narration[anchor]={ text, sig:ch.convs.length, at:Date.now() }; persist(); }
+  else { _narrNote=anchor; }
+  renderStorybook();
+}
+function narrationBlock(ch){
+  const jsA=attrJs(ch.anchor);
+  if(_writingAnchor===ch.anchor)
+    return `<div class="panel"><p class="hint" style="margin:0">✍️ Inkling is writing this chapter… <span style="opacity:.7">(first reply can take a moment)</span></p></div>`;
+  const nar=(DB.narration||{})[ch.anchor];
+  if(nar && nar.sig===ch.convs.length)
+    return `<div class="panel" style="border-color:rgba(167,139,250,.35)">
+      <div style="font:800 10px system-ui;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">✍️ Written by Inkling</div>
+      <div style="font:400 16px/1.9 Georgia,'Times New Roman',serif;color:#eef2f8">${mdToHtml(nar.text)}</div>
+      <div style="margin-top:10px"><button class="back" onclick="writeChapter('${jsA}')">↻ Rewrite</button></div></div>`;
+  const grew = nar && nar.sig!==ch.convs.length;
+  const label = inkToken() ? "✍️ Have Inkling write this chapter" : "✍️ Write this chapter with Inkling";
+  return `<div style="margin:12px 0">
+    <button class="btn" style="font:800 12px system-ui" onclick="writeChapter('${jsA}')">${label}</button>
+    ${grew?' <span class="hint">chapter grew — rewrite to update</span>':''}
+    ${_narrNote===ch.anchor?'<div class="hint" style="margin-top:7px">To let Inkling write it, sign in on the main app and set an API key on Render. The chapter below is always here to read.</div>':''}
+  </div>`;
+}
+
 function renderStorybook(){
   const book=buildBook();
   if(!book.total){
@@ -816,6 +871,7 @@ function renderChapter(book, ch){
      <div style="font:800 11px system-ui;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 2px">Chapter ${ch.n}</div>
      <h1 style="margin:0 0 4px">${esc(ch.title)}</h1>
      <div class="panel" style="border-color:rgba(167,139,250,.3)"><p style="font:600 15px/1.8 system-ui;color:#e6edf3;margin:0">${opener}</p></div>
+     ${narrationBlock(ch)}
      ${deepBlock}
      <div style="margin:18px 0 8px"><h2 style="font:800 14px system-ui;color:var(--violet);margin:0">The pages</h2></div>
      <div class="panel">${pages}</div>
