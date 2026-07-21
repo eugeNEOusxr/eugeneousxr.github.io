@@ -750,7 +750,7 @@ function convPage(c){
    On demand (per chapter), cached in DB.narration keyed by anchor + a signature
    (conv count) so it regenerates only when the chapter actually grows. Falls back
    to the structural chapter for guests / no API key. */
-let _writingAnchor=null, _narrNote=null, _bookScrollCh=null;
+let _writingAnchor=null, _narrNote=null, _bookScrollCh=null, _narrAll={running:false,stop:false};
 async function chatLLM(message, context){
   const token=inkToken(); if(!token) return null;
   try{
@@ -821,6 +821,55 @@ function bookChapter(ch, deepMap){
     ${narrationInline(ch)}
   </section>`;
 }
+/* ---- WRITE THE WHOLE BOOK: narrate every chapter in the background ---- */
+function updateChapterDom(ch, deepMap){ const el=document.getElementById("ch"+ch.n); if(el) el.outerHTML=bookChapter(ch, deepMap); }
+function bookProgress(done,total){
+  let el=document.getElementById("bookProgress");
+  if(!el){ el=document.createElement("div"); el.id="bookProgress";
+    el.style.cssText="position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:9999;background:rgba(10,14,24,.96);border:1px solid rgba(167,139,250,.5);border-radius:999px;padding:9px 16px;color:#eef2f8;font:700 12px system-ui;box-shadow:0 6px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px";
+    document.body.appendChild(el); }
+  el.innerHTML=`✍️ Writing your book — <b>${done} / ${total}</b> <button class="back" style="margin:0" onclick="_narrAll.stop=true;this.textContent='Stopping…'">Stop</button>`;
+}
+function bookProgressDone(done,stopped){
+  const el=document.getElementById("bookProgress"); if(!el) return;
+  el.innerHTML = stopped ? `Paused at ${done}. <button class="back" style="margin:0" onclick="writeWholeBook()">Resume</button> <button class="back" style="margin:0" onclick="this.parentElement.remove()">✕</button>`
+                         : `✓ Wrote ${done} chapter${done===1?"":"s"}. <button class="back" style="margin:0" onclick="this.parentElement.remove()">✕</button>`;
+  if(!stopped) setTimeout(()=>{ const e=document.getElementById("bookProgress"); if(e) e.remove(); }, 7000);
+}
+function chaptersToNarrate(book){ return book.chapters.filter(ch=>{ const n=(DB.narration||{})[ch.anchor]; return !(n&&n.sig===ch.convs.length); }); }
+async function writeWholeBook(){
+  if(_narrAll.running) return;
+  if(!inkToken()){ renderStorybook(); return; }
+  const book=buildBook(); const todo=chaptersToNarrate(book);
+  if(!todo.length){ return; }
+  if(!confirm(`Have Inkling write ${todo.length} chapter${todo.length===1?"":"s"} in prose? It calls the AI once per chapter (uses your API key) and can take several minutes. You can Stop anytime — finished chapters are saved as it goes.`)) return;
+  const deepMap={}; deepenings().forEach(d=>deepMap[d.key]=d);
+  _narrAll={running:true, stop:false};
+  bookProgress(0, todo.length);
+  let done=0;
+  for(const ch of todo){
+    if(_narrAll.stop) break;
+    _writingAnchor=ch.anchor; updateChapterDom(ch, deepMap);
+    let text=null; try{ text=await narrateChapter(ch); }catch(e){ text=null; }
+    _writingAnchor=null;
+    if(text){ DB.narration=DB.narration||{}; DB.narration[ch.anchor]={ text, sig:ch.convs.length, at:Date.now() }; persist(); }
+    updateChapterDom(ch, deepMap);
+    done++; bookProgress(done, todo.length);
+    await new Promise(r=>setTimeout(r, 500));
+  }
+  const stopped=_narrAll.stop; _narrAll={running:false,stop:false};
+  bookProgressDone(done, stopped);
+  const bar=document.getElementById("bookWriteBar"); if(bar) bar.outerHTML=coverWriteBar(buildBook());
+}
+function rewriteWholeBook(){ if(confirm("Rewrite every chapter from scratch? This replaces all current AI narration.")){ DB.narration={}; persist(); writeWholeBook(); } }
+function coverWriteBar(book){
+  if(!book.chapters.length) return `<div id="bookWriteBar"></div>`;
+  const todo=chaptersToNarrate(book).length;
+  if(!inkToken()) return `<div id="bookWriteBar" style="text-align:center;margin:4px 0 14px"><span class="hint">✍️ Sign in on the main app + set an API key on Render to have Inkling write the whole book in prose.</span></div>`;
+  if(!todo) return `<div id="bookWriteBar" style="text-align:center;margin:4px 0 14px"><span class="hint">✅ Every chapter is written. </span><button class="back" onclick="rewriteWholeBook()">↻ Rewrite the whole book</button></div>`;
+  return `<div id="bookWriteBar" style="text-align:center;margin:4px 0 14px"><button class="btn" style="font:800 12px system-ui" onclick="writeWholeBook()">✍️ Have Inkling write the whole book — ${todo} chapter${todo===1?"":"s"}</button></div>`;
+}
+
 // The whole book, read straight through — cover, then every chapter in sequence.
 function renderStorybook(){
   const book=buildBook();
@@ -846,6 +895,7 @@ function renderStorybook(){
        <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.15em;text-transform:uppercase">An evolving autobiography</div>
        <h1 style="font:800 30px/1.15 Georgia,serif;margin:8px 0 0">The Story of Your Understanding</h1></div>
      <p style="font:400 16.5px/1.95 Georgia,serif;color:#eaeff7;margin:16px auto 14px;text-align:center;max-width:640px">${prologue}</p>
+     ${coverWriteBar(book)}
      <details style="margin:0 0 8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0">
        <summary style="cursor:pointer;color:var(--dim);font:700 12px system-ui">Table of contents — ${nCh} chapters (tap a title to jump)</summary>
        <div style="margin-top:10px;max-height:42vh;overflow:auto">${toc}${book.brief.length?`<a onclick="document.getElementById('brief').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:var(--blue);display:block;padding:2px 0;font-size:13px">✦ Brief threads · ${book.brief.length}</a>`:""}</div>
