@@ -750,7 +750,7 @@ function convPage(c){
    On demand (per chapter), cached in DB.narration keyed by anchor + a signature
    (conv count) so it regenerates only when the chapter actually grows. Falls back
    to the structural chapter for guests / no API key. */
-let _writingAnchor=null, _narrNote=null;
+let _writingAnchor=null, _narrNote=null, _bookScrollCh=null;
 async function chatLLM(message, context){
   const token=inkToken(); if(!token) return null;
   try{
@@ -774,33 +774,54 @@ async function narrateChapter(ch){
 }
 async function writeChapter(anchor){
   const ch=buildBook().chapters.find(c=>c.anchor===anchor); if(!ch) return;
+  _bookScrollCh=ch.n;
   if(!inkToken()){ _narrNote=anchor; renderStorybook(); return; }
   _narrNote=null; _writingAnchor=anchor; renderStorybook();
   const text=await narrateChapter(ch);
   _writingAnchor=null;
   if(text){ DB.narration=DB.narration||{}; DB.narration[anchor]={ text, sig:ch.convs.length, at:Date.now() }; persist(); }
   else { _narrNote=anchor; }
-  renderStorybook();
+  _bookScrollCh=ch.n; renderStorybook();
 }
-function narrationBlock(ch){
+function narrationInline(ch){
   const jsA=attrJs(ch.anchor);
   if(_writingAnchor===ch.anchor)
-    return `<div class="panel"><p class="hint" style="margin:0">✍️ Inkling is writing this chapter… <span style="opacity:.7">(first reply can take a moment)</span></p></div>`;
-  const nar=(DB.narration||{})[ch.anchor];
-  if(nar && nar.sig===ch.convs.length)
-    return `<div class="panel" style="border-color:rgba(167,139,250,.35)">
-      <div style="font:800 10px system-ui;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">✍️ Written by Inkling</div>
-      <div style="font:400 16px/1.9 Georgia,'Times New Roman',serif;color:#eef2f8">${mdToHtml(nar.text)}</div>
-      <div style="margin-top:10px"><button class="back" onclick="writeChapter('${jsA}')">↻ Rewrite</button></div></div>`;
-  const grew = nar && nar.sig!==ch.convs.length;
-  const label = inkToken() ? "✍️ Have Inkling write this chapter" : "✍️ Write this chapter with Inkling";
-  return `<div style="margin:12px 0">
-    <button class="btn" style="font:800 12px system-ui" onclick="writeChapter('${jsA}')">${label}</button>
-    ${grew?' <span class="hint">chapter grew — rewrite to update</span>':''}
-    ${_narrNote===ch.anchor?'<div class="hint" style="margin-top:7px">To let Inkling write it, sign in on the main app and set an API key on Render. The chapter below is always here to read.</div>':''}
+    return `<p class="hint" style="text-align:center;margin:12px 0">✍️ Inkling is writing this chapter…</p>`;
+  const nar=(DB.narration||{})[ch.anchor], done=nar&&nar.sig===ch.convs.length;
+  if(done)
+    return `<div style="text-align:center;margin:10px 0"><button class="back" onclick="writeChapter('${jsA}')">↻ Rewrite in Inkling's words</button></div>`;
+  const label = inkToken() ? "✍️ Have Inkling write this chapter in prose" : "✍️ Write this chapter (sign in for AI)";
+  return `<div style="text-align:center;margin:12px 0">
+    <button class="btn" style="font:800 11px system-ui;padding:6px 13px" onclick="writeChapter('${jsA}')">${label}</button>
+    ${_narrNote===ch.anchor?'<div class="hint" style="margin-top:6px">Sign in on the main app + set an API key on Render to enable.</div>':''}
   </div>`;
 }
 
+// One conversation, as a flowing line in the book (not a button/list item).
+function bookEntry(c){
+  return `<p style="font:400 15px/1.72 Georgia,serif;color:#c9d3e2;margin:0 0 10px;padding-left:14px;border-left:2px solid rgba(167,139,250,.16);cursor:pointer" onclick="openConvInGalaxy('${c.id}')"><span style="color:var(--violet);font-weight:700;font-size:12.5px">${fmtDate(c.at)}</span> — <b style="color:#e7edf6">${esc(c.title)}</b>${c.summary?`. ${esc(c.summary)}`:""}</p>`;
+}
+function bookChapter(ch, deepMap){
+  const nar=(DB.narration||{})[ch.anchor], narr=(nar&&nar.sig===ch.convs.length)?nar.text:null;
+  const threadLine=ch.threads.length?` The ideas woven through it: <b>${ch.threads.map(esc).join(", ")}</b>.`:"";
+  const opener=`Between ${fmtSpan(ch.span[0],ch.span[1])}, across ${ch.convs.length} conversation${ch.convs.length===1?"":"s"}, you kept returning to <b>${esc(ch.title)}</b>.${threadLine}`;
+  const d=deepMap[ch.anchor];
+  const deepNote=d?`<p style="font:italic 400 15px/1.8 Georgia,serif;color:#a9e6c9;margin:0 0 12px">When ${esc(d.label)} first appeared (${fmtDate(d.first.at)}) it sat among ${esc(d.then.slice(0,3).join(", "))||"your first ideas"}; by ${fmtDate(d.recent.at)} you'd tied it to ${esc(d.gained.slice(0,3).join(", "))}.</p>`:"";
+  const body = narr
+    ? `<div style="font:400 16.5px/1.95 Georgia,serif;color:#eef2f8;margin:0 0 8px">${mdToHtml(narr)}</div>
+       <div style="font:800 10px system-ui;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin:16px 0 8px">Drawn from ${ch.convs.length} conversation${ch.convs.length===1?"":"s"}</div>${ch.convs.map(bookEntry).join("")}`
+    : `<p style="font:400 16.5px/1.95 Georgia,serif;color:#eaeff7;margin:0 0 12px">${opener}</p>${deepNote}${ch.convs.map(bookEntry).join("")}`;
+  return `<section id="ch${ch.n}" style="margin:0 0 46px;scroll-margin-top:16px">
+    <div style="text-align:center;margin:40px 0 18px">
+      <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.18em;text-transform:uppercase">Chapter ${ch.n}</div>
+      <h2 style="font:800 27px/1.2 Georgia,serif;margin:8px 0 0;color:#f3f6fc">${esc(ch.title)}</h2>
+      <div style="width:44px;height:2px;background:rgba(167,139,250,.5);margin:14px auto 0"></div>
+    </div>
+    ${body}
+    ${narrationInline(ch)}
+  </section>`;
+}
+// The whole book, read straight through — cover, then every chapter in sequence.
 function renderStorybook(){
   const book=buildBook();
   if(!book.total){
@@ -808,88 +829,33 @@ function renderStorybook(){
       <div class="empty">Your book hasn't started yet.<br><span style="opacity:.8">Import your ChatGPT history (📥 Imports) — Inkling writes it into chapters here.</span></div>`, "storybook");
     return;
   }
-  // A chapter page (or the brief-threads chapter)
-  if(view.chapter!=null){
-    if(view.chapter==="brief") return renderBriefChapter(book);
-    const ch=book.chapters[view.chapter-1];
-    if(ch) return renderChapter(book, ch);
-  }
-  return renderBookTOC(book);
-}
-
-function renderBookTOC(book){
   const nCh=book.chapters.length;
-  const prologue=`This is the story of your understanding — <b>${book.total} conversation${book.total===1?"":"s"}</b> `+
-    `spanning <b>${fmtSpan(book.span[0],book.span[1])}</b>, read as a book. It has grown to <b>${nCh} chapter${nCh===1?"":"s"}</b>`+
-    (book.brief.length?` and ${book.brief.length} brief thread${book.brief.length===1?"":"s"}`:"")+
-    `. Each theme you kept returning to became a chapter; each conversation, a page. Read from the beginning, or open any chapter.`;
-  const deep=deepenings();
-  const deepSection = deep.length
-    ? `<div style="margin:22px 0 8px"><h2 style="font:800 15px system-ui;color:#39d98a;margin:0">🌱 How your understanding has deepened</h2>
-       <p class="sub" style="margin:4px 0 0">Ideas you circled back to — how far they've come. The old pages stay; this is the distance travelled.</p></div>
-       ${deepeningCard(deep[0], true)}${deep.slice(1,3).map(d=>deepeningCard(d,false)).join("")}` : "";
-  const toc=book.chapters.map(ch=>
-    `<button class="qrow" style="margin:0 0 5px" onclick="go({name:'storybook',chapter:${ch.n}})">
-       <span style="color:var(--dim);font-weight:800;min-width:34px;text-align:right">${ch.n}</span>
-       <span class="qt" style="flex:1">${esc(ch.title)}</span>
-       <span style="color:var(--dim);font-weight:600">${ch.convs.length} · ${fmtDate(ch.span[0])}</span></button>`).join("");
-  const briefRow=book.brief.length
-    ? `<button class="qrow" style="margin:6px 0 0" onclick="go({name:'storybook',chapter:'brief'})">
-        <span style="color:var(--dim);font-weight:800;min-width:34px;text-align:right">✦</span>
-        <span class="qt" style="flex:1">Brief threads</span>
-        <span style="color:var(--dim);font-weight:600">${book.brief.length} pages</span></button>` : "";
+  const deepMap={}; deepenings().forEach(d=>deepMap[d.key]=d);
+  const prologue=`This is the story of your understanding — <b>${book.total} conversation${book.total===1?"":"s"}</b> spanning <b>${fmtSpan(book.span[0],book.span[1])}</b>, read as one continuous book of <b>${nCh} chapter${nCh===1?"":"s"}</b>${book.brief.length?` and ${book.brief.length} brief threads`:""}. Just keep scrolling — each theme you returned to becomes the next chapter, in the order it first appeared in your life.`;
+  const toc=book.chapters.map(ch=>`<a onclick="document.getElementById('ch${ch.n}').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:var(--blue);display:block;padding:2px 0;font-size:13px">${ch.n}. ${esc(ch.title)} <span style="color:var(--dim)">· ${ch.convs.length}</span></a>`).join("");
+  const chapters=book.chapters.map(ch=>bookChapter(ch, deepMap)).join("");
+  const brief=book.brief.length?`<section id="brief" style="margin:46px 0 0">
+      <div style="text-align:center;margin:40px 0 18px">
+        <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.18em;text-transform:uppercase">Appendix</div>
+        <h2 style="font:800 27px/1.2 Georgia,serif;margin:8px 0 0;color:#f3f6fc">Brief threads</h2>
+        <div style="width:44px;height:2px;background:rgba(167,139,250,.5);margin:14px auto 0"></div></div>
+      <p style="font:400 16px/1.9 Georgia,serif;color:#eaeff7;margin:0 0 12px">${book.brief.length} conversations that stand on their own — one-off questions and quick detours that haven't yet grown into a chapter.</p>
+      ${book.brief.map(bookEntry).join("")}</section>`:"";
   app.innerHTML=chrome(
-    `<h1>📖 The Story of Your Understanding</h1>
-     <p class="sub">Your whole history, written as a book — ${nCh} chapters and counting.</p>
-     <div class="panel" style="border-color:rgba(167,139,250,.35)">
-       <p style="font:600 15px/1.8 system-ui;color:#e6edf3;margin:0">${prologue}</p>
-       ${nCh?`<div style="margin-top:12px"><button class="btn" style="font:800 12px system-ui" onclick="go({name:'storybook',chapter:1})">Begin reading — Chapter 1 ›</button></div>`:""}
-     </div>
-     ${deepSection}
-     <div style="margin:22px 0 8px"><h2 style="font:800 15px system-ui;color:var(--violet);margin:0">Table of contents</h2>
-       <p class="sub" style="margin:4px 0 0">${nCh} chapters · ${book.total} conversations</p></div>
-     <div class="panel">${toc}${briefRow}</div>
-     <div class="hint">A living book — it re-chapters itself every time you import or talk to Inkling.</div>`, "storybook");
-}
-
-function renderChapter(book, ch){
-  const nCh=book.chapters.length;
-  const threadLine=ch.threads.length
-    ? ` The ideas woven through it: <b>${ch.threads.map(esc).join(", ")}</b>.` : "";
-  const opener=`Between <b>${fmtSpan(ch.span[0],ch.span[1])}</b>, across <b>${ch.convs.length} conversation${ch.convs.length===1?"":"s"}</b>, you kept returning to <b>${esc(ch.title)}</b>.${threadLine}`;
-  // a deepening whose concept matches this chapter's anchor
-  const d=deepenings().find(x=>x.key===ch.anchor);
-  const deepBlock=d?`<div style="margin:14px 0">${deepeningCard(d,true)}</div>`:"";
-  const pages=ch.convs.map(convPage).join("");
-  const prev=ch.n>1?`<button class="back" onclick="go({name:'storybook',chapter:${ch.n-1}})">‹ Ch. ${ch.n-1}</button>`:`<span></span>`;
-  const next=ch.n<nCh?`<button class="back" onclick="go({name:'storybook',chapter:${ch.n+1}})">Ch. ${ch.n+1} ›</button>`
-    :(book.brief.length?`<button class="back" onclick="go({name:'storybook',chapter:'brief'})">Brief threads ›</button>`:`<span></span>`);
-  app.innerHTML=chrome(
-    `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-       <button class="back" onclick="go({name:'storybook'})">‹ Table of contents</button>
-       <span class="hint" style="margin:0">Chapter ${ch.n} of ${nCh}</span></div>
-     <div style="font:800 11px system-ui;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 2px">Chapter ${ch.n}</div>
-     <h1 style="margin:0 0 4px">${esc(ch.title)}</h1>
-     <div class="panel" style="border-color:rgba(167,139,250,.3)"><p style="font:600 15px/1.8 system-ui;color:#e6edf3;margin:0">${opener}</p></div>
-     ${narrationBlock(ch)}
-     ${deepBlock}
-     <div style="margin:18px 0 8px"><h2 style="font:800 14px system-ui;color:var(--violet);margin:0">The pages</h2></div>
-     <div class="panel">${pages}</div>
-     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px">${prev}${next}</div>`, "storybook");
-  window.scrollTo(0,0);
-}
-
-function renderBriefChapter(book){
-  const pages=book.brief.map(convPage).join("");
-  app.innerHTML=chrome(
-    `<button class="back" onclick="go({name:'storybook'})">‹ Table of contents</button>
-     <div style="font:800 11px system-ui;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 2px">Appendix</div>
-     <h1 style="margin:0 0 4px">Brief threads</h1>
-     <div class="panel" style="border-color:rgba(167,139,250,.3)"><p style="font:600 15px/1.8 system-ui;color:#e6edf3;margin:0">${book.brief.length} conversations that stand on their own — one-off questions, quick detours, sparks that haven't yet grown into a chapter. They may still connect as you explore more.</p></div>
-     <div style="margin:18px 0 8px"><h2 style="font:800 14px system-ui;color:var(--violet);margin:0">The pages</h2></div>
-     <div class="panel">${pages}</div>
-     <div style="margin-top:16px"><button class="back" onclick="go({name:'storybook'})">‹ Table of contents</button></div>`, "storybook");
-  window.scrollTo(0,0);
+    `<div style="text-align:center;margin:6px 0 4px">
+       <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.15em;text-transform:uppercase">An evolving autobiography</div>
+       <h1 style="font:800 30px/1.15 Georgia,serif;margin:8px 0 0">The Story of Your Understanding</h1></div>
+     <p style="font:400 16.5px/1.95 Georgia,serif;color:#eaeff7;margin:16px auto 14px;text-align:center;max-width:640px">${prologue}</p>
+     <details style="margin:0 0 8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0">
+       <summary style="cursor:pointer;color:var(--dim);font:700 12px system-ui">Table of contents — ${nCh} chapters (tap a title to jump)</summary>
+       <div style="margin-top:10px;max-height:42vh;overflow:auto">${toc}${book.brief.length?`<a onclick="document.getElementById('brief').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:var(--blue);display:block;padding:2px 0;font-size:13px">✦ Brief threads · ${book.brief.length}</a>`:""}</div>
+     </details>
+     ${chapters}
+     ${brief}
+     <div style="text-align:center;margin:46px 0 12px"><div style="width:60px;height:1px;background:var(--line);margin:0 auto 12px"></div>
+       <p class="hint" style="margin:0">The end — for now. Your book keeps writing itself as you explore.</p></div>`, "storybook");
+  if(_bookScrollCh){ const el=document.getElementById("ch"+_bookScrollCh); if(el) el.scrollIntoView(); _bookScrollCh=null; }
+  else window.scrollTo(0,0);
 }
 
 // Persist the pending import as a conversation node (a future galaxy "star").
