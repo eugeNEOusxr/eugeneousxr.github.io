@@ -344,6 +344,7 @@ function persist(){ save(DB); }
 const CONF = ["Just guessing","A rough idea","Fairly confident","I understand it","I could teach it"];
 const CONF_COLOR = ["#64748b","#3b82f6","#22d3ee","#39d98a","#f0abfc"];
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function attrJs(s){ return esc(s).replace(/"/g,"&quot;").replace(/'/g,"\\'"); }  // safe inside onclick="fn('…')"
 function fieldById(id){ return FIELDS.find(f=>f.id===id); }
 function qById(fid,qid){ return (fieldById(fid).questions||[]).find(q=>q.id===qid); }
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}); }
@@ -562,6 +563,47 @@ function openConvQuiz(id){
   const c=(DB.conversations||[]).find(x=>x.id===id);
   if(c&&c.quiz) openQuizDeck(c.quiz);
 }
+function openConvDetail(id){
+  const c=(DB.conversations||[]).find(x=>x.id===id);
+  if(c) showGalaxyInfo(c);
+}
+
+/* ---- CONCEPT SPOTLIGHT: pull a thread → light up every chat that shares it ---- */
+function spotlightConcept(concept){
+  window.__spotlightConcept=String(concept||"").toLowerCase();
+  drawGalaxy(DB.conversations||[]);   // reads window.__spotlightConcept
+  const matched=(DB.conversations||[]).filter(c=>(c.concepts||[]).some(x=>x.toLowerCase()===window.__spotlightConcept));
+  showThroughLine(concept, matched);
+}
+function clearSpotlight(){
+  window.__spotlightConcept=null;
+  drawGalaxy(DB.conversations||[]);
+  const el=document.getElementById("galaxyInfo"); if(el) el.style.display="none";
+}
+// A local (no-AI) synthesis: name the other ideas these chats keep sharing.
+function throughLine(concept, convs){
+  if(!convs.length) return `Nothing shares ${concept} yet.`;
+  const counts={};
+  convs.forEach(c=>(c.concepts||[]).forEach(x=>{ if(x.toLowerCase()!==String(concept).toLowerCase()) counts[x]=(counts[x]||0)+1; }));
+  const shared=Object.keys(counts).filter(k=>counts[k]>=2).sort((a,b)=>counts[b]-counts[a]).slice(0,3);
+  let s=`You've explored ${concept} across ${convs.length} conversation${convs.length>1?"s":""}.`;
+  if(shared.length) s+=` They keep circling ${shared.join(", ")} too — for you, ${concept} sits close to those ideas.`;
+  else if(convs.length>1) s+=` It's a thread linking otherwise separate chats.`;
+  return s;
+}
+function showThroughLine(concept, convs){
+  const el=document.getElementById("galaxyInfo"); if(!el) return;
+  const list=convs.map(c=>`<button class="qrow" style="margin:0 0 6px;padding:8px 11px" onclick="openConvDetail('${c.id}')">
+     <span class="dot done"></span><span><span class="qt">${esc(c.title)}</span></span></button>`).join("");
+  el.innerHTML=`<div class="panel" style="margin:0;background:rgba(8,12,22,.97)">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+      <span class="nn" style="color:var(--pink)">🧵 ${esc(concept)}</span>
+      <button class="back" style="margin:0" onclick="clearSpotlight()">✕</button></div>
+    <div style="margin-top:6px;color:#dbe4ee;line-height:1.55;font-size:13px">${esc(throughLine(concept,convs))}</div>
+    <div style="margin-top:10px;max-height:32vh;overflow:auto">${list}</div>
+  </div>`;
+  el.style.display="block";
+}
 
 // Persist the pending import as a conversation node (a future galaxy "star").
 function saveImport(){
@@ -654,11 +696,19 @@ function renderGalaxy(){
     app.innerHTML=chrome(`<h1>🌌 Galaxy</h1><div class="empty">No conversations yet.<br><span style="opacity:.8">Import a few from ChatGPT/Claude/Gemini and Save them — they become stars here.</span></div>`, "galaxy");
     return;
   }
+  window.__spotlightConcept=null;
+  const cc={}; convs.forEach(c=>(c.concepts||[]).forEach(x=>{ cc[x]=(cc[x]||0)+1; }));
+  const topConcepts=Object.keys(cc).sort((a,b)=>cc[b]-cc[a]).slice(0,12);
+  const conceptBar = topConcepts.length? `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 12px">
+      <span class="hint" style="margin:0">Pull a thread:</span>
+      ${topConcepts.map(k=>`<button class="lk" style="cursor:pointer" onclick="spotlightConcept('${attrJs(k)}')">${esc(k)} <span style="opacity:.55">${cc[k]}</span></button>`).join("")}
+    </div>`:"";
   app.innerHTML=chrome(
     `<h1>🌌 Your conversation galaxy</h1>
-     <p class="sub">Each star is a conversation you imported. Shared concepts pull them into clusters. Tap a star to open its digest.</p>
+     <p class="sub">Each star is a conversation. Shared concepts cluster them — tap a star for its digest, or pull a thread below to see every chat that touched an idea.</p>
+     ${conceptBar}
      <div style="position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:radial-gradient(1000px 520px at 50% 25%,rgba(90,70,180,.18),transparent 62%),#05070e">
-       <canvas id="galaxy" style="display:block;width:100%;height:68vh;cursor:pointer"></canvas>
+       <canvas id="galaxy" style="display:block;width:100%;height:64vh;cursor:pointer"></canvas>
        <div id="galaxyInfo" style="position:absolute;left:12px;right:12px;bottom:12px;display:none"></div>
      </div>
      <div class="hint" style="margin-top:8px">${convs.length} conversation${convs.length===1?"":"s"} · lines connect chats that share a concept.</div>`, "galaxy");
@@ -701,12 +751,19 @@ function drawGalaxy(convs){
     });
   });
 
+  // Spotlight: when a concept is selected, matched chats glow (pink) + their
+  // shared threads light up, everything else dims.
+  const spot = window.__spotlightConcept || null;
+  const matched = (i)=> spot ? keys[i].has(spot) : true;
+
   // edges between chats sharing concepts
   for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
     let shared=0; for(const k of keys[j]){ if(keys[i].has(k)) shared++; }
     if(shared>0){
-      ctx.strokeStyle="rgba(150,130,255,"+Math.min(.4,.14*shared)+")";
-      ctx.lineWidth=1;
+      const both=matched(i)&&matched(j);
+      ctx.strokeStyle = spot ? (both?"rgba(240,171,252,.6)":"rgba(150,130,255,.05)")
+                             : "rgba(150,130,255,"+Math.min(.4,.14*shared)+")";
+      ctx.lineWidth = spot&&both?1.6:1;
       ctx.beginPath(); ctx.moveTo(stars[i].x,stars[i].y); ctx.lineTo(stars[j].x,stars[j].y); ctx.stroke();
     }
   }
@@ -716,28 +773,34 @@ function drawGalaxy(convs){
     const m=clusters[r], counts={};
     m.forEach(idx=>(convs[idx].concepts||[]).forEach(cc=>{ counts[cc]=(counts[cc]||0)+1; }));
     const top=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
-    if(top){ const c=centers[r]; ctx.fillStyle="rgba(200,190,255,.65)";
+    if(top){ const c=centers[r]; ctx.fillStyle=spot?"rgba(200,190,255,.28)":"rgba(200,190,255,.65)";
       ctx.fillText(top, c.x, c.y-(m.length===1?26:Math.sqrt(m.length)*18+34)); }
   });
   // stars
-  stars.forEach(s=>{
-    const size=4+Math.min(7,(s.conv.concepts||[]).length);
+  for(let idx=0; idx<n; idx++){
+    const s=stars[idx]; if(!s) continue;
+    const isM=matched(idx);
+    const size=(4+Math.min(7,(s.conv.concepts||[]).length))*(spot&&isM?1.3:1);
+    ctx.globalAlpha=(spot&&!isM)?0.16:1;
+    const core=(spot&&isM)?"rgba(245,200,255,1)":"rgba(180,215,255,1)";
+    const halo=(spot&&isM)?"rgba(240,171,252,.7)":"rgba(120,150,255,.65)";
     const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,size*2.6);
-    g.addColorStop(0,"rgba(180,215,255,1)"); g.addColorStop(.4,"rgba(120,150,255,.65)"); g.addColorStop(1,"rgba(120,150,255,0)");
+    g.addColorStop(0,core); g.addColorStop(.4,halo); g.addColorStop(1,"rgba(120,150,255,0)");
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(s.x,s.y,size*2.6,0,Math.PI*2); ctx.fill();
     ctx.fillStyle="#eaf2ff"; ctx.beginPath(); ctx.arc(s.x,s.y,size*0.6,0,Math.PI*2); ctx.fill();
-    s._r=size*2.6;
-  });
-  // star labels = the conversation's subject (its title). Shown when the sky
-  // isn't too crowded; otherwise the title still appears on tap.
-  if(n<=40){
-    ctx.textAlign="center"; ctx.font="600 11px system-ui";
-    stars.forEach(s=>{
-      let t=String(s.conv.title||"");
-      if(t.length>26) t=t.slice(0,25)+"…";
-      ctx.fillStyle="rgba(230,237,243,.9)";
-      ctx.fillText(t, s.x, s.y + s._r + 13);
-    });
+    ctx.globalAlpha=1; s._r=size*2.6;
+  }
+  // star labels = the conversation's subject (title). Shown when uncrowded, or
+  // only for matched stars during a spotlight.
+  ctx.textAlign="center"; ctx.font="600 11px system-ui";
+  for(let idx=0; idx<n; idx++){
+    const s=stars[idx]; if(!s) continue;
+    const isM=matched(idx);
+    if(spot && !isM) continue;
+    if(!spot && n>40) continue;
+    let t=String(s.conv.title||""); if(t.length>26) t=t.slice(0,25)+"…";
+    ctx.fillStyle=(spot&&isM)?"rgba(245,220,255,.95)":"rgba(230,237,243,.9)";
+    ctx.fillText(t, s.x, s.y + s._r + 13);
   }
 
   canvas.onclick=e=>{
@@ -772,7 +835,7 @@ function showGalaxyInfo(conv, mode){
   window.__gConv=conv;
   const modes=convModes(conv);
   if(!mode || !modes.some(m=>m[0]===mode)) mode=modes[0][0];
-  const chips=(conv.concepts||[]).slice(0,6).map(x=>`<span class="lk">${esc(x)}</span>`).join("");
+  const chips=(conv.concepts||[]).slice(0,6).map(x=>`<button class="lk" style="cursor:pointer" onclick="spotlightConcept('${attrJs(x)}')">${esc(x)}</button>`).join("");
   const quizBtn=conv.quiz?`<button class="btn pink" style="padding:6px 12px;font:800 11px system-ui" onclick="openConvQuiz('${conv.id}')">🎓 Study as quiz</button>`:"";
   const tabs=modes.map(([k,label])=>`<button onclick="showGalaxyInfo(window.__gConv,'${k}')" style="padding:4px 11px;border-radius:999px;font:700 11px system-ui;cursor:pointer;border:1px solid ${mode===k?'rgba(158,203,255,.6)':'var(--line)'};background:${mode===k?'rgba(158,203,255,.18)':'transparent'};color:${mode===k?'var(--blue)':'var(--dim)'}">${label}</button>`).join("");
   let body="";
