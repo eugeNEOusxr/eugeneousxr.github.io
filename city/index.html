@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Inkling · Knowledge City</title>
+  <script type="module" crossorigin src="./assets/index-D4iR3pp9.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CNRwMkam.css">
+</head>
+<body>
+  <!-- The renderer canvas is created by App.js and appended here. -->
+  <div id="app"></div>
+
+  <!-- HUD (2D overlays live above the 3D world) -->
+  <header id="hud-top">
+    <div class="brand">🏙️ Knowledge City<small>a living map of understanding</small></div>
+    <div id="mode-tabs"></div>
+  </header>
+  <div id="hud-hint">drag to orbit · scroll to zoom · hover a building · click to inspect</div>
+  <div id="legend"></div>
+
+  <!-- Panels are managed by src/ui/*.js -->
+  <aside id="info-panel" class="panel" aria-hidden="true"></aside>
+  <section id="storybook-panel" class="reader" aria-hidden="true"></section>
+
+</body>
+</html>
