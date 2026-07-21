@@ -764,12 +764,12 @@ async function chatLLM(message, context){
 }
 async function narrateChapter(ch){
   const lines=ch.convs.slice(0,18).map(c=>`- ${c.title} (${fmtDate(c.at)})${c.summary?": "+String(c.summary).slice(0,90):""}`).join("\n");
-  const msg=`Write Chapter ${ch.n} of my intellectual autobiography, titled "${ch.title}". `+
-    `I explored this across ${ch.convs.length} conversation${ch.convs.length===1?"":"s"} between ${fmtSpan(ch.span[0],ch.span[1])}.`+
-    (ch.threads.length?` Recurring threads: ${ch.threads.join(", ")}.`:"")+
-    `\nThe conversations:\n${lines}\n\n`+
-    `Write it as flowing, engaging nonfiction prose — 2 to 4 short paragraphs, second person ("you"), telling the story of how my understanding of ${ch.title} developed: what drew me in, what I wrestled with, how my thinking evolved, and where it points next. Weave the conversations together; don't list them. Warm, curious, specific, grounded in what's above. No headings, no bullet points.`;
-  const context="You are Inkling, writing a chapter of the user's evolving intellectual autobiography — the story of how their understanding grows over time. Voice: warm, curious, precise literary nonfiction; second person; no headings or lists. You're writing about Jeremy, a first-principles systems thinker whose paths span electronics, AI, and robotics.";
+  const msg=`Write Chapter ${ch.n}, titled "${ch.title}", as a chapter of a SCIENCE-FICTION novel about a mind exploring the frontier of its own understanding. `+
+    `Ground it entirely in these real conversations — do not invent facts, names, or events:\n${lines}\n\n`+
+    `Across ${ch.convs.length} transmission${ch.convs.length===1?"":"s"} between ${fmtSpan(ch.span[0],ch.span[1])}, you kept returning to ${ch.title}.`+
+    (ch.threads.length?` Recurring signals: ${ch.threads.join(", ")}.`:"")+
+    `\n\nWrite 2 to 4 short, cinematic paragraphs in second person ("you"): what pulled you toward this frontier, the obstacles and turns, how your understanding mutated and expanded, and where the horizon points next. Sci-fi atmosphere and imagery — ideas as systems, forces, architectures and signals; the mind as an expanding universe being charted — but every claim must stay faithful to the conversations above. No headings, no bullet points.`;
+  const context="You are the narrator of an ongoing science-fiction saga whose protagonist is the reader ('you') — an explorer charting the frontier of their own understanding. Render real ideas with the atmosphere of great science fiction: learning as venturing into unmapped territory, concepts as systems and forces and signals, the mind as a universe being surveyed. Voice: cinematic, vivid, propulsive, a little awestruck. NEVER fabricate events or facts — only the voice is science fiction; the substance stays true to the user's actual conversations. Second person, no headings or lists. You're chronicling Jeremy, a first-principles systems thinker whose paths span electronics, AI, and robotics.";
   return await chatLLM(msg, context);
 }
 async function writeChapter(anchor){
