@@ -721,21 +721,55 @@ function deepeningCard(d, hero){
    Every recurring theme becomes a chapter; conversations are its pages. Ordered by
    when each theme first appeared, so the book follows your journey through time. */
 function titleCase(s){ return String(s||"").replace(/\b[a-z]/g,m=>m.toUpperCase()); }
-function bookAnchor(c, cf){ for(const x of (c.concepts||[])){ if((cf[x]||0)>=3) return x; } return (c.concepts||[])[0]||null; }
+// --- concept cleanup: drop junk, merge synonyms to a canonical head term ---
+const CONCEPT_JUNK=new Set(["data home","home eugeneous","phone computer","usr lib","system out","eugeneous eugeneousvm","internal modules","data data","eugeneousvm","https termux","null undefined","system system"]);
+const CONCEPT_PRIMARY=["pixel prodigy","entity software","operating system","smart contract","machine learning","neural network","language model","knowledge graph","unity","solana","blockchain","ethereum","python","javascript","consciousness","quantum","cosmic","electronics","transistor","voltage","robot","website","backend","frontend","game","physics","philosophy","energy"];
+function canonConcept(x){
+  const s=String(x||"").toLowerCase().trim(); if(!s||CONCEPT_JUNK.has(s)) return null;
+  for(const p of CONCEPT_PRIMARY){ if(s===p||s.includes(" "+p)||s.includes(p+" ")||s.startsWith(p)||s.endsWith(p)) return p; }
+  return s;
+}
+function canonConcepts(c){ const out=[], seen=new Set(); (c.concepts||[]).forEach(x=>{ const k=canonConcept(x); if(k&&!seen.has(k)){ seen.add(k); out.push(k); } }); return out; }
+// --- Parts: group the many chapters into a few domains ---
+const BOOK_PARTS=[
+  { id:"build", name:"Building & Product", kw:["pixel prodigy","entity software","app","website","portfolio","backend","frontend","product","startup","launch","deploy","saas","platform","landing"] },
+  { id:"chain", name:"Blockchain & Crypto", kw:["solana","smart contract","blockchain","ethereum","token","crypto","wallet","web3","nft","defi","mint"] },
+  { id:"ai", name:"AI & Machine Learning", kw:["machine learning","neural network","language model","ai","model","training","llm","gpt","agent","prompt","embedding","gradient"] },
+  { id:"game", name:"Games & 3D Worlds", kw:["unity","game","vr","3d","shader","animation","sentis","render","godot","unreal"] },
+  { id:"code", name:"Systems & Code", kw:["python","javascript","operating system","linux","code","programming","script","database","server","api","algorithm","memory","cpu"] },
+  { id:"hw", name:"Electronics & Hardware", kw:["electronics","voltage","transistor","circuit","arduino","raspberry","sensor","robot","motor","plc"] },
+  { id:"cosmos", name:"Mind, Science & Cosmos", kw:["consciousness","quantum","cosmic","energy","physics","universe","light","mind","awareness","philosophy","reality","time"] },
+  { id:"life", name:"Learning & Life", kw:["learning","study","habit","goal","health","psychology","note","finance","tax"] },
+];
+function partOf(ch){
+  const hay=(ch.anchor+" "+ch.threads.join(" ")).toLowerCase();
+  let best=null, score=0;
+  BOOK_PARTS.forEach(p=>{ let s=0; p.kw.forEach(k=>{ if(hay.includes(k)) s++; }); if(s>score){ score=s; best=p; } });
+  return best ? best.id : "other";
+}
 function buildBook(){
   const convs=(DB.conversations||[]).slice();
-  const cf={}; convs.forEach(c=>(c.concepts||[]).forEach(x=>cf[x]=(cf[x]||0)+1));
+  const cc=new Map(); convs.forEach(c=>cc.set(c, canonConcepts(c)));
+  const cf={}; convs.forEach(c=>cc.get(c).forEach(x=>cf[x]=(cf[x]||0)+1));
+  const anchor=c=>{ const cs=cc.get(c); for(const x of cs){ if((cf[x]||0)>=3) return x; } return cs[0]||null; };
   const groups={};
-  convs.forEach(c=>{ const a=bookAnchor(c,cf); const key=a==null?"__brief":a; (groups[key]=groups[key]||[]).push(c); });
+  convs.forEach(c=>{ const a=anchor(c); const key=a==null?"__brief":a; (groups[key]=groups[key]||[]).push(c); });
   const brief=[]; let chapters=[];
   Object.entries(groups).forEach(([k,v])=>{ if(k==="__brief"||v.length<2) brief.push(...v);
     else chapters.push({ anchor:k, convs:v.slice().sort((a,b)=>(a.at||0)-(b.at||0)) }); });
-  chapters.sort((a,b)=>(a.convs[0].at||0)-(b.convs[0].at||0));
-  chapters.forEach((ch,i)=>{ ch.n=i+1; ch.title=titleCase(ch.anchor);
-    const counts={}; ch.convs.forEach(c=>(c.concepts||[]).forEach(x=>{ if(x!==ch.anchor) counts[x]=(counts[x]||0)+1; }));
+  chapters.forEach((ch)=>{ ch.title=titleCase(ch.anchor);
+    const counts={}; ch.convs.forEach(c=>cc.get(c).forEach(x=>{ if(x!==ch.anchor) counts[x]=(counts[x]||0)+1; }));
     ch.threads=Object.keys(counts).filter(k=>counts[k]>=2).sort((a,b)=>counts[b]-counts[a]).slice(0,6);
     ch.span=[ch.convs[0].at, ch.convs[ch.convs.length-1].at]; });
-  return { chapters, brief:brief.sort((a,b)=>(a.at||0)-(b.at||0)), total:convs.length,
+  // group chapters into Parts, order parts by first appearance, then renumber in reading order
+  const byPart={}; chapters.forEach(ch=>{ (byPart[partOf(ch)]=byPart[partOf(ch)]||[]).push(ch); });
+  const nameById={}; BOOK_PARTS.forEach(p=>nameById[p.id]=p.name); nameById.other="Other Explorations";
+  let parts=Object.entries(byPart).map(([id,chs])=>({ id, name:nameById[id]||"Other",
+    chapters:chs.sort((a,b)=>(a.span[0]||0)-(b.span[0]||0)), first:Math.min(...chs.map(c=>c.span[0]||Infinity)) }));
+  parts.sort((a,b)=>a.first-b.first);
+  let n=0; parts.forEach(p=>p.chapters.forEach(ch=>ch.n=++n));
+  const ordered=[].concat(...parts.map(p=>p.chapters));
+  return { chapters:ordered, parts, brief:brief.sort((a,b)=>(a.at||0)-(b.at||0)), total:convs.length,
     span:[Math.min(...convs.map(c=>c.at||Infinity)), Math.max(...convs.map(c=>c.at||0))] };
 }
 function fmtSpan(a,b){ const A=fmtDate(a), B=fmtDate(b); return A===B?A:`${A} – ${B}`; }
@@ -913,9 +947,17 @@ function renderStorybook(){
   }
   const nCh=book.chapters.length;
   const deepMap={}; deepenings().forEach(d=>deepMap[d.key]=d);
-  const prologue=`This is the story of your understanding — <b>${book.total} conversation${book.total===1?"":"s"}</b> spanning <b>${fmtSpan(book.span[0],book.span[1])}</b>, read as one continuous book of <b>${nCh} chapter${nCh===1?"":"s"}</b>${book.brief.length?` and ${book.brief.length} brief threads`:""}. Just keep scrolling — each theme you returned to becomes the next chapter, in the order it first appeared in your life.`;
-  const toc=book.chapters.map(ch=>`<a onclick="document.getElementById('ch${ch.n}').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:var(--blue);display:block;padding:2px 0;font-size:13px">${ch.n}. ${esc(ch.title)} <span style="color:var(--dim)">· ${ch.convs.length}</span></a>`).join("");
-  const chapters=book.chapters.map(ch=>bookChapter(ch, deepMap)).join("");
+  const nParts=book.parts.length;
+  const prologue=`This is the story of your understanding — <b>${book.total} conversation${book.total===1?"":"s"}</b> spanning <b>${fmtSpan(book.span[0],book.span[1])}</b>, read as one continuous book: <b>${nCh} chapter${nCh===1?"":"s"}</b> across <b>${nParts} part${nParts===1?"":"s"}</b>${book.brief.length?` plus ${book.brief.length} brief threads`:""}. Just keep scrolling — related themes are gathered into parts, and within each, the chapters run in the order they first appeared in your life.`;
+  const partHeader=(p)=>`<div id="part-${p.id}" style="text-align:center;margin:56px 0 4px;scroll-margin-top:16px">
+      <div style="font:800 12px system-ui;color:#9ecbff;letter-spacing:.22em;text-transform:uppercase">Part · ${esc(p.name)}</div>
+      <div style="width:80px;height:1px;background:rgba(158,203,255,.5);margin:12px auto 0"></div>
+      <div class="hint" style="margin:8px 0 0">${p.chapters.length} chapter${p.chapters.length===1?"":"s"}</div></div>`;
+  const chapters=book.parts.map(p=>partHeader(p)+p.chapters.map(ch=>bookChapter(ch, deepMap)).join("")).join("");
+  const toc=book.parts.map(p=>
+    `<a onclick="document.getElementById('part-${p.id}').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:#9ecbff;font-weight:800;display:block;padding:8px 0 3px;font-size:12px;letter-spacing:.05em;text-transform:uppercase">${esc(p.name)}</a>`+
+    p.chapters.map(ch=>`<a onclick="document.getElementById('ch${ch.n}').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:var(--blue);display:block;padding:2px 0 2px 12px;font-size:13px">${ch.n}. ${esc(ch.title)} <span style="color:var(--dim)">· ${ch.convs.length}</span></a>`).join("")
+  ).join("");
   const brief=book.brief.length?`<section id="brief" style="margin:46px 0 0">
       <div style="text-align:center;margin:40px 0 18px">
         <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.18em;text-transform:uppercase">Appendix</div>
