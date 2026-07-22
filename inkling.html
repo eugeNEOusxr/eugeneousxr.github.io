@@ -747,21 +747,63 @@ function partOf(ch){
   BOOK_PARTS.forEach(p=>{ let s=0; p.kw.forEach(k=>{ if(hay.includes(k)) s++; }); if(s>score){ score=s; best=p; } });
   return best ? best.id : "other";
 }
-function buildBook(){
-  const convs=(DB.conversations||[]).slice();
+function currentGroupMode(){ return DB.groupMode==="semantic" ? "semantic" : "keyword"; }
+function setGroupMode(m){ if(_narrAll.running||_improveRun.running) return; DB.groupMode=(m==="semantic"?"semantic":"keyword"); persist(); renderStorybook(); }
+function groupModeToggle(){
+  const m=currentGroupMode();
+  const pill=(id,label,desc)=>`<button onclick="setGroupMode('${id}')" title="${desc}" style="cursor:pointer;border-radius:999px;padding:5px 12px;font:800 11px system-ui;border:1px solid ${id===m?'rgba(158,203,255,.8)':'var(--line)'};background:${id===m?'rgba(158,203,255,.2)':'transparent'};color:${id===m?'#cfe4ff':'var(--dim)'}">${label}</button>`;
+  return `<div style="margin:2px 0 6px;text-align:center"><span class="hint" style="margin:0 6px 0 0">Group chapters by</span>`+
+    pill('keyword','🔑 Keywords','Group by a shared concept — exact and fast')+
+    pill('semantic','🧭 Meaning','Group by overall similarity — the local vector service')+`</div>`;
+}
+// Keyword grouping: anchor = a shared concept (fast, exact).
+function groupKeyword(convs){
   const cc=new Map(); convs.forEach(c=>cc.set(c, canonConcepts(c)));
   const cf={}; convs.forEach(c=>cc.get(c).forEach(x=>cf[x]=(cf[x]||0)+1));
   const anchor=c=>{ const cs=cc.get(c); for(const x of cs){ if((cf[x]||0)>=3) return x; } return cs[0]||null; };
-  const groups={};
-  convs.forEach(c=>{ const a=anchor(c); const key=a==null?"__brief":a; (groups[key]=groups[key]||[]).push(c); });
-  const brief=[]; let chapters=[];
-  Object.entries(groups).forEach(([k,v])=>{ if(k==="__brief"||v.length<2) brief.push(...v);
-    else chapters.push({ anchor:k, convs:v.slice().sort((a,b)=>(a.at||0)-(b.at||0)) }); });
-  chapters.forEach((ch)=>{ ch.title=titleCase(ch.anchor);
-    const counts={}; ch.convs.forEach(c=>cc.get(c).forEach(x=>{ if(x!==ch.anchor) counts[x]=(counts[x]||0)+1; }));
-    ch.threads=Object.keys(counts).filter(k=>counts[k]>=2).sort((a,b)=>counts[b]-counts[a]).slice(0,6);
+  const groups={}; convs.forEach(c=>{ const a=anchor(c); const key=a==null?"__brief":a; (groups[key]=groups[key]||[]).push(c); });
+  const brief=[], chapters=[];
+  Object.entries(groups).forEach(([k,v])=>{ if(k==="__brief"||v.length<2) brief.push(...v); else chapters.push({ anchor:k, convs:v.slice() }); });
+  chapters.forEach(ch=>{ const counts={}; ch.convs.forEach(c=>cc.get(c).forEach(x=>{ if(x!==ch.anchor) counts[x]=(counts[x]||0)+1; }));
+    ch.threads=Object.keys(counts).filter(k=>counts[k]>=2).sort((a,b)=>counts[b]-counts[a]).slice(0,6); });
+  return { chapters, brief };
+}
+// --- local VECTOR SERVICE: TF-IDF vectors + cosine (kNN) → group by MEANING ---
+function stemTok(w){ if(w.length<=4) return w; const s=w.replace(/(ational|ization|iveness|ousness|fulness|ing|edly|ies|ied|ily|ness| ments|ment|tions|tion|sions|sion|ers|ors|est|ed|es|s)$/,""); return s.length>=3?s:w; }
+function convTF(c){ const tf={}; const add=(t,w)=>{ const s=stemTok(String(t)); if(s&&s.length>2) tf[s]=(tf[s]||0)+w; };
+  cgTok((c.title||"")+" "+(c.summary||"")).forEach(t=>add(t,1));
+  canonConcepts(c).forEach(t=>String(t).split(/\s+/).forEach(w=>{ if(w) add(w,2); }));
+  return tf; }
+function groupSemantic(convs){
+  const tfs=convs.map(convTF), N=convs.length, df={};
+  tfs.forEach(tf=>Object.keys(tf).forEach(t=>df[t]=(df[t]||0)+1));
+  const vecs=tfs.map(tf=>{ const v={}; let n=0; for(const t in tf){ const idf=Math.log((N+1)/((df[t]||0)+1))+1; const w=tf[t]*idf; v[t]=w; n+=w*w; } n=Math.sqrt(n)||1; for(const t in v) v[t]/=n; return v; });
+  const cos=(a,b)=>{ const [x,y]=Object.keys(a).length<Object.keys(b).length?[a,b]:[b,a]; let s=0; for(const t in x){ if(y[t]!==undefined) s+=x[t]*y[t]; } return s; };
+  // k-nearest-neighbour edges (adapts to the data's scale better than a fixed cutoff)
+  const K=6, FLOOR=0.02, MAX=30, edges=[];
+  for(let i=0;i<N;i++){ const sims=[];
+    for(let j=0;j<N;j++){ if(j===i) continue; const s=cos(vecs[i],vecs[j]); if(s>FLOOR) sims.push([s,j]); }
+    sims.sort((a,b)=>b[0]-a[0]); sims.slice(0,K).forEach(([s,j])=>edges.push([s,i,j])); }
+  edges.sort((a,b)=>b[0]-a[0]);
+  const par=convs.map((_,i)=>i), sz=convs.map(()=>1), find=x=>{ while(par[x]!==x){ par[x]=par[par[x]]; x=par[x]; } return x; };
+  edges.forEach(([s,i,j])=>{ const a=find(i),b=find(j); if(a!==b && sz[a]+sz[b]<=MAX){ par[a]=b; sz[b]+=sz[a]; } });
+  const byRoot={}; convs.forEach((c,i)=>{ const r=find(i); (byRoot[r]=byRoot[r]||[]).push(i); });
+  const brief=[], chapters=[];
+  Object.values(byRoot).forEach(idxs=>{ if(idxs.length<2){ idxs.forEach(i=>brief.push(convs[i])); return; }
+    const rank={}; idxs.forEach(i=>(convs[i].concepts||[]).forEach(x=>{ const k=canonConcept(x); if(k) rank[k]=(rank[k]||0)+1; }));
+    let terms=Object.keys(rank).sort((a,b)=>rank[b]-rank[a]);
+    if(!terms.length){ // fall back to centroid vector terms
+      const cent={}; idxs.forEach(i=>{ for(const t in vecs[i]) cent[t]=(cent[t]||0)+vecs[i][t]; });
+      terms=Object.keys(cent).sort((a,b)=>cent[b]-cent[a]); }
+    chapters.push({ anchor:terms[0]||"threads", convs:idxs.map(i=>convs[i]), threads:terms.slice(1,7) }); });
+  return { chapters, brief };
+}
+function buildBook(){
+  const convs=(DB.conversations||[]).slice();
+  const g=(currentGroupMode()==="semantic" && convs.length>=6) ? groupSemantic(convs) : groupKeyword(convs);
+  const chapters=g.chapters, brief=g.brief;
+  chapters.forEach(ch=>{ ch.convs.sort((a,b)=>(a.at||0)-(b.at||0)); ch.title=titleCase(ch.anchor); ch.threads=ch.threads||[];
     ch.span=[ch.convs[0].at, ch.convs[ch.convs.length-1].at]; });
-  // group chapters into Parts, order parts by first appearance, then renumber in reading order
   const byPart={}; chapters.forEach(ch=>{ (byPart[partOf(ch)]=byPart[partOf(ch)]||[]).push(ch); });
   const nameById={}; BOOK_PARTS.forEach(p=>nameById[p.id]=p.name); nameById.other="Other Explorations";
   let parts=Object.entries(byPart).map(([id,chs])=>({ id, name:nameById[id]||"Other",
@@ -769,7 +811,7 @@ function buildBook(){
   parts.sort((a,b)=>a.first-b.first);
   let n=0; parts.forEach(p=>p.chapters.forEach(ch=>ch.n=++n));
   const ordered=[].concat(...parts.map(p=>p.chapters));
-  return { chapters:ordered, parts, brief:brief.sort((a,b)=>(a.at||0)-(b.at||0)), total:convs.length,
+  return { chapters:ordered, parts, brief:brief.sort((a,b)=>(a.at||0)-(b.at||0)), total:convs.length, mode:currentGroupMode(),
     span:[Math.min(...convs.map(c=>c.at||Infinity)), Math.max(...convs.map(c=>c.at||0))] };
 }
 function fmtSpan(a,b){ const A=fmtDate(a), B=fmtDate(b); return A===B?A:`${A} – ${B}`; }
@@ -1008,6 +1050,7 @@ function renderStorybook(){
        <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.15em;text-transform:uppercase">An evolving autobiography</div>
        <h1 style="font:800 30px/1.15 Georgia,serif;margin:8px 0 0">The Story of Your Understanding</h1></div>
      <p style="font:400 16.5px/1.95 Georgia,serif;color:#eaeff7;margin:16px auto 14px;text-align:center;max-width:640px">${prologue}</p>
+     ${groupModeToggle()}
      ${coverWriteBar(book)}
      <details style="margin:0 0 8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0">
        <summary style="cursor:pointer;color:var(--dim);font:700 12px system-ui">Table of contents — ${nCh} chapters (tap a title to jump)</summary>
