@@ -873,18 +873,56 @@ function bookChapter(ch, deepMap){
 }
 /* ---- WRITE THE WHOLE BOOK: narrate every chapter in the background ---- */
 function updateChapterDom(ch, deepMap){ const el=document.getElementById("ch"+ch.n); if(el) el.outerHTML=bookChapter(ch, deepMap); }
-function bookProgress(done,total){
+function bookProgress(done,total,label,stopExpr){
+  label=label||"Writing your book"; stopExpr=stopExpr||"_narrAll.stop=true";
   let el=document.getElementById("bookProgress");
   if(!el){ el=document.createElement("div"); el.id="bookProgress";
     el.style.cssText="position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:9999;background:rgba(10,14,24,.96);border:1px solid rgba(167,139,250,.5);border-radius:999px;padding:9px 16px;color:#eef2f8;font:700 12px system-ui;box-shadow:0 6px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px";
     document.body.appendChild(el); }
-  el.innerHTML=`✍️ Writing your book — <b>${done} / ${total}</b> <button class="back" style="margin:0" onclick="_narrAll.stop=true;this.textContent='Stopping…'">Stop</button>`;
+  el.innerHTML=`✨ ${esc(label)} — <b>${done} / ${total}</b> <button class="back" style="margin:0" onclick="${stopExpr};this.textContent='Stopping…'">Stop</button>`;
 }
-function bookProgressDone(done,stopped){
+function bookProgressDone(done,stopped,resumeFn,noun){
   const el=document.getElementById("bookProgress"); if(!el) return;
-  el.innerHTML = stopped ? `Paused at ${done}. <button class="back" style="margin:0" onclick="writeWholeBook()">Resume</button> <button class="back" style="margin:0" onclick="this.parentElement.remove()">✕</button>`
-                         : `✓ Wrote ${done} chapter${done===1?"":"s"}. <button class="back" style="margin:0" onclick="this.parentElement.remove()">✕</button>`;
+  resumeFn=resumeFn||"writeWholeBook"; noun=noun||"chapter";
+  el.innerHTML = stopped ? `Paused at ${done}. <button class="back" style="margin:0" onclick="${resumeFn}()">Resume</button> <button class="back" style="margin:0" onclick="this.parentElement.remove()">✕</button>`
+                         : `✓ Done — ${done} ${noun}${done===1?"":"s"}. <button class="back" style="margin:0" onclick="this.parentElement.remove()">✕</button>`;
   if(!stopped) setTimeout(()=>{ const e=document.getElementById("bookProgress"); if(e) e.remove(); }, 7000);
+}
+/* ---- IMPROVE SUMMARIES: batched AI real-summaries + clean concepts ---- */
+let _improveRun={running:false,stop:false};
+async function improveBatch(batch){
+  const list=batch.map((c,i)=>`${i+1}. id=${c.id} | title: ${c.title} | opening: ${String(c.summary||"").slice(0,150).replace(/\s+/g," ")}`).join("\n");
+  const msg=`Here are ${batch.length} of my AI conversations (id, title, and my opening message). For EACH one, write a clear, engaging 1–2 sentence summary of what it was really about — readable and specific, never "the user asked" — and 3 to 5 clean topic tags (lowercase short noun phrases).\n\n${list}\n\nRespond with ONLY a JSON array, one object per conversation in the same order, exactly this shape:\n[{"id":"...","summary":"...","concepts":["tag","tag"]}]\nNo prose before or after. Do not invent facts beyond the title and opening.`;
+  const context="You are a careful editor turning raw AI-chat logs into a readable personal knowledge base. Faithful, specific, concise. Output valid JSON only — a single array.";
+  const reply=await chatLLM(msg, context);
+  if(!reply) return null;
+  try{ const m=String(reply).match(/\[[\s\S]*\]/); return m?JSON.parse(m[0]):null; }catch(e){ return null; }
+}
+async function improveAllSummaries(){
+  if(_improveRun.running || _narrAll.running) return;
+  if(!inkToken()) return;
+  const todo=(DB.conversations||[]).filter(c=>!c.aiSum);
+  if(!todo.length) return;
+  const calls=Math.ceil(todo.length/12);
+  if(!confirm(`Have Inkling write real summaries + clean tags for ${todo.length} conversation${todo.length===1?"":"s"}? It batches ~12 per AI call (~${calls} call${calls===1?"":"s"} on your API key) and can take a while. Stop anytime — finished ones are saved.`)) return;
+  _improveRun={running:true,stop:false};
+  const B=12; let done=0;
+  bookProgress(0, todo.length, "Improving summaries", "_improveRun.stop=true");
+  for(let i=0;i<todo.length && !_improveRun.stop;i+=B){
+    const batch=todo.slice(i,i+B);
+    let res=null; try{ res=await improveBatch(batch); }catch(e){ res=null; }
+    const byId={}; (res||[]).forEach(r=>{ if(r&&r.id!=null) byId[String(r.id)]=r; });
+    batch.forEach(c=>{ const r=byId[String(c.id)]; if(r){
+      if(r.summary) c.summary=String(r.summary).slice(0,300);
+      if(Array.isArray(r.concepts)&&r.concepts.length) c.concepts=r.concepts.map(x=>String(x).toLowerCase().trim()).filter(Boolean).slice(0,6);
+      c.aiSum=true; done++; } });
+    persist();
+    bookProgress(done, todo.length, "Improving summaries", "_improveRun.stop=true");
+    await new Promise(r=>setTimeout(r,400));
+  }
+  const stopped=_improveRun.stop; _improveRun={running:false,stop:false};
+  bookProgressDone(done, stopped, "improveAllSummaries", "summary");
+  if(view.name==="imports") renderImports(); else if(view.name==="storybook") renderStorybook();
 }
 function chaptersToNarrate(book){ return book.chapters.filter(ch=>{ const n=narrEntry(ch.anchor); return !(n&&n.sig===ch.convs.length); }); }
 async function writeWholeBook(){
@@ -895,7 +933,7 @@ async function writeWholeBook(){
   if(!confirm(`Have Inkling write ${todo.length} chapter${todo.length===1?"":"s"} in prose? It calls the AI once per chapter (uses your API key) and can take several minutes. You can Stop anytime — finished chapters are saved as it goes.`)) return;
   const deepMap={}; deepenings().forEach(d=>deepMap[d.key]=d);
   _narrAll={running:true, stop:false};
-  bookProgress(0, todo.length);
+  bookProgress(0, todo.length, "Writing your book", "_narrAll.stop=true");
   let done=0;
   for(const ch of todo){
     if(_narrAll.stop) break;
@@ -904,11 +942,11 @@ async function writeWholeBook(){
     _writingAnchor=null;
     if(text){ saveNarr(ch.anchor,{ text, sig:ch.convs.length, at:Date.now() }); persist(); }
     updateChapterDom(ch, deepMap);
-    done++; bookProgress(done, todo.length);
+    done++; bookProgress(done, todo.length, "Writing your book", "_narrAll.stop=true");
     await new Promise(r=>setTimeout(r, 500));
   }
   const stopped=_narrAll.stop; _narrAll={running:false,stop:false};
-  bookProgressDone(done, stopped);
+  bookProgressDone(done, stopped, "writeWholeBook", "chapter");
   const bar=document.getElementById("bookWriteBar"); if(bar) bar.outerHTML=coverWriteBar(buildBook());
 }
 function rewriteWholeBook(){
@@ -1250,6 +1288,14 @@ function renderImports(){
         <span id="cgStatus" class="hint" style="margin:0"></span>
       </div>
     </div>`;
+  const toImprove=(DB.conversations||[]).filter(c=>!c.aiSum).length;
+  const improveCard = list.length ? `<div class="node" style="border-color:rgba(158,203,255,.45)">
+      <div class="nh"><span class="nn">✨ Improve summaries with AI</span></div>
+      <div style="margin-top:7px;color:#dbe4ee;line-height:1.55">Turn the short first-message snippets into real, readable summaries and clean topic tags — batched ~12 per call to stay affordable. Improves your galaxy, atlas, and book at once.${toImprove?"":" <b style='color:#39d98a'>All caught up.</b>"}</div>
+      <div style="margin-top:10px">${inkToken()
+        ? `<button class="btn" style="font:800 12px system-ui" onclick="improveAllSummaries()"${toImprove?"":" disabled"}>✨ ${toImprove?("Improve "+toImprove+" conversation"+(toImprove===1?"":"s")):"All summaries improved"}</button>`
+        : `<span class="hint">Sign in on the main app + set an API key on Render to enable.</span>`}</div>
+    </div>` : "";
   if(!list.length){
     app.innerHTML=chrome(`<h1>📥 Imports</h1>
       ${cgCard}
@@ -1273,6 +1319,7 @@ function renderImports(){
     `<h1>📥 Imports</h1>
      <p class="sub">Conversations you brought in from ChatGPT, Claude, and Gemini — each one a star in your knowledge graph.</p>
      ${cgCard}
+     ${improveCard}
      ${journeyCard}
      ${galaxyBtn}
      ${cards}`, "imports");
