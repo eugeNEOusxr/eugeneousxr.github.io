@@ -391,6 +391,7 @@ function render(){
   if(view.name==="galaxy") return renderGalaxy();
   if(view.name==="storybook") return renderStorybook();
   if(view.name==="graph") return renderGraph();
+  if(view.name==="conv") return renderConvDetail(view.convId);
 }
 
 /* ============================================================
@@ -425,7 +426,7 @@ function renderGraph(){
   if(!g.nodes.length){ app.innerHTML=chrome(`<h1>🕸️ Knowledge Graph</h1><div class="empty">Not enough shared concepts yet.<br><span style="opacity:.8">Import more conversations (or run ✨ Improve summaries) and they'll link up here.</span></div>`,"graph"); return; }
   app.innerHTML=chrome(
     `<h1>🕸️ Knowledge Graph</h1>
-     <p class="sub">Walking through your mind — every concept a living node, pulled together by the conversations that share it. Drag to rearrange · click a node for its conversations.</p>
+     <p class="sub">Walking through your mind — every concept a living node. <b>Click a concept</b> to spread out the conversations inside it; <b>click a conversation</b> (the ringed endpoints) to open its Story. Drag to rearrange.</p>
      <div style="display:flex;gap:8px;align-items:center;margin:0 0 10px">
        <input id="kgSearch" placeholder="Search a concept…" oninput="window.__kgSearch=(this.value||'').toLowerCase()" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 11px;font:600 12px system-ui">
        <span class="hint" style="margin:0">${g.nodes.length} concepts · ${g.edges.length} links</span>
@@ -448,39 +449,62 @@ function startGraph(g){
   const dpr=window.devicePixelRatio||1, ctx=canvas.getContext("2d");
   const size=()=>{ const r=canvas.getBoundingClientRect(); canvas.width=r.width*dpr; canvas.height=r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); return r; };
   let R=size();
-  const N=g.nodes, byId={}; N.forEach(n=>byId[n.id]=n);
-  N.forEach((n,i)=>{ const a=i/N.length*Math.PI*2; n.x=R.width/2+Math.cos(a)*(120+Math.random()*80); n.y=R.height/2+Math.sin(a)*(90+Math.random()*60); n.vx=0; n.vy=0; });
-  const adj={}; g.edges.forEach(e=>{ (adj[e.a]=adj[e.a]||new Set()).add(e.b); (adj[e.b]=adj[e.b]||new Set()).add(e.a); });
-  window.__kgSearch=""; window.__kgCutoff=g.tmax; let drag=null, hover=null, sel=null;
+  const concepts=g.nodes; concepts.forEach(n=>{ n.kind="concept"; n.key=n.id; });
+  concepts.forEach((n,i)=>{ const a=i/concepts.length*Math.PI*2; n.x=R.width/2+Math.cos(a)*(120+Math.random()*80); n.y=R.height/2+Math.sin(a)*(90+Math.random()*60); n.vx=0; n.vy=0; });
+  let convNodes=[], nodes=[], edges=[], byKey={}, adj={}; const expanded=new Set();
+  function rebuild(){
+    nodes=concepts.concat(convNodes);
+    edges=g.edges.concat(convNodes.map(cn=>({a:cn.parent,b:cn.key,w:2,cx:true})));
+    byKey={}; nodes.forEach(n=>byKey[n.key]=n);
+    adj={}; edges.forEach(e=>{ (adj[e.a]=adj[e.a]||new Set()).add(e.b); (adj[e.b]=adj[e.b]||new Set()).add(e.a); });
+  }
+  function toggle(cid){ const parent=byKey[cid]; if(!parent||parent.kind!=="concept") return;
+    if(expanded.has(cid)) expanded.delete(cid);
+    else { expanded.add(cid); (g.byConcept[cid]||[]).slice(0,10).forEach((c,i)=>{ const key=cid+"|"+c.id; if(convNodes.some(x=>x.key===key)) return;
+      const a=i/10*Math.PI*2; convNodes.push({ kind:"conv", key, convId:c.id, conv:c, label:(c.title||"Untitled").slice(0,22), r:5, cat:parent.cat, parent:cid, firstAt:c.at||0, x:parent.x+Math.cos(a)*55, y:parent.y+Math.sin(a)*55, vx:0, vy:0 }); }); }
+    convNodes=convNodes.filter(cn=>expanded.has(cn.parent)); rebuild();
+  }
+  rebuild();
+  window.__kg={ toggle, nodes:()=>nodes, expanded:()=>[...expanded] };
+  window.__kgSearch=""; window.__kgCutoff=g.tmax; let drag=null, hover=null, sel=null, downNode=null, downXY=null, moved=false;
   const at=ev=>{ const r=canvas.getBoundingClientRect(); return {x:ev.clientX-r.left, y:ev.clientY-r.top}; };
-  const pick=p=>{ let best=null,bd=1e9; N.forEach(n=>{ const d=(n.x-p.x)**2+(n.y-p.y)**2; const rr=Math.max(12,n.r+6); if(d<rr*rr&&d<bd){bd=d;best=n;} }); return best; };
-  canvas.onmousedown=e=>{ const n=pick(at(e)); if(n){ drag=n; n.fixed=true; canvas.style.cursor="grabbing"; } };
-  canvas.onmousemove=e=>{ const p=at(e); if(drag){ drag.x=p.x; drag.y=p.y; drag.vx=drag.vy=0; } else { hover=pick(p); canvas.style.cursor=hover?"pointer":"grab"; } };
-  canvas.onmouseup=()=>{ if(drag){ drag.fixed=false; drag=null; canvas.style.cursor="grab"; } };
-  canvas.onmouseleave=()=>{ if(drag){ drag.fixed=false; drag=null; } hover=null; };
-  canvas.onclick=e=>{ const n=pick(at(e)); if(n){ sel=n; showGraphNode(n,g); } };
+  const pick=p=>{ let best=null,bd=1e9; nodes.forEach(n=>{ const d=(n.x-p.x)**2+(n.y-p.y)**2; const rr=Math.max(12,n.r+7); if(d<rr*rr&&d<bd){bd=d;best=n;} }); return best; };
+  canvas.onmousedown=e=>{ const p=at(e), n=pick(p); if(n){ drag=n; downNode=n; downXY=p; moved=false; n.fixed=true; canvas.style.cursor="grabbing"; } };
+  canvas.onmousemove=e=>{ const p=at(e); if(drag){ if(Math.hypot(p.x-downXY.x,p.y-downXY.y)>4) moved=true; drag.x=p.x; drag.y=p.y; drag.vx=drag.vy=0; } else { hover=pick(p); canvas.style.cursor=hover?"pointer":"grab"; } };
+  canvas.onmouseup=()=>{ if(!drag) return; drag.fixed=false; const n=downNode; drag=null; downNode=null; canvas.style.cursor="grab";
+    if(n && !moved){ sel=n; if(n.kind==="conv") openConv(n.convId); else toggle(n.key); } };
+  canvas.onmouseleave=()=>{ if(drag){ drag.fixed=false; drag=null; downNode=null; } hover=null; };
   function step(){
     if(!document.getElementById("kgraph")) return;
-    for(let i=0;i<N.length;i++){ const a=N[i]; if(a.fixed) continue;
-      for(let j=0;j<N.length;j++){ if(i===j) continue; const b=N[j]; const dx=a.x-b.x, dy=a.y-b.y; const d2=dx*dx+dy*dy+0.01, d=Math.sqrt(d2); const f=1600/d2; a.vx+=dx/d*f; a.vy+=dy/d*f; }
-      a.vx+=(R.width/2-a.x)*0.0010*(0.5+a.w/g.fmax); a.vy+=(R.height/2-a.y)*0.0010*(0.5+a.w/g.fmax);
+    const M=nodes.length;
+    for(let i=0;i<M;i++){ const a=nodes[i]; if(a.fixed) continue;
+      for(let j=0;j<M;j++){ if(i===j) continue; const b=nodes[j]; const dx=a.x-b.x, dy=a.y-b.y; const d2=dx*dx+dy*dy+0.01, d=Math.sqrt(d2); const f=(a.kind==="conv"||b.kind==="conv"?650:1600)/d2; a.vx+=dx/d*f; a.vy+=dy/d*f; }
+      const g0=a.kind==="conv"?0.0004:0.0010*(0.5+a.w/g.fmax); a.vx+=(R.width/2-a.x)*g0; a.vy+=(R.height/2-a.y)*g0;
     }
-    g.edges.forEach(e=>{ const a=byId[e.a], b=byId[e.b]; const dx=b.x-a.x, dy=b.y-a.y, dist=Math.sqrt(dx*dx+dy*dy)||1, f=(dist-72)*0.0022*Math.min(3,e.w);
+    edges.forEach(e=>{ const a=byKey[e.a], b=byKey[e.b]; if(!a||!b) return; const dx=b.x-a.x, dy=b.y-a.y, dist=Math.sqrt(dx*dx+dy*dy)||1, tgt=e.cx?42:72, f=(dist-tgt)*(e.cx?0.01:0.0022)*Math.min(3,e.w);
       if(!a.fixed){ a.vx+=dx/dist*f; a.vy+=dy/dist*f; } if(!b.fixed){ b.vx-=dx/dist*f; b.vy-=dy/dist*f; } });
-    N.forEach(n=>{ if(n.fixed) return; n.vx*=0.84; n.vy*=0.84; n.x+=n.vx; n.y+=n.vy; n.x=Math.max(n.r,Math.min(R.width-n.r,n.x)); n.y=Math.max(n.r,Math.min(R.height-n.r,n.y)); });
+    nodes.forEach(n=>{ if(n.fixed) return; n.vx*=0.84; n.vy*=0.84; n.x+=n.vx; n.y+=n.vy; n.x=Math.max(n.r,Math.min(R.width-n.r,n.x)); n.y=Math.max(n.r,Math.min(R.height-n.r,n.y)); });
     ctx.clearRect(0,0,R.width,R.height);
-    const q=window.__kgSearch||"", anyQ=!!q, m=n=>q&&n.id.includes(q);
+    const q=window.__kgSearch||"", anyQ=!!q;
+    const m=n=> q && (n.kind==="concept"? n.id.includes(q) : n.label.toLowerCase().includes(q));
     const cut=window.__kgCutoff||g.tmax, vis=n=>(n.firstAt||0)<=cut;
-    const lit=n=> !anyQ ? true : (m(n) || (adj[n.id]&&[...adj[n.id]].some(x=>x.includes(q))));
-    g.edges.forEach(e=>{ const a=byId[e.a], b=byId[e.b]; if(!vis(a)||!vis(b)) return; const on=!anyQ||m(a)||m(b)||(sel&&(a===sel||b===sel));
-      ctx.strokeStyle=on?"rgba(150,130,255,"+Math.min(.5,.1+.08*e.w)+")":"rgba(150,130,255,.04)"; ctx.lineWidth=on?Math.min(3,0.6+e.w*0.4):0.6;
-      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); });
-    N.forEach(n=>{ if(!vis(n)) return; const hi=(n===hover||n===sel), neigh=sel&&adj[sel.id]&&adj[sel.id].has(n.id), L=lit(n), col=KG_CATCOLOR[n.cat]||"#9ecbff";
+    const lit=n=> !anyQ ? true : (m(n) || (adj[n.key]&&[...adj[n.key]].some(k=>{ const nb=byKey[k]; return nb&&m(nb); })));
+    edges.forEach(e=>{ const a=byKey[e.a], b=byKey[e.b]; if(!a||!b||!vis(a)||!vis(b)) return; const on=!anyQ||m(a)||m(b)||(sel&&(a===sel||b===sel));
+      ctx.strokeStyle=e.cx?(on?"rgba(158,203,255,.4)":"rgba(158,203,255,.09)"):(on?"rgba(150,130,255,"+Math.min(.5,.1+.08*e.w)+")":"rgba(150,130,255,.04)");
+      ctx.lineWidth=e.cx?1:(on?Math.min(3,0.6+e.w*0.4):0.6); ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); });
+    nodes.forEach(n=>{ if(!vis(n)) return; const hi=(n===hover||n===sel), L=lit(n), col=KG_CATCOLOR[n.cat]||"#9ecbff";
       ctx.globalAlpha=L?1:0.16;
-      const gg=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*1.9); gg.addColorStop(0,col); gg.addColorStop(1,"rgba(5,7,14,0)");
-      ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*1.9,0,7); ctx.fill();
-      ctx.fillStyle=(hi||neigh)?"#fff":col; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*(hi?0.95:0.7),0,7); ctx.fill();
-      if(n.r>10||hi||neigh){ ctx.fillStyle="rgba(234,242,255,"+(L?0.95:0.3)+")"; ctx.font=(hi?"800 ":"600 ")+Math.round(Math.min(15,9+n.r*0.22))+"px system-ui"; ctx.textAlign="center"; ctx.fillText(n.label, n.x, n.y-n.r-4); }
+      if(n.kind==="conv"){
+        ctx.fillStyle=hi?"#fff":col; ctx.beginPath(); ctx.arc(n.x,n.y,hi?6:4.5,0,7); ctx.fill();
+        ctx.strokeStyle=col; ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(n.x,n.y,hi?9:7,0,7); ctx.stroke();
+        if(hi){ ctx.fillStyle="#eaf2ff"; ctx.font="700 11px system-ui"; ctx.textAlign="center"; ctx.fillText(n.label+" →", n.x, n.y-12); }
+      } else {
+        const gg=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*1.9); gg.addColorStop(0,col); gg.addColorStop(1,"rgba(5,7,14,0)");
+        ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*1.9,0,7); ctx.fill();
+        ctx.fillStyle=hi?"#fff":col; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*(hi?0.95:0.7),0,7); ctx.fill();
+        if(expanded.has(n.key)){ ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(n.x,n.y,n.r*1.15,0,7); ctx.stroke(); }
+        if(n.r>10||hi){ ctx.fillStyle="rgba(234,242,255,"+(L?0.95:0.3)+")"; ctx.font=(hi?"800 ":"600 ")+Math.round(Math.min(15,9+n.r*0.22))+"px system-ui"; ctx.textAlign="center"; ctx.fillText(n.label, n.x, n.y-n.r-4); }
+      }
       ctx.globalAlpha=1;
     });
     requestAnimationFrame(step);
@@ -507,6 +531,42 @@ function showGraphNode(n,g){
 function openChapterForConv(id){
   const book=buildBook(); const ch=book.chapters.find(c=>c.convs.some(x=>x.id===id));
   if(ch) openChapterFromLibrary(ch.n); else openConvInGalaxy(id);
+}
+/* ---- ONE CONVERSATION: read it + have Inkling elaborate (uses the fuller excerpt) ---- */
+function openConv(id){ go({name:"conv", convId:id}); }
+let _elabId=null;
+async function elaborateConv(id){
+  const c=(DB.conversations||[]).find(x=>x.id===id); if(!c) return;
+  if(!inkToken()){ _elabId="__signin"; renderConvDetail(id); return; }
+  _elabId=id; renderConvDetail(id);
+  const msg=`Here is one of my past conversations. Elaborate on what I was really exploring — the questions I was asking, the ideas at play, and how they connect to my thinking about consciousness, AI, and the mind. Write 2–3 thoughtful paragraphs grounded ONLY in the text below; where I was uncertain, preserve the uncertainty. Do not invent.\n\nTitle: ${c.title}\n\n${c.excerpt||c.summary||""}`;
+  const context="You are Inkling, a thoughtful mentor helping the user understand their own past conversations. Ground everything strictly in the provided text; never invent facts or events. Second person, warm, precise, curious. No headings, no lists.";
+  let text=null; try{ text=await chatLLM(msg, context); }catch(e){ text=null; }
+  _elabId=null;
+  if(text){ DB.elaborations=DB.elaborations||{}; DB.elaborations[id]=text; persist(); }
+  else { _elabId="__fail"; }
+  renderConvDetail(id);
+}
+function renderConvDetail(id){
+  const c=(DB.conversations||[]).find(x=>x.id===id);
+  if(!c){ go({name:"storybook"}); return; }
+  const dialogue = c.excerpt
+    ? c.excerpt.split("\n").filter(Boolean).map(line=>{ const me=/^Me:/.test(line); return `<div style="margin:0 0 8px;padding:9px 12px;border-radius:12px;max-width:88%;${me?'background:rgba(88,166,255,.14);border:1px solid rgba(88,166,255,.3);margin-left:auto':'background:var(--panel);border:1px solid var(--line)'}"><span class="hint" style="margin:0 0 2px;display:block">${me?'You':'Inkling / AI'}</span><span style="color:#e6edf3;line-height:1.55">${esc(line.replace(/^(Me:|AI:)\s*/,""))}</span></div>`; }).join("")
+    : `<div class="hint">Only a short summary was saved for this one. Re-import your export (📥 Imports) to bring in the fuller conversation.</div><p style="color:#dbe4ee;line-height:1.6;margin-top:8px">${esc(c.summary||"")}</p>`;
+  const el=(DB.elaborations||{})[id];
+  let elab;
+  if(_elabId===id) elab=`<div class="panel"><p class="hint" style="margin:0">✍️ Inkling is elaborating…</p></div>`;
+  else if(el) elab=`<div class="panel" style="border-color:rgba(167,139,250,.35)"><div style="font:800 10px system-ui;color:var(--violet);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">✍️ Inkling elaborates</div><div style="font:400 15.5px/1.85 Georgia,serif;color:#eef2f8">${mdToHtml(el)}</div><div style="margin-top:8px"><button class="back" onclick="elaborateConv('${attrJs(id)}')">↻ Again</button></div></div>`;
+  else elab=`<div style="margin:6px 0"><button class="btn" style="font:800 12px system-ui" onclick="elaborateConv('${attrJs(id)}')">${inkToken()?"✍️ Have Inkling elaborate on this":"✍️ Elaborate (sign in for AI)"}</button>${_elabId==="__signin"?'<div class="hint" style="margin-top:6px">Sign in on the main app + set an API key on Render to enable.</div>':''}${_elabId==="__fail"?'<div class="hint" style="margin-top:6px">Inkling\'s AI is unavailable right now.</div>':''}</div>`;
+  app.innerHTML=chrome(
+    `<button class="back" onclick="go({name:'storybook'})">‹ Back to your library</button>
+     <h1 style="margin:10px 0 2px">${esc(c.title)}</h1>
+     <p class="sub">${esc((c.provider||"ai").toUpperCase())} · ${fmtDate(c.at)} · ${c.messageCount||0} messages${c.excerpt?"":" · summary only"}</p>
+     <div class="links" style="margin:0 0 12px">${(c.concepts||[]).slice(0,10).map(x=>`<span class="lk">${esc(x)}</span>`).join("")}</div>
+     ${elab}
+     <div style="margin:18px 0 8px"><h2 style="font:800 13px system-ui;color:var(--violet);margin:0">The conversation</h2></div>
+     ${dialogue}`, "graph");
+  window.scrollTo(0,0);
 }
 let _kgTimer=null;
 function updateKgDate(){ const el=document.getElementById("kgDate"), s=document.getElementById("kgTime"); if(!el||!s) return; el.textContent=(+s.value>=+s.max)?"all time":fmtDate(+s.value); }
@@ -1021,7 +1081,7 @@ function narrationInline(ch){
 
 // One conversation, as a flowing line in the book (not a button/list item).
 function bookEntry(c){
-  return `<p style="font:400 15px/1.72 Georgia,serif;color:#c9d3e2;margin:0 0 10px;padding-left:14px;border-left:2px solid rgba(167,139,250,.16);cursor:pointer" onclick="openConvInGalaxy('${c.id}')"><span style="color:var(--violet);font-weight:700;font-size:12.5px">${fmtDate(c.at)}</span> — <b style="color:#e7edf6">${esc(c.title)}</b>${c.summary?`. ${esc(c.summary)}`:""}</p>`;
+  return `<p style="font:400 15px/1.72 Georgia,serif;color:#c9d3e2;margin:0 0 10px;padding-left:14px;border-left:2px solid rgba(167,139,250,.16);cursor:pointer" onclick="openConv('${c.id}')"><span style="color:var(--violet);font-weight:700;font-size:12.5px">${fmtDate(c.at)}</span> — <b style="color:#e7edf6">${esc(c.title)}</b>${c.summary?`. ${esc(c.summary)}`:""}</p>`;
 }
 function bookChapter(ch, deepMap){
   const nar=narrEntry(ch.anchor), narr=(nar&&nar.sig===ch.convs.length)?nar.text:null;
@@ -1427,13 +1487,26 @@ function cgStrip(s){ return String(s||"").replace(/```[\s\S]*?```/g," ").replace
 function cgClean(s){ return cgStrip(s).toLowerCase().replace(/[^a-z0-9+\s-]/g," ").replace(/\s+/g," ").trim(); }
 function cgBase(w){ return /[a-z]/.test(w)&&/^[a-z][a-z0-9+-]*[a-z0-9]$/.test(w)&&w.length>=3&&w.length<=22&&!CG_STOP.has(w)&&!CG_NOISE.has(w); }
 function cgTok(s){ return cgClean(s).split(" ").filter(cgBase); }
-function cgConvText(c){
-  let user=[], asst=[], first="";
+function cgMessages(c){
+  const msgs=[];
   for(const nd of Object.values(c.mapping||{})){ const m=nd.message; if(!m||!m.content||m.content.content_type!=="text")continue;
     const role=m.author&&m.author.role; if(role!=="user"&&role!=="assistant")continue;
     const t=(m.content.parts||[]).filter(p=>typeof p==="string").join(" ").trim(); if(!t)continue;
-    if(role==="user"){ user.push(t); if(!first) first=t; } else asst.push(t); }
-  return { user:user.join("\n").slice(0,14000), asst:asst.join("\n").slice(0,16000), first, n:user.length+asst.length };
+    msgs.push({ role, t, ct:m.create_time||0 }); }
+  msgs.sort((a,b)=>a.ct-b.ct);
+  return msgs;
+}
+// A richer excerpt of the actual back-and-forth (kept local; ~2k chars) so the AI
+// passes have real material — not just the first message.
+function cgExcerpt(msgs){
+  const out=[]; let len=0;
+  for(const m of msgs){ if(len>1900) break; const line=(m.role==="user"?"Me: ":"AI: ")+m.t.replace(/\s+/g," ").slice(0,340); out.push(line); len+=line.length+1; }
+  return out.join("\n").slice(0,2100);
+}
+function cgConvText(c){
+  const msgs=cgMessages(c); let user=[], asst=[], first="";
+  msgs.forEach(m=>{ if(m.role==="user"){ user.push(m.t); if(!first) first=m.t; } else asst.push(m.t); });
+  return { user:user.join("\n").slice(0,14000), asst:asst.join("\n").slice(0,16000), first, n:msgs.length, msgs };
 }
 function cgTopTerms(text){ const w=cgTok(text); const uni={}, bi={};
   for(let i=0;i<w.length;i++){ if(!CG_GENERIC.has(w[i])) uni[w[i]]=(uni[w[i]]||0)+1;
@@ -1453,6 +1526,7 @@ function cgRecord(c){
   return { id: c.conversation_id||c.id||("cg"+at+Math.random().toString(36).slice(2,6)),
     title: (c.title&&c.title.trim())||"Untitled conversation", provider:"chatgpt",
     summary: (txt.first||"").replace(/\s+/g," ").slice(0,180),
+    excerpt: cgExcerpt(txt.msgs),
     concepts, messageCount: txt.n, at,
     provenance:null, messages:null, digest:null, quiz:null, relations:[] };
 }
@@ -1502,21 +1576,28 @@ async function importChatGPT(fileList){
     }
   }
   if(!sources.length){ cgStatus("No conversations found — pick your <b>chatgptconvo.zip</b> (or the <b>conversations-*.json</b> files inside it)."); return; }
-  const have=new Set((DB.conversations||[]).map(c=>c.id)); let added=0, scanned=0;
+  DB.conversations=DB.conversations||[];
+  const byId={}; DB.conversations.forEach(c=>byId[c.id]=c); let added=0, updated=0, scanned=0;
   for(let i=0;i<sources.length;i++){
-    cgStatus(`Reading ${i+1}/${sources.length} — ${esc(sources[i].name)}… <span style="color:var(--dim)">${added} conversations so far</span>`);
+    cgStatus(`Reading ${i+1}/${sources.length} — ${esc(sources[i].name)}… <span style="color:var(--dim)">${added} new · ${updated} refreshed</span>`);
     await new Promise(r=>setTimeout(r,10));
     let arr; try{ arr=JSON.parse(await sources[i].get()); }catch(e){ continue; }
     if(!Array.isArray(arr)) arr=[arr];
     for(const c of arr){ if(!c||!c.mapping)continue; scanned++;
-      const rec=cgRecord(c); if(have.has(rec.id))continue; have.add(rec.id);
-      DB.conversations.push(rec); added++; }
+      const rec=cgRecord(c); const ex=byId[rec.id];
+      if(ex){ // re-import: refresh the excerpt + message count; keep AI-improved summary/concepts
+        ex.excerpt=rec.excerpt; ex.messageCount=rec.messageCount;
+        if(!ex.aiSum){ ex.summary=rec.summary; ex.concepts=rec.concepts; }
+        updated++;
+      } else { byId[rec.id]=rec; DB.conversations.push(rec); added++; }
+    }
     arr=null;
   }
   DB.conversations.sort((a,b)=>b.at-a.at);
   try{ persist(); }catch(e){ cgStatus("⚠ Storage got full — imported what fit."); }
-  cgStatus(`✅ Imported <b>${added}</b> conversation${added===1?"":"s"} (${scanned} scanned). Opening your galaxy…`);
-  setTimeout(()=>go({name:"galaxy"}), 900);
+  cgStatus(`✅ ${added} new · ${updated} refreshed with fuller text (${scanned} scanned). Opening your library…`);
+  DB.storyView="library"; try{ persist(); }catch(e){}
+  setTimeout(()=>go({name:"storybook"}), 900);
 }
 function triggerChatGPTImport(){ const el=document.getElementById("cgFile"); if(el) el.click(); }
 
