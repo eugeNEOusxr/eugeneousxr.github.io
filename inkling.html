@@ -1017,6 +1017,80 @@ function coverWriteBar(book){
   return `<div id="bookWriteBar" style="margin:4px 0 14px">${genrePicker()}<div style="text-align:center;margin-top:8px">${action}</div></div>`;
 }
 
+/* ---- THE LIBRARY: a browsable homepage of your life, by category ---- */
+const LIB_CATS=[
+  { id:"consciousness", name:"AI & Consciousness", emoji:"🧠", priority:true, kw:["consciousness","conscious","awareness","aware","sentient","sentience","coincidence","synchronicity","emergence","qualia","subjective","the mind","ai mind"] },
+  { id:"mind", name:"My Mind & Inner Experience", emoji:"🌌", priority:true, kw:["my mind","my thoughts","thought","dream","memory","feeling","perception","intuition","psyche","identity","inner","introspect"] },
+  { id:"spiritual", name:"Spiritual Reflections", emoji:"✨", priority:true, kw:["spiritual","spirit","god","soul","meditation","universe","faith","sacred","divine","enlighten","cosmic","meaning of life","existence"] },
+  { id:"growth", name:"Personal Growth", emoji:"🌱", kw:["growth","habit","discipline","motivation","self-improvement","routine","mindset","overcome","healing","purpose","reflection"] },
+  { id:"philosophy", name:"Technology Philosophy", emoji:"🤔", kw:["philosophy","ethics","implications","morality","humanity","society","future of","should we","meaning of technology"] },
+  { id:"inkling", name:"Inkling Development", emoji:"🌿", kw:["inkling"] },
+  { id:"worldweaver", name:"WorldWeaver & WordWeaver", emoji:"🕸️", kw:["worldweaver","wordweaver","weaver"] },
+  { id:"ee", name:"Electrical Engineering Journey", emoji:"⚡", kw:["electrical","circuit","voltage","transistor","electrician","electronics","resistor","current","mosfet","ohm"] },
+  { id:"code", name:"Programming & Software", emoji:"💻", kw:["python","javascript","programming","software","api","algorithm","backend","database","code","script"] },
+  { id:"chain", name:"Blockchain & Crypto", emoji:"🔗", kw:["solana","blockchain","smart contract","token","crypto","web3","nft","wallet"] },
+  { id:"ai", name:"AI & Machine Learning", emoji:"🤖", kw:["neural","machine learning","language model","llm","gpt","training","agent","embedding","gradient"] },
+  { id:"creative", name:"Creative Projects", emoji:"🎨", kw:["pixel prodigy","game","art","music","unity","3d","story","design","creative","render"] },
+  { id:"business", name:"Business Ideas", emoji:"💡", kw:["business","startup","monetize","revenue","product","market","customer","pitch","saas","entrepreneur"] },
+  { id:"future", name:"Future Vision", emoji:"🔮", kw:["future","vision","roadmap","long term","someday","10 year","ambition"] },
+  { id:"science", name:"Science & the Cosmos", emoji:"🔭", kw:["quantum","physics","energy","cosmic","light","space","astronomy","relativity"] },
+];
+const LIB_OTHER={ id:"other", name:"Other Explorations", emoji:"📂" };
+function libCatOf(ch){
+  const title=(ch.anchor+" "+ch.title).toLowerCase();
+  const body=((ch.threads||[]).join(" ")+" "+ch.convs.map(c=>c.title+" "+(c.summary||"")).join(" ")).toLowerCase();
+  let best="other", score=0.9;
+  LIB_CATS.forEach(cat=>{ let s=0;
+    cat.kw.forEach(k=>{ if(title.includes(k)) s+=3; else if(body.includes(k)) s+=1; });
+    if(cat.priority&&s>0) s+=0.6;
+    if(s>score){ score=s; best=cat.id; } });
+  return best;
+}
+function chapterEmoji(ch){ const c=LIB_CATS.find(x=>x.id===libCatOf(ch)); return c?c.emoji:LIB_OTHER.emoji; }
+function readingTime(ch){ const m=ch.convs.reduce((s,c)=>s+(c.messageCount||4),0); return Math.max(2, Math.min(45, Math.round(m*0.5))); }
+function chapterTeaser(ch){
+  const c=ch.convs.slice().sort((a,b)=>(b.messageCount||0)-(a.messageCount||0))[0];
+  let s=(c&&c.summary)||("Exploring "+ch.title+" across "+ch.convs.length+" conversations.");
+  s=String(s).split(". ")[0].replace(/\.$/,""); return s.length>150?s.slice(0,150)+"…":s;
+}
+function currentStoryView(){ return DB.storyView==="read" ? "read" : "library"; }
+function setStoryView(v){ DB.storyView=(v==="read"?"read":"library"); persist(); renderStorybook(); }
+function storyViewToggle(){
+  const v=currentStoryView();
+  const pill=(id,label)=>`<button onclick="setStoryView('${id}')" style="cursor:pointer;border-radius:999px;padding:5px 13px;font:800 11px system-ui;border:1px solid ${id===v?'rgba(167,139,250,.8)':'var(--line)'};background:${id===v?'rgba(167,139,250,.2)':'transparent'};color:${id===v?'#ddd6fe':'var(--dim)'}">${label}</button>`;
+  return `<div style="display:flex;gap:6px;justify-content:center;margin:2px 0 10px">${pill('library','📚 Library')}${pill('read','📖 Read straight through')}</div>`;
+}
+function openChapterFromLibrary(n){ _bookScrollCh=n; DB.storyView="read"; persist(); renderStorybook(); }
+function storyCard(ch, emoji){
+  return `<button onclick="openChapterFromLibrary(${ch.n})" style="text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:118px">
+    <div style="font-size:22px;line-height:1">${emoji}</div>
+    <div style="font:800 14px system-ui;color:#eef2f8;line-height:1.25">${esc(ch.title)}</div>
+    <div style="font:400 12.5px/1.5 system-ui;color:var(--dim);flex:1">${esc(chapterTeaser(ch))}</div>
+    <div style="font:700 11px system-ui;color:var(--violet)">⏱ ${readingTime(ch)} min · ${ch.convs.length} conversation${ch.convs.length===1?"":"s"}</div>
+  </button>`;
+}
+function renderLibrary(book){
+  const cats={}; LIB_CATS.concat([LIB_OTHER]).forEach(c=>cats[c.id]={ ...c, chapters:[] });
+  book.chapters.forEach(ch=>{ cats[libCatOf(ch)].chapters.push(ch); });
+  const order=LIB_CATS.map(c=>c.id).concat(["other"]);
+  const shown=order.map(id=>cats[id]).filter(c=>c.chapters.length);
+  const sections=shown.map(c=>{
+    const cards=c.chapters.slice().sort((a,b)=>b.convs.length-a.convs.length).map(ch=>storyCard(ch,c.emoji)).join("");
+    return `<div style="margin:28px 0 8px"><h2 style="font:800 17px system-ui;margin:0;color:#eef2f8">${c.emoji} ${esc(c.name)} <span style="color:var(--dim);font-weight:700;font-size:12px">· ${c.chapters.length}</span></h2></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px">${cards}</div>`;
+  }).join("");
+  app.innerHTML=chrome(
+    `${storyViewToggle()}
+     <div style="text-align:center;margin:4px 0 6px">
+       <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.15em;text-transform:uppercase">A digital library of your life</div>
+       <h1 style="font:800 28px/1.15 Georgia,serif;margin:8px 0 0">The Story of Your Understanding</h1></div>
+     <p class="sub" style="text-align:center;max-width:660px;margin:10px auto 4px">${book.total} conversations · ${book.chapters.length} chapters across ${shown.length} categories · ${fmtSpan(book.span[0],book.span[1])}. Browse by category, or open any story to read it.</p>
+     ${groupModeToggle()}
+     ${sections}
+     <div class="hint" style="margin-top:24px;text-align:center">Tap a story to read it. Switch to <b>📖 Read straight through</b> for the whole book, cover to cover.</div>`, "storybook");
+  window.scrollTo(0,0);
+}
+
 // The whole book, read straight through — cover, then every chapter in sequence.
 function renderStorybook(){
   const book=buildBook();
@@ -1025,6 +1099,7 @@ function renderStorybook(){
       <div class="empty">Your book hasn't started yet.<br><span style="opacity:.8">Import your ChatGPT history (📥 Imports) — Inkling writes it into chapters here.</span></div>`, "storybook");
     return;
   }
+  if(currentStoryView()==="library") return renderLibrary(book);
   const nCh=book.chapters.length;
   const deepMap={}; deepenings().forEach(d=>deepMap[d.key]=d);
   const nParts=book.parts.length;
@@ -1046,7 +1121,8 @@ function renderStorybook(){
       <p style="font:400 16px/1.9 Georgia,serif;color:#eaeff7;margin:0 0 12px">${book.brief.length} conversations that stand on their own — one-off questions and quick detours that haven't yet grown into a chapter.</p>
       ${book.brief.map(bookEntry).join("")}</section>`:"";
   app.innerHTML=chrome(
-    `<div style="text-align:center;margin:6px 0 4px">
+    `${storyViewToggle()}
+     <div style="text-align:center;margin:6px 0 4px">
        <div style="font:800 11px system-ui;color:var(--violet);letter-spacing:.15em;text-transform:uppercase">An evolving autobiography</div>
        <h1 style="font:800 30px/1.15 Georgia,serif;margin:8px 0 0">The Story of Your Understanding</h1></div>
      <p style="font:400 16.5px/1.95 Georgia,serif;color:#eaeff7;margin:16px auto 14px;text-align:center;max-width:640px">${prologue}</p>
