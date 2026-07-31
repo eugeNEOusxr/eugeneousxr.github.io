@@ -431,6 +431,27 @@ function buildConceptGraph(){
   edges=edges.sort((p,q)=>q.w-p.w).slice(0,240);
   return { nodes, edges, byConcept, fmax, tmin, tmax };
 }
+// Memory trail: the connected ideas that led up to a node, earliest first.
+function traceTrail(g, key){
+  const el=document.getElementById("kgInfo"); if(!el) return;
+  const byId={}; g.nodes.forEach(n=>byId[n.id]=n);
+  const start=byId[key]; if(!start){ el.style.display="none"; return; }
+  const adj={}; g.edges.forEach(e=>{ (adj[e.a]=adj[e.a]||[]).push(e.b); (adj[e.b]=adj[e.b]||[]).push(e.a); });
+  const seen=new Set([key]), q=[key]; while(q.length){ const x=q.shift(); (adj[x]||[]).forEach(y=>{ if(!seen.has(y)){ seen.add(y); q.push(y); } }); }
+  const comp=[...seen].map(k=>byId[k]).filter(Boolean);
+  const before=comp.filter(n=>(n.firstAt||0)<=(start.firstAt||0)).sort((a,b)=>(a.firstAt||0)-(b.firstAt||0));
+  const led=before.length>1?before:comp.sort((a,b)=>(a.firstAt||0)-(b.firstAt||0));
+  const chain=led.map(n=>`<span onclick="go({name:'graph',focusConcept:'${attrJs(n.id)}'})" style="cursor:pointer;color:${n===start?'#fff':(KG_CATCOLOR[n.cat]||'#9ecbff')};font-weight:${n===start?800:600}">${esc(n.label)}</span>`);
+  el.innerHTML=`<div class="panel" style="margin:0;background:rgba(8,12,22,.97)">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+      <span class="nn" style="color:${KG_CATCOLOR[start.cat]||'#9ecbff'}">🧵 Memory trail · ${esc(start.label)}</span>
+      <button class="back" style="margin:0" onclick="var e=document.getElementById('kgInfo');if(e)e.style.display='none';window.__kgTrail=null">✕</button></div>
+    <div class="hint" style="margin:6px 0 0">How this grew — connected ideas, earliest first:</div>
+    <div style="margin-top:6px;line-height:1.9;font-size:13px">${chain.join(' <span style="color:var(--dim)">→</span> ')}</div>
+    <div class="hint" style="margin-top:6px">Click a concept above to jump to it · tap the node again to also spread its conversations.</div>
+  </div>`;
+  el.style.display="block"; window.__kgTrail=seen;
+}
 function kgTypePills(g){
   if(!window.__kgHide) window.__kgHide=new Set(["realization","question"]);
   const counts={}; g.nodes.forEach(n=>{ const t=n.type||"concept"; counts[t]=(counts[t]||0)+1; });
@@ -493,7 +514,7 @@ function startGraph(g){
   canvas.onmousedown=e=>{ const p=at(e), n=pick(p); if(n){ drag=n; downNode=n; downXY=p; moved=false; n.fixed=true; canvas.style.cursor="grabbing"; } };
   canvas.onmousemove=e=>{ const p=at(e); if(drag){ if(Math.hypot(p.x-downXY.x,p.y-downXY.y)>4) moved=true; drag.x=p.x; drag.y=p.y; drag.vx=drag.vy=0; } else { hover=pick(p); canvas.style.cursor=hover?"pointer":"grab"; } };
   canvas.onmouseup=()=>{ if(!drag) return; drag.fixed=false; const n=downNode; drag=null; downNode=null; canvas.style.cursor="grab";
-    if(n && !moved){ sel=n; if(n.kind==="conv") openConv(n.convId); else toggle(n.key); } };
+    if(n && !moved){ sel=n; if(n.kind==="conv") openConv(n.convId); else { toggle(n.key); traceTrail(g, n.key); } } };
   canvas.onmouseleave=()=>{ if(drag){ drag.fixed=false; drag=null; downNode=null; } hover=null; };
   if(window.__kgFocus){ const fk=window.__kgFocus; window.__kgFocus=null; if(byKey[fk]){ toggle(fk); sel=byKey[fk]; const p=byKey[fk]; if(p){ p.x=R.width/2; p.y=R.height*0.42; } } else { window.__kgSearch=fk; const inp=document.getElementById("kgSearch"); if(inp) inp.value=fk; } }
   function step(){
