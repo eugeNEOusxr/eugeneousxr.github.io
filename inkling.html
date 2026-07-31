@@ -402,7 +402,8 @@ function render(){
    (v1: concept graph. Roadmap: timeline slider, realization/question/
    project/person node types, labeled relationships, memory trails.)
    ============================================================ */
-const KG_CATCOLOR={consciousness:"#a78bfa",mind:"#c084fc",spiritual:"#f0abfc",growth:"#39d98a",philosophy:"#9ecbff",inkling:"#39d98a",worldweaver:"#f0abfc",ee:"#fbbf24",code:"#39d98a",chain:"#fbbf24",ai:"#a78bfa",creative:"#f0abfc",business:"#ffd166",future:"#7dd3fc",science:"#22d3ee",other:"#9ecbff"};
+const KG_CATCOLOR={consciousness:"#a78bfa",mind:"#c084fc",spiritual:"#f0abfc",growth:"#39d98a",philosophy:"#9ecbff",inkling:"#39d98a",worldweaver:"#f0abfc",ee:"#fbbf24",code:"#39d98a",chain:"#fbbf24",ai:"#a78bfa",creative:"#f0abfc",business:"#ffd166",future:"#7dd3fc",science:"#22d3ee",other:"#9ecbff",
+  project:"#ff8a5b",person:"#f0abfc",tech:"#22d3ee",realization:"#ffd166",question:"#9ecbff"};
 function buildConceptGraph(){
   const convs=(DB.conversations||[]);
   const freq={}, coocc={}, byConcept={};
@@ -413,13 +414,31 @@ function buildConceptGraph(){
   const set=new Set(top), fmax=Math.max(1,...top.map(x=>freq[x]));
   const nodes=top.map(x=>({ id:x, label:titleCase(x), w:freq[x], r:6+16*Math.sqrt(freq[x]/fmax),
     cat:libCatOf({anchor:x,threads:[],convs:byConcept[x]||[]}),
-    firstAt:Math.min(...(byConcept[x]||[]).map(c=>c.at||Infinity)) }));
+    firstAt:Math.min(...(byConcept[x]||[]).map(c=>c.at||Infinity)), type:"concept" }));
+  const TYPES=[ {type:"project",field:"projects",emoji:"🔨",cap:15}, {type:"person",field:"people",emoji:"👤",cap:12},
+    {type:"tech",field:"technologies",emoji:"🛠",cap:12}, {type:"realization",field:"realizations",emoji:"💡",cap:15},
+    {type:"question",field:"questions",emoji:"❓",cap:12} ];
+  TYPES.forEach(T=>{ const byLower={};
+    convs.forEach(c=>{ const arr=(c.extract&&c.extract[T.field])||[]; const seen=new Set();
+      arr.forEach(x=>{ const k=String(x).trim(); if(!k)return; const lk=k.toLowerCase(); if(seen.has(lk))return; seen.add(lk);
+        byLower[lk]=byLower[lk]||{label:k,convs:[]}; byLower[lk].convs.push(c); if(k.length<byLower[lk].label.length) byLower[lk].label=k; }); });
+    const items=Object.entries(byLower).map(([lk,v])=>({lk,label:v.label,convs:v.convs,count:v.convs.length})).sort((a,b)=>b.count-a.count).slice(0,T.cap);
+    const cmax=Math.max(1,...items.map(it=>it.count));
+    items.forEach(it=>{ const id=T.type+"|"+it.lk; nodes.push({ id, label:T.emoji+" "+it.label.slice(0,26), w:it.count, r:5+8*Math.sqrt(it.count/cmax), cat:T.type, type:T.type, firstAt:Math.min(...it.convs.map(c=>c.at||Infinity)) }); byConcept[id]=it.convs; }); });
   const ats=(DB.conversations||[]).map(c=>c.at||0).filter(Boolean);
   const tmin=ats.length?Math.min(...ats):0, tmax=ats.length?Math.max(...ats):Date.now();
   let edges=[]; Object.entries(coocc).forEach(([k,v])=>{ const [a,b]=k.split(""); if(set.has(a)&&set.has(b)&&v>=1) edges.push({a,b,w:v}); });
   edges=edges.sort((p,q)=>q.w-p.w).slice(0,240);
   return { nodes, edges, byConcept, fmax, tmin, tmax };
 }
+function kgTypePills(g){
+  if(!window.__kgHide) window.__kgHide=new Set(["realization","question"]);
+  const counts={}; g.nodes.forEach(n=>{ const t=n.type||"concept"; counts[t]=(counts[t]||0)+1; });
+  const defs=[["concept","🔷 Concepts"],["project","🔨 Projects"],["person","👤 People"],["tech","🛠 Tech"],["realization","💡 Realizations"],["question","❓ Questions"]];
+  return defs.filter(([t])=>counts[t]).map(([t,label])=>{ const col=KG_CATCOLOR[t]||"#9ecbff", on=!window.__kgHide.has(t);
+    return `<button onclick="kgToggleType('${t}',this)" style="opacity:${on?1:0.4};cursor:pointer;border-radius:999px;padding:4px 11px;font:800 10px system-ui;border:1px solid ${col}66;background:${col}22;color:${col}">${label} ${counts[t]}</button>`; }).join("");
+}
+function kgToggleType(t, btn){ if(!window.__kgHide) window.__kgHide=new Set(); if(window.__kgHide.has(t)) window.__kgHide.delete(t); else window.__kgHide.add(t); if(btn) btn.style.opacity=window.__kgHide.has(t)?"0.4":"1"; }
 function renderGraph(){
   if(!(DB.conversations||[]).length){ app.innerHTML=chrome(`<h1>🕸️ Knowledge Graph</h1><div class="empty">No conversations yet.<br><span style="opacity:.8">Import your ChatGPT history (📥 Imports) — your concepts become a living graph here.</span></div>`,"graph"); return; }
   const g=buildConceptGraph();
@@ -429,8 +448,9 @@ function renderGraph(){
      <p class="sub">Walking through your mind — every concept a living node. <b>Click a concept</b> to spread out the conversations inside it; <b>click a conversation</b> (the ringed endpoints) to open its Story. Drag to rearrange.</p>
      <div style="display:flex;gap:8px;align-items:center;margin:0 0 10px">
        <input id="kgSearch" placeholder="Search a concept…" oninput="window.__kgSearch=(this.value||'').toLowerCase()" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 11px;font:600 12px system-ui">
-       <span class="hint" style="margin:0">${g.nodes.length} concepts · ${g.edges.length} links</span>
+       <span class="hint" style="margin:0">${g.nodes.length} nodes · ${g.edges.length} links</span>
      </div>
+     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px">${kgTypePills(g)}</div>
      <div style="position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:radial-gradient(900px 500px at 50% 30%,rgba(90,70,180,.15),transparent 60%),#05070e">
        <canvas id="kgraph" style="display:block;width:100%;height:60vh;cursor:grab"></canvas>
        <div id="kgInfo" style="position:absolute;left:12px;right:12px;bottom:12px;display:none"></div>
@@ -489,7 +509,8 @@ function startGraph(g){
     ctx.clearRect(0,0,R.width,R.height);
     const q=window.__kgSearch||"", anyQ=!!q;
     const m=n=> q && (n.kind==="concept"? n.id.includes(q) : n.label.toLowerCase().includes(q));
-    const cut=window.__kgCutoff||g.tmax, vis=n=>(n.firstAt||0)<=cut;
+    const cut=window.__kgCutoff||g.tmax, hide=window.__kgHide||new Set();
+    const vis=n=>{ if((n.firstAt||0)>cut) return false; if(n.kind==="conv"){ const p=byKey[n.parent]; return p ? (!hide.has(p.type||"concept")&&(p.firstAt||0)<=cut) : true; } return !hide.has(n.type||"concept"); };
     const lit=n=> !anyQ ? true : (m(n) || (adj[n.key]&&[...adj[n.key]].some(k=>{ const nb=byKey[k]; return nb&&m(nb); })));
     edges.forEach(e=>{ const a=byKey[e.a], b=byKey[e.b]; if(!a||!b||!vis(a)||!vis(b)) return; const on=!anyQ||m(a)||m(b)||(sel&&(a===sel||b===sel));
       ctx.strokeStyle=e.cx?(on?"rgba(158,203,255,.4)":"rgba(158,203,255,.09)"):(on?"rgba(150,130,255,"+Math.min(.5,.1+.08*e.w)+")":"rgba(150,130,255,.04)");
