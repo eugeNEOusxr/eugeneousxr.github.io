@@ -80,14 +80,18 @@
     /* Show a dark cosmos gradient from the very first paint (before the JS/3D and the
        backdrop image load) so the app opens onto deep space instead of flashing black. */
     html, body, #app {
-      background: radial-gradient(125% 95% at 50% 18%, #0a0e1a 0%, #060810 52%, #020308 100%);
+      background:
+        radial-gradient(120% 85% at 50% 6%, rgba(34,211,238,.10), transparent 48%),
+        radial-gradient(125% 95% at 50% 18%, #0a1420 0%, #060a12 52%, #02040a 100%);
     }
     /* Cute boot loader — a little dino hops on the cosmos gradient while the app loads,
        then fades out. Beats staring at a black screen. */
     #boot-loader {
       position: fixed; inset: 0; z-index: 2147483000;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-      background: radial-gradient(125% 95% at 50% 18%, #0a0e1a 0%, #060810 52%, #020308 100%);
+      background:
+        radial-gradient(120% 85% at 50% 6%, rgba(34,211,238,.10), transparent 48%),
+        radial-gradient(125% 95% at 50% 18%, #0a1420 0%, #060a12 52%, #02040a 100%);
       font-family: -apple-system, system-ui, "Segoe UI", sans-serif; color: #cdd6ff;
       transition: opacity .5s ease;
     }
