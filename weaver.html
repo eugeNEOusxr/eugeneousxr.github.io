@@ -38,6 +38,25 @@
     padding:7px 14px; font:800 12px system-ui; }
   .switch a:hover{ color:var(--ink); border-color:rgba(167,139,250,.5); }
   .foot{ text-align:center; color:var(--dim); font:600 12px system-ui; margin-top:20px; }
+  /* Shared Inkling orb — the same assistant across Orbit / Inkling / Weaver. */
+  .orb{ position:fixed; right:18px; bottom:18px; z-index:60; width:56px; height:56px; border-radius:50%; border:0; cursor:pointer;
+    background:radial-gradient(circle at 35% 30%, #a78bfa, #6d28d9); color:#fff; font-size:24px;
+    box-shadow:0 8px 26px rgba(109,40,217,.5); transition:transform .15s; }
+  .orb:hover{ transform:scale(1.06); }
+  .orb-panel{ position:fixed; right:18px; bottom:84px; z-index:60; width:min(360px,92vw); height:min(60vh,520px);
+    background:rgba(10,14,24,.97); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column;
+    overflow:hidden; box-shadow:0 16px 50px rgba(0,0,0,.5); }
+  .orb-panel[hidden]{ display:none; }
+  .orb-head{ display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--line); font:800 14px system-ui; color:var(--violet); }
+  .orb-head button{ background:none; border:0; color:var(--dim); cursor:pointer; font-size:15px; }
+  .orb-thread{ flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:9px; }
+  .orb-hi{ color:var(--dim); font:500 13px/1.6 system-ui; }
+  .orb-msg{ max-width:88%; padding:9px 12px; font:500 13.5px/1.5 system-ui; }
+  .orb-user{ align-self:flex-end; background:rgba(88,166,255,.16); border:1px solid rgba(88,166,255,.35); color:#eaf2ff; border-radius:13px 13px 4px 13px; }
+  .orb-inkling{ align-self:flex-start; background:rgba(255,255,255,.05); border:1px solid var(--line); color:#e6edf3; border-radius:13px 13px 13px 4px; }
+  .orb-input{ display:flex; gap:7px; padding:10px; border-top:1px solid var(--line); }
+  .orb-input input{ flex:1; background:rgba(255,255,255,.05); border:1px solid var(--line); color:var(--ink); border-radius:9px; padding:9px 11px; font:600 13px system-ui; }
+  .orb-input button{ background:linear-gradient(135deg,#2563eb,#7c3aed); border:0; color:#fff; border-radius:9px; width:40px; font-size:18px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -85,5 +104,51 @@
     </div>
     <div class="foot">Weaver — part of your suite. One account, three apps.</div>
   </div>
+
+  <!-- Shared Inkling orb (same widget goes on Orbit + Inkling too) -->
+  <button id="orb" class="orb" aria-label="Ask Inkling">✦</button>
+  <div id="orbPanel" class="orb-panel" hidden>
+    <div class="orb-head"><span>✦ Inkling</span><button id="orbClose" aria-label="Close">✕</button></div>
+    <div id="orbThread" class="orb-thread"></div>
+    <div class="orb-input"><input id="orbInput" placeholder="Ask Inkling anything…" /><button id="orbSend" aria-label="Send">›</button></div>
+  </div>
+  <script>
+  (function(){
+    var API=(window.__EUGENEOUS_API__)||"https://inkling-15yf.onrender.com";
+    var CHAT_KEY="inkling-orb-v1", APP="Weaver (study & practice)";
+    var FRAME="You are Inkling — the user's mentor across their whole suite (Orbit: calendar & schedule; Inkling: knowledge, story & graph; Weaver: study & practice). Warm, curious, concise; connect ideas and lead with a question when apt; never fabricate. The user is currently in "+APP+".";
+    function token(){ try{ var s=JSON.parse(localStorage.getItem("eugeneousxr:session")||"null"); return s&&s.token?s.token:null; }catch(e){ return null; } }
+    function load(){ try{ return JSON.parse(localStorage.getItem(CHAT_KEY)||"[]"); }catch(e){ return []; } }
+    function save(m){ try{ localStorage.setItem(CHAT_KEY, JSON.stringify(m.slice(-40))); }catch(e){} }
+    function esc(s){ return String(s==null?"":s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
+    function md(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\n/g,"<br>"); }
+    var msgs=load();
+    function render(){ var t=document.getElementById("orbThread");
+      t.innerHTML = msgs.length ? msgs.map(function(m){ return '<div class="orb-msg orb-'+(m.role==="user"?"user":"inkling")+'">'+(m.role==="user"?esc(m.text):md(m.text))+'</div>'; }).join("")
+        : '<div class="orb-hi">Hi — I\'m Inkling. Ask me anything; I\'m the same assistant across Orbit, Inkling and Weaver, and I remember our chat everywhere.</div>';
+      t.scrollTop=t.scrollHeight; }
+    async function send(){
+      var inp=document.getElementById("orbInput"); var q=(inp.value||"").trim(); if(!q) return; inp.value="";
+      msgs.push({role:"user",text:q}); save(msgs); render();
+      var tk=token();
+      if(!tk){ msgs.push({role:"inkling",text:"Sign in on the main app (and set an API key on Render) and I can answer with the full model — I'll be the same Inkling across all three apps."}); save(msgs); render(); return; }
+      msgs.push({role:"inkling",text:"…"}); render();
+      var reply=null;
+      try{
+        var hist=msgs.filter(function(m){return m.text!=="…";}).slice(-12).map(function(m){return {role:m.role==="user"?"user":"assistant",content:m.text};});
+        var res=await fetch(API+"/api/inkling/chat",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+tk},
+          body:JSON.stringify({message:q, history:hist, mindSummary:FRAME, referenceDate:new Date().toISOString().slice(0,10)})});
+        if(res.ok){ var d=await res.json(); if(d&&d.source==="llm"&&d.reply) reply=d.reply; }
+      }catch(e){}
+      msgs.pop();
+      msgs.push({role:"inkling",text: reply||"I couldn't reach the AI just now — check you're signed in and the API key is set on Render."});
+      save(msgs); render();
+    }
+    document.getElementById("orb").onclick=function(){ var p=document.getElementById("orbPanel"); p.hidden=!p.hidden; if(!p.hidden){ render(); document.getElementById("orbInput").focus(); } };
+    document.getElementById("orbClose").onclick=function(){ document.getElementById("orbPanel").hidden=true; };
+    document.getElementById("orbSend").onclick=send;
+    document.getElementById("orbInput").addEventListener("keydown",function(e){ if(e.key==="Enter") send(); });
+  })();
+  </script>
 </body>
 </html>
