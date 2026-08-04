@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Weaver — Study &amp; Practice</title>
+<meta name="theme-color" content="#05070e" />
+<link rel="manifest" href="/weaver-manifest.json" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧵</text></svg>" />
+<style>
+  :root{ --bg:#05070e; --ink:#e6edf3; --dim:#8b949e; --line:rgba(255,255,255,.12); --panel:rgba(14,19,32,.7);
+    --violet:#a78bfa; --green:#39d98a; --blue:#9ecbff; --amber:#fbbf24; --cyan:#22d3ee; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; min-height:100%; background:
+    radial-gradient(1100px 600px at 50% -5%, rgba(90,70,180,.20), transparent 60%), var(--bg);
+    color:var(--ink); font:600 15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .wrap{ max-width:860px; margin:0 auto; padding:34px 18px 60px; }
+  header{ text-align:center; margin:14px 0 30px; }
+  .logo{ font:800 34px/1.1 Georgia,serif; }
+  .logo .t{ font-size:38px; }
+  .tag{ color:var(--dim); font:600 14px system-ui; margin-top:6px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+  a.card{ display:flex; flex-direction:column; gap:8px; text-decoration:none; color:inherit;
+    background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px 16px 18px;
+    transition:border-color .15s, transform .15s; }
+  a.card:hover{ border-color:rgba(167,139,250,.55); transform:translateY(-2px); }
+  .emoji{ font-size:26px; line-height:1; }
+  .ct{ font:800 16px system-ui; }
+  .cd{ color:var(--dim); font:500 13px/1.5 system-ui; }
+  .accent{ height:3px; border-radius:3px; width:38px; margin-top:2px; }
+  .sec{ margin:28px 0 10px; font:800 12px system-ui; letter-spacing:.12em; text-transform:uppercase; color:var(--dim); }
+  .switch{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:34px; }
+  .switch a{ text-decoration:none; color:var(--dim); border:1px solid var(--line); border-radius:999px;
+    padding:7px 14px; font:800 12px system-ui; }
+  .switch a:hover{ color:var(--ink); border-color:rgba(167,139,250,.5); }
+  .foot{ text-align:center; color:var(--dim); font:600 12px system-ui; margin-top:20px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><span class="t">🧵</span> Weaver</div>
+      <div class="tag">Weave subjects into mastery — quizzes, flashcards, and living study maps.</div>
+    </header>
+
+    <div class="sec">Practice</div>
+    <div class="grid">
+      <a class="card" href="/quiz.html">
+        <div class="emoji">📝</div>
+        <div class="ct">Quizzes &amp; Flashcards</div>
+        <div class="cd">Graded, Canvas-style quizzes across Precalculus, Psychology, Circuits, Electrician, AI, and Biology — with hints, math input, and explanations.</div>
+        <div class="accent" style="background:var(--green)"></div>
+      </a>
+      <a class="card" href="/quiz.html">
+        <div class="emoji">🗺️</div>
+        <div class="ct">Study Maps</div>
+        <div class="cd">Structured paths — Electrician Apprenticeship, Electrical Engineering, Psychology — that light up as you learn and drop you into the right deck.</div>
+        <div class="accent" style="background:var(--amber)"></div>
+      </a>
+    </div>
+
+    <div class="sec">Explore</div>
+    <div class="grid">
+      <a class="card" href="/wordweaver.html">
+        <div class="emoji">🕸️</div>
+        <div class="ct">Knowledge Canvas</div>
+        <div class="cd">See a subject as a living map — a spiral of concepts, sections, and subsections you can wander and deep-link into.</div>
+        <div class="accent" style="background:var(--blue)"></div>
+      </a>
+      <a class="card" href="/wordweaver3d.html">
+        <div class="emoji">🏙️</div>
+        <div class="ct">Knowledge Towers (3D)</div>
+        <div class="cd">Fly through a subject built as 3D towers — chapters as floors, concepts as steps you can climb.</div>
+        <div class="accent" style="background:var(--cyan)"></div>
+      </a>
+    </div>
+
+    <div class="switch">
+      <a href="/inkling.html">🌱 Inkling</a>
+      <a href="/">🛰️ Orbit</a>
+    </div>
+    <div class="foot">Weaver — part of your suite. One account, three apps.</div>
+  </div>
+</body>
+</html>
