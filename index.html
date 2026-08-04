@@ -613,24 +613,12 @@
       <span class="inkling-bottom-nav__icon" aria-hidden="true">🔔</span>
       <span class="inkling-bottom-nav__label">Alerts</span>
     </button>
-    <!-- Alarm removed from the bottom nav 2026-06-18 (set alarms from the Schedule
-         day panel). Study brought down here, in the alarm's old spot; Mind & Study
-         still live in the Inkling orb too. -->
-    <button type="button" class="inkling-bottom-nav__btn" data-tab="study" aria-pressed="false">
-      <span class="inkling-bottom-nav__icon" aria-hidden="true">📚</span>
-      <span class="inkling-bottom-nav__label">Study</span>
-    </button>
-    <button type="button" class="inkling-bottom-nav__btn" data-tab="mind" aria-pressed="false">
-      <span class="inkling-bottom-nav__icon" aria-hidden="true">🧠</span>
-      <span class="inkling-bottom-nav__label">Mind</span>
-    </button>
+    <!-- 3-app split (2026-07-31): Orbit's bottom nav = TIME only (Calendar · Schedule ·
+         Alerts · Goals) + the app-switcher above. Study moved to Weaver; Mind &
+         Storybook moved to Inkling. Panels/handlers stay in the code, just off the nav. -->
     <button type="button" class="inkling-bottom-nav__btn" data-tab="goals" aria-pressed="false">
       <span class="inkling-bottom-nav__icon" aria-hidden="true">🎯</span>
       <span class="inkling-bottom-nav__label">Goals</span>
-    </button>
-    <button type="button" class="inkling-bottom-nav__btn" data-tab="storybook" aria-pressed="false" title="Read your life, projects, and ideas as an evolving story.">
-      <span class="inkling-bottom-nav__icon" aria-hidden="true">📖</span>
-      <span class="inkling-bottom-nav__label">Storybook</span>
     </button>
   </nav>
 
