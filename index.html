@@ -590,16 +590,15 @@
   </aside>
 
   <nav id="inkling-bottom-nav" class="inkling-bottom-nav" aria-label="Main navigation">
-    <!-- Seed launcher: a plain link (no data-tab) straight into the Inkling
-         personal knowledge & growth system (inkling.html). Chat imports, the
-         galaxy, paths, quiz and story all live there. -->
-    <a class="inkling-bottom-nav__btn" href="/inkling.html?view=imports" aria-label="Open Inkling — your imported conversations and galaxy">
+    <!-- Current app badge + the switcher (Inkling / Weaver open the other suite apps). -->
+    <span class="inkling-bottom-nav__app" style="display:inline-flex;align-items:center;gap:5px;padding:3px 11px;margin-right:2px;border-radius:999px;background:rgba(125,211,252,.16);border:1px solid rgba(125,211,252,.55);color:#7dd3fc;font:800 12px system-ui;white-space:nowrap">🛰️ Orbit</span>
+    <a class="inkling-bottom-nav__btn" href="/inkling.html?view=imports" aria-label="Switch to Inkling" style="opacity:.72">
       <span class="inkling-bottom-nav__icon" aria-hidden="true">🌱</span>
-      <span class="inkling-bottom-nav__label">Inkling</span>
+      <span class="inkling-bottom-nav__label">Inkling ↗</span>
     </a>
-    <a class="inkling-bottom-nav__btn" href="/weaver.html" aria-label="Open Weaver — quizzes, flashcards and study maps">
+    <a class="inkling-bottom-nav__btn" href="/weaver.html" aria-label="Switch to Weaver" style="opacity:.72">
       <span class="inkling-bottom-nav__icon" aria-hidden="true">🧵</span>
-      <span class="inkling-bottom-nav__label">Weaver</span>
+      <span class="inkling-bottom-nav__label">Weaver ↗</span>
     </a>
     <button type="button" class="inkling-bottom-nav__btn" data-tab="wordweaver" aria-pressed="false">
       <span class="inkling-bottom-nav__icon" aria-hidden="true">📅</span>
