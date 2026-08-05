@@ -54,6 +54,9 @@
   .orb-msg{ max-width:88%; padding:9px 12px; font:500 13.5px/1.5 system-ui; }
   .orb-user{ align-self:flex-end; background:rgba(88,166,255,.16); border:1px solid rgba(88,166,255,.35); color:#eaf2ff; border-radius:13px 13px 4px 13px; }
   .orb-inkling{ align-self:flex-start; background:rgba(255,255,255,.05); border:1px solid var(--line); color:#e6edf3; border-radius:13px 13px 13px 4px; }
+  .orb-actions{ display:flex; gap:6px; flex-wrap:wrap; padding:9px 10px 0; }
+  .orb-chip{ background:rgba(167,139,250,.14); border:1px solid rgba(167,139,250,.4); color:#ddd6fe; border-radius:999px; padding:5px 10px; font:800 11px system-ui; cursor:pointer; }
+  .orb-chip:hover{ background:rgba(167,139,250,.26); }
   .orb-input{ display:flex; gap:7px; padding:10px; border-top:1px solid var(--line); }
   .orb-input input{ flex:1; background:rgba(255,255,255,.05); border:1px solid var(--line); color:var(--ink); border-radius:9px; padding:9px 11px; font:600 13px system-ui; }
   .orb-input button{ background:linear-gradient(135deg,#2563eb,#7c3aed); border:0; color:#fff; border-radius:9px; width:40px; font-size:18px; cursor:pointer; }
@@ -110,6 +113,7 @@
   <div id="orbPanel" class="orb-panel" hidden>
     <div class="orb-head"><span>✦ Inkling</span><button id="orbClose" aria-label="Close">✕</button></div>
     <div id="orbThread" class="orb-thread"></div>
+    <div class="orb-actions" id="orbActions"></div>
     <div class="orb-input"><input id="orbInput" placeholder="Ask Inkling anything…" /><button id="orbSend" aria-label="Send">›</button></div>
   </div>
   <script>
@@ -122,13 +126,19 @@
     function save(m){ try{ localStorage.setItem(CHAT_KEY, JSON.stringify(m.slice(-40))); }catch(e){} }
     function esc(s){ return String(s==null?"":s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
     function md(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\n/g,"<br>"); }
+    // App-specific quick actions — the minimal set Weaver needs.
+    var ACTIONS=[
+      {i:"📝",t:"Quiz me",m:"Quiz me — pick a topic I've been studying, ask me one question, then check my answer."},
+      {i:"💡",t:"Explain",m:"Explain a concept I'm learning as simply as you can. Ask me which one first."},
+      {i:"🎯",t:"What next",m:"Based on what I've been studying, what should I focus on next, and why?"}
+    ];
     var msgs=load();
     function render(){ var t=document.getElementById("orbThread");
       t.innerHTML = msgs.length ? msgs.map(function(m){ return '<div class="orb-msg orb-'+(m.role==="user"?"user":"inkling")+'">'+(m.role==="user"?esc(m.text):md(m.text))+'</div>'; }).join("")
         : '<div class="orb-hi">Hi — I\'m Inkling. Ask me anything; I\'m the same assistant across Orbit, Inkling and Weaver, and I remember our chat everywhere.</div>';
       t.scrollTop=t.scrollHeight; }
-    async function send(){
-      var inp=document.getElementById("orbInput"); var q=(inp.value||"").trim(); if(!q) return; inp.value="";
+    async function send(preset){
+      var inp=document.getElementById("orbInput"); var q=preset||(inp.value||"").trim(); if(!q) return; if(!preset) inp.value="";
       msgs.push({role:"user",text:q}); save(msgs); render();
       var tk=token();
       if(!tk){ msgs.push({role:"inkling",text:"Sign in on the main app (and set an API key on Render) and I can answer with the full model — I'll be the same Inkling across all three apps."}); save(msgs); render(); return; }
@@ -148,6 +158,9 @@
     document.getElementById("orbClose").onclick=function(){ document.getElementById("orbPanel").hidden=true; };
     document.getElementById("orbSend").onclick=send;
     document.getElementById("orbInput").addEventListener("keydown",function(e){ if(e.key==="Enter") send(); });
+    (function(){ var el=document.getElementById("orbActions");
+      el.innerHTML=ACTIONS.map(function(a,i){ return '<button class="orb-chip" data-i="'+i+'">'+a.i+' '+a.t+'</button>'; }).join("");
+      el.querySelectorAll(".orb-chip").forEach(function(b){ b.onclick=function(){ send(ACTIONS[+b.getAttribute("data-i")].m); }; }); })();
   })();
   </script>
 </body>
