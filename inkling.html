@@ -340,7 +340,128 @@ DB.profile = DB.profile || { answers:{}, fields:[], done:false, startedAt:0, com
 DB.captures = DB.captures || [];  // interpreter output: [{id,text,type,links,reason,at}]
 DB.chat = DB.chat || [];          // conversation transcript: [{role,text|html,route,links,actions,at}]
 DB.conversations = DB.conversations || []; // imported AI chats: [{id,title,provider,summary,concepts,relations,quiz,messageCount,at}]
+DB.proposals = DB.proposals || [];   // NEXARIS Approval Gate inbox: AI changes waiting for your OK (never applied until approved)
+DB.revisions = DB.revisions || [];   // append-only history — every applied change keeps the value it replaced (nothing is ever lost)
 function persist(){ save(DB); }
+
+/* ============================================================
+   NEXARIS P0 — THE APPROVAL GATE  (human final authority)
+   AI passes no longer write straight into your graph. They PROPOSE.
+   Each proposal carries an "explain" block (why / confidence / risks)
+   and a list of before→after changes. Nothing changes until YOU approve.
+   Every applied change is logged to DB.revisions with the old value,
+   so history is never overwritten and every decision is reversible (Undo).
+   ============================================================ */
+const GATE_KINDS = { summary:{icon:"✨",agent:"Summarizer",label:"Summaries & tags"},
+  extract:{icon:"🔮",agent:"Extractor",label:"Extracted knowledge"},
+  edge:{icon:"🔗",agent:"Relationship Labeler",label:"Relationship labels"} };
+function newId(p){ return (p||"id")+"_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+const Gate = {
+  propose(p){ p.id=newId("prop"); p.ts=Date.now(); p.status="pending";
+    p.changes=(p.changes||[]).filter(ch=>Gate._diff(ch)); if(!p.changes.length) return null;
+    DB.proposals.unshift(p); persist(); return p.id; },
+  pending(kind){ return (DB.proposals||[]).filter(p=>p.status==="pending"&&(!kind||p.kind===kind)); },
+  applied(){ return (DB.proposals||[]).filter(p=>p.status==="applied"); },
+  find(id){ return (DB.proposals||[]).find(p=>p.id===id); },
+  // is a change actually a change? (skip no-ops)
+  _diff(ch){ const f=ch.fields||{}; return Object.keys(f).some(k=>JSON.stringify(f[k].from)!==JSON.stringify(f[k].to)); },
+  _target(ch){ if(ch.target.type==="conversation") return (DB.conversations||[]).find(c=>String(c.id)===String(ch.target.id));
+    if(ch.target.type==="edgeLabel"){ DB.edgeLabels=DB.edgeLabels||{}; return DB.edgeLabels; } return null; },
+  _read(ch,field){ const t=Gate._target(ch); if(!t) return undefined;
+    return ch.target.type==="edgeLabel" ? t[ch.target.key] : t[field]; },
+  _write(ch,field,val){ const t=Gate._target(ch); if(!t) return;
+    if(ch.target.type==="edgeLabel") t[ch.target.key]=val; else t[field]=val; },
+  approve(id){ const p=Gate.find(id); if(!p||p.status!=="pending") return;
+    p.revIds=[];
+    (p.changes||[]).forEach(ch=>{ const f=ch.fields||{}; Object.keys(f).forEach(field=>{
+      const from=Gate._read(ch,field); const to=f[field].to;
+      if(JSON.stringify(from)===JSON.stringify(to)) return;
+      Gate._write(ch,field,to);
+      const rid=newId("rev"); p.revIds.push(rid);
+      DB.revisions.push({ id:rid, ts:Date.now(), proposalId:p.id, agent:p.agent, kind:p.kind,
+        target:ch.target, label:ch.target.label, field, from, to }); }); });
+    // mark source conversations processed so the pass won't re-offer them
+    (p.changes||[]).forEach(ch=>{ if(ch.target.type==="conversation"){ const c=(DB.conversations||[]).find(x=>String(x.id)===String(ch.target.id));
+      if(c){ if(p.kind==="summary") c.aiSum=true; if(p.kind==="extract") c.aiExtracted=true; } } });
+    p.status="applied"; p.decidedAt=Date.now(); persist(); },
+  reject(id){ const p=Gate.find(id); if(!p||p.status!=="pending") return;
+    p.status="rejected"; p.decidedAt=Date.now(); persist(); },
+  undo(id){ const p=Gate.find(id); if(!p||p.status!=="applied") return;
+    // restore each change's previous value, logged as its own reversal (history preserved)
+    (p.revIds||[]).map(rid=>DB.revisions.find(r=>r.id===rid)).filter(Boolean).reverse().forEach(r=>{
+      const ch={ target:r.target }; const cur=Gate._read(ch,r.field);
+      Gate._write(ch,r.field,r.from);
+      DB.revisions.push({ id:newId("rev"), ts:Date.now(), proposalId:p.id, agent:"You (Undo)",
+        kind:p.kind, target:r.target, label:r.label, field:r.field, from:cur, to:r.from }); });
+    (p.changes||[]).forEach(ch=>{ if(ch.target.type==="conversation"){ const c=(DB.conversations||[]).find(x=>String(x.id)===String(ch.target.id));
+      if(c){ if(p.kind==="summary") c.aiSum=false; if(p.kind==="extract") c.aiExtracted=false; } } });
+    p.status="undone"; p.undoneAt=Date.now(); persist(); },
+  // conversation ids already sitting in a pending proposal of this kind (don't double-offer)
+  pendingConvIds(kind){ const s=new Set(); Gate.pending(kind).forEach(p=>(p.changes||[]).forEach(ch=>{
+    if(ch.target.type==="conversation") s.add(String(ch.target.id)); })); return s; }
+};
+/* ---- Approval Gate UI (the ✅ Review tab) ---- */
+function changeRow(ch){
+  const f=ch.fields||{}; let rows="";
+  if(f.summary){ rows+=`<div style="margin-top:5px"><span style="color:var(--dim);text-decoration:line-through">${esc(f.summary.from||"(empty)")}</span><br><span style="color:#39d98a">${esc(f.summary.to)}</span></div>`; }
+  if(f.concepts){ const a=(f.concepts.from||[]).join(", ")||"(none)", b=(f.concepts.to||[]).join(", ");
+    rows+=`<div style="margin-top:5px;font-size:12px"><span style="color:var(--dim);text-decoration:line-through">${esc(a)}</span> → <span style="color:#22d3ee">${esc(b)}</span></div>`; }
+  if(f.extract){ rows+=`<div style="margin-top:5px;font-size:12px;color:#39d98a">${esc(JSON.stringify(f.extract.to))}</div>`; }
+  return `<div style="border-top:1px solid var(--line);padding:9px 0;font:500 13px/1.45 system-ui">
+    <div style="font:700 12px system-ui;color:var(--ink)">${esc(ch.target.label||ch.target.key||"")}</div>${rows}</div>`;
+}
+function proposalCard(p){
+  const k=GATE_KINDS[p.kind]||{icon:"•",agent:p.agent}, ex=p.explain||{};
+  return `<div class="card" style="margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+      <div style="font:800 14px system-ui">${k.icon} ${esc(p.title||k.label||"Proposal")}</div>
+      <div style="color:var(--dim);font:600 11px system-ui;white-space:nowrap">${esc(k.agent||"")} · ${daysAgo(p.ts)}</div>
+    </div>
+    <div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0">
+      <div style="font:700 12px system-ui;color:var(--blue)">Why Inkling proposes this</div>
+      <div style="font:500 13px/1.5 system-ui;margin-top:3px">${esc(ex.why||"")}</div>
+      ${ex.confidence!=null?`<div style="margin-top:8px;font:600 11px system-ui;color:var(--dim)">Confidence ${Math.round(ex.confidence*100)}%${ex.evidence&&ex.evidence.length?" · "+esc(ex.evidence.join(", ")):""}</div>`:""}
+      ${ex.alternatives&&ex.alternatives.length?`<div style="margin-top:4px;font:500 11px system-ui;color:var(--dim)">Considered: ${esc(ex.alternatives.join(" · "))}</div>`:""}
+      ${ex.risks&&ex.risks.length?`<div style="margin-top:6px;font:500 11.5px/1.45 system-ui;color:#ffd166">⚠ ${esc(ex.risks.join(" "))}</div>`:""}
+    </div>
+    <div style="font:700 12px system-ui;color:var(--dim);margin:2px 0 2px">${(p.changes||[]).length} change${(p.changes||[]).length===1?"":"s"} — before → after</div>
+    <div style="max-height:340px;overflow:auto">${(p.changes||[]).map(changeRow).join("")}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" style="flex:1;font:800 13px system-ui" onclick="Gate.approve('${p.id}');renderApprovals()">✓ Approve all</button>
+      <button class="btn ghost" style="flex:1;font:800 13px system-ui" onclick="Gate.reject('${p.id}');renderApprovals()">✕ Reject</button>
+    </div>
+  </div>`;
+}
+function appliedCard(p){
+  const k=GATE_KINDS[p.kind]||{icon:"•"}, n=(p.revIds||[]).length;
+  return `<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;opacity:.9">
+    <div><div style="font:700 13px system-ui">${k.icon} ${esc(p.title||"")}</div>
+      <div style="color:var(--dim);font:600 11px system-ui">Applied ${daysAgo(p.decidedAt||p.ts)} · ${n} value${n===1?"":"s"} changed · originals kept</div></div>
+    <button class="btn ghost" style="font:800 12px system-ui;white-space:nowrap" onclick="Gate.undo('${p.id}');renderApprovals()">↩ Undo</button>
+  </div>`;
+}
+function renderApprovals(){
+  const pend=Gate.pending(), done=Gate.applied().slice(0,8);
+  let body="";
+  if(!pend.length && !done.length){
+    body=`<div class="card" style="text-align:center;padding:26px 18px">
+      <div style="font-size:30px">✅</div>
+      <div style="font:800 16px system-ui;margin-top:6px">Nothing waiting for review</div>
+      <p class="sub" style="max-width:470px;margin:8px auto 0">When Inkling improves your summaries, extracts knowledge, or labels relationships, the changes land here first. Nothing touches your graph until you approve it — and every approved change can be undone.</p>
+      <div style="margin-top:14px"><button class="btn ghost" onclick="go({name:'imports'})">Go to Imports →</button></div>
+    </div>`;
+  } else {
+    if(pend.length){ body+=`<div style="font:800 13px system-ui;color:var(--dim);margin:2px 0 8px">⏳ Waiting for you (${pend.length})</div>`+pend.map(proposalCard).join(""); }
+    if(done.length){ body+=`<div style="font:800 13px system-ui;color:var(--dim);margin:18px 0 8px">🕓 Recently applied — reversible</div>`+done.map(appliedCard).join(""); }
+  }
+  app.innerHTML=chrome(`<div style="max-width:760px;margin:0 auto">
+      <div class="card" style="background:linear-gradient(135deg,rgba(240,171,252,.10),transparent);border-color:rgba(240,171,252,.3)">
+        <div style="font:800 15px system-ui">🛡️ Approval Gate</div>
+        <p class="sub" style="margin:6px 0 0">Inkling proposes; <b style="color:var(--ink)">you decide</b>. AI changes wait here with their reasoning before they ever touch your knowledge graph. History is never overwritten — every approved change can be undone.</p>
+      </div>
+      ${body}
+    </div>`, "approvals");
+}
 
 /* ---- helpers ---- */
 const CONF = ["Just guessing","A rough idea","Fairly confident","I understand it","I could teach it"];
@@ -372,6 +493,7 @@ function chrome(inner, active){
         <button class="${active==='storybook'?'on':''}" onclick="go({name:'storybook'})">📖 Story</button>
         <button class="${active==='graph'?'on':''}" onclick="go({name:'graph'})">🕸️ Graph</button>
         <button onclick="location.href='/city/'">🗺️ Atlas</button>
+        <button class="${active==='approvals'?'on':''}" onclick="go({name:'approvals'})" title="Review AI changes before they touch your graph">✅ Review${(function(){const n=Gate.pending().length;return n?` <span style="background:#f0abfc;color:#1a1030;border-radius:999px;padding:0 6px;font:800 11px system-ui">${n}</span>`:"";})()}</button>
       </div>
     </div>${inner}`;
 }
@@ -393,6 +515,7 @@ function render(){
   if(view.name==="galaxy") return renderGalaxy();
   if(view.name==="storybook") return renderStorybook();
   if(view.name==="graph") return renderGraph();
+  if(view.name==="approvals") return renderApprovals();
   if(view.name==="conv") return renderConvDetail(view.convId);
 }
 
@@ -1193,28 +1316,36 @@ async function improveBatch(batch){
 async function improveAllSummaries(){
   if(_improveRun.running || _narrAll.running) return;
   if(!inkToken()) return;
-  const todo=(DB.conversations||[]).filter(c=>!c.aiSum);
-  if(!todo.length) return;
+  const skip=Gate.pendingConvIds("summary");
+  const todo=(DB.conversations||[]).filter(c=>!c.aiSum && !skip.has(String(c.id)));
+  if(!todo.length){ if(Gate.pending("summary").length){ alert("These summaries are already waiting in Review — approve or reject them first."); go({name:"approvals"}); } return; }
   const calls=Math.ceil(todo.length/12);
-  if(!confirm(`Have Inkling write real summaries + clean tags for ${todo.length} conversation${todo.length===1?"":"s"}? It batches ~12 per AI call (~${calls} call${calls===1?"":"s"} on your API key) and can take a while. Stop anytime — finished ones are saved.`)) return;
+  if(!confirm(`Have Inkling draft real summaries + clean tags for ${todo.length} conversation${todo.length===1?"":"s"}? It batches ~12 per AI call (~${calls} call${calls===1?"":"s"} on your API key). Nothing changes yet — each batch becomes a proposal you approve in Review. Stop anytime.`)) return;
   _improveRun={running:true,stop:false};
-  const B=12; let done=0;
-  bookProgress(0, todo.length, "Improving summaries", "_improveRun.stop=true");
+  const B=12; let done=0, proposed=0;
+  bookProgress(0, todo.length, "Drafting summaries", "_improveRun.stop=true");
   for(let i=0;i<todo.length && !_improveRun.stop;i+=B){
     const batch=todo.slice(i,i+B);
     let res=null; try{ res=await improveBatch(batch); }catch(e){ res=null; }
     const byId={}; (res||[]).forEach(r=>{ if(r&&r.id!=null) byId[String(r.id)]=r; });
-    batch.forEach(c=>{ const r=byId[String(c.id)]; if(r){
-      if(r.summary) c.summary=String(r.summary).slice(0,300);
-      if(Array.isArray(r.concepts)&&r.concepts.length) c.concepts=r.concepts.map(x=>String(x).toLowerCase().trim()).filter(Boolean).slice(0,6);
-      c.aiSum=true; done++; } });
-    persist();
-    bookProgress(done, todo.length, "Improving summaries", "_improveRun.stop=true");
+    const changes=[];
+    batch.forEach(c=>{ const r=byId[String(c.id)]; if(!r) return; const fields={};
+      if(r.summary) fields.summary={ from:c.summary||"", to:String(r.summary).slice(0,300) };
+      if(Array.isArray(r.concepts)&&r.concepts.length) fields.concepts={ from:c.concepts||[], to:r.concepts.map(x=>String(x).toLowerCase().trim()).filter(Boolean).slice(0,6) };
+      if(Object.keys(fields).length) changes.push({ target:{type:"conversation",id:c.id,label:c.title||"Untitled"}, fields }); });
+    if(changes.length){ const id=Gate.propose({ kind:"summary", agent:GATE_KINDS.summary.agent, title:`Summaries & tags · ${changes.length} conversation${changes.length===1?"":"s"}`,
+      explain:{ why:"Rewrote raw opening lines into clear 1–2 sentence summaries with clean topic tags, so your graph clusters correctly and your story reads well.",
+        confidence:0.7, evidence:[`${changes.length} conversation${changes.length===1?"":"s"} in this batch`],
+        alternatives:["Keep the raw opening text","Summarize only, no tags"],
+        risks:["AI can over-compress nuance — check the diffs. Originals are kept and every change is reversible."] } });
+      if(id) proposed++; done+=changes.length; }
+    bookProgress(Math.min(i+B,todo.length), todo.length, "Drafting summaries", "_improveRun.stop=true");
     await new Promise(r=>setTimeout(r,400));
   }
   const stopped=_improveRun.stop; _improveRun={running:false,stop:false};
   bookProgressDone(done, stopped, "improveAllSummaries", "summary");
-  if(view.name==="imports") renderImports(); else if(view.name==="storybook") renderStorybook();
+  if(proposed){ go({name:"approvals"}); }
+  else if(view.name==="imports") renderImports(); else if(view.name==="storybook") renderStorybook();
 }
 /* ---- AI EXTRACTION PASS: pull Questions / Realizations / Projects / People / Tech ---- */
 let _extractRun={running:false,stop:false};
