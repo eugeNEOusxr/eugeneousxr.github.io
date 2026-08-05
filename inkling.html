@@ -342,7 +342,19 @@ DB.chat = DB.chat || [];          // conversation transcript: [{role,text|html,r
 DB.conversations = DB.conversations || []; // imported AI chats: [{id,title,provider,summary,concepts,relations,quiz,messageCount,at}]
 DB.proposals = DB.proposals || [];   // NEXARIS Approval Gate inbox: AI changes waiting for your OK (never applied until approved)
 DB.revisions = DB.revisions || [];   // append-only history — every applied change keeps the value it replaced (nothing is ever lost)
+DB.events = DB.events || [];         // NEXARIS event log — append-only stream of every decision (the "nervous system")
 function persist(){ save(DB); }
+
+/* NEXARIS event bus (P1): append-only log of everything that happens. Small,
+   tamper-simple, replayable. Every Gate action emits one event here. */
+const EVENT_META = { "proposal.proposed":{icon:"📥",verb:"Proposed"}, "proposal.approved":{icon:"✅",verb:"Approved"},
+  "proposal.rejected":{icon:"🚫",verb:"Rejected"}, "proposal.undone":{icon:"↩",verb:"Undone"} };
+function emit(topic, payload){
+  DB.events = DB.events || [];
+  DB.events.push(Object.assign({ id:"evt_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6), ts:Date.now(), topic }, payload||{}));
+  if(DB.events.length>1000) DB.events = DB.events.slice(-1000); // storage guard (keeps the most recent 1000)
+  persist();
+}
 
 /* ============================================================
    NEXARIS P0 — THE APPROVAL GATE  (human final authority)
@@ -359,7 +371,9 @@ function newId(p){ return (p||"id")+"_"+Date.now().toString(36)+Math.random().to
 const Gate = {
   propose(p){ p.id=newId("prop"); p.ts=Date.now(); p.status="pending";
     p.changes=(p.changes||[]).filter(ch=>Gate._diff(ch)); if(!p.changes.length) return null;
-    DB.proposals.unshift(p); persist(); return p.id; },
+    DB.proposals.unshift(p); persist();
+    emit("proposal.proposed",{ proposalId:p.id, kind:p.kind, agent:p.agent, title:p.title, changes:p.changes.length, demo:!!p.demo });
+    return p.id; },
   pending(kind){ return (DB.proposals||[]).filter(p=>p.status==="pending"&&(!kind||p.kind===kind)); },
   applied(){ return (DB.proposals||[]).filter(p=>p.status==="applied"); },
   find(id){ return (DB.proposals||[]).find(p=>p.id===id); },
@@ -383,9 +397,11 @@ const Gate = {
     // mark source conversations processed so the pass won't re-offer them
     (p.changes||[]).forEach(ch=>{ if(ch.target.type==="conversation"){ const c=(DB.conversations||[]).find(x=>String(x.id)===String(ch.target.id));
       if(c){ if(p.kind==="summary") c.aiSum=true; if(p.kind==="extract") c.aiExtracted=true; } } });
-    p.status="applied"; p.decidedAt=Date.now(); persist(); },
+    p.status="applied"; p.decidedAt=Date.now(); persist();
+    emit("proposal.approved",{ proposalId:p.id, kind:p.kind, agent:p.agent, title:p.title, changes:(p.changes||[]).length, revisions:(p.revIds||[]).length, demo:!!p.demo }); },
   reject(id){ const p=Gate.find(id); if(!p||p.status!=="pending") return;
-    p.status="rejected"; p.decidedAt=Date.now(); persist(); },
+    p.status="rejected"; p.decidedAt=Date.now(); persist();
+    emit("proposal.rejected",{ proposalId:p.id, kind:p.kind, agent:p.agent, title:p.title, changes:(p.changes||[]).length, demo:!!p.demo }); },
   undo(id){ const p=Gate.find(id); if(!p||p.status!=="applied") return;
     // restore each change's previous value, logged as its own reversal (history preserved)
     (p.revIds||[]).map(rid=>DB.revisions.find(r=>r.id===rid)).filter(Boolean).reverse().forEach(r=>{
@@ -395,7 +411,8 @@ const Gate = {
         kind:p.kind, target:r.target, label:r.label, field:r.field, from:cur, to:r.from }); });
     (p.changes||[]).forEach(ch=>{ if(ch.target.type==="conversation"){ const c=(DB.conversations||[]).find(x=>String(x.id)===String(ch.target.id));
       if(c){ if(p.kind==="summary") c.aiSum=false; if(p.kind==="extract") c.aiExtracted=false; } } });
-    p.status="undone"; p.undoneAt=Date.now(); persist(); },
+    p.status="undone"; p.undoneAt=Date.now(); persist();
+    emit("proposal.undone",{ proposalId:p.id, kind:p.kind, agent:"You (Undo)", title:p.title, changes:(p.changes||[]).length, demo:!!p.demo }); },
   // conversation ids already sitting in a pending proposal of this kind (don't double-offer)
   pendingConvIds(kind){ const s=new Set(); Gate.pending(kind).forEach(p=>(p.changes||[]).forEach(ch=>{
     if(ch.target.type==="conversation") s.add(String(ch.target.id)); })); return s; },
@@ -447,10 +464,19 @@ function appliedCard(p){
     <button class="btn ghost" style="font:800 12px system-ui;white-space:nowrap" onclick="Gate.undo('${p.id}');renderApprovals()">↩ Undo</button>
   </div>`;
 }
+function eventLine(e){
+  const m=EVENT_META[e.topic]||{icon:"•",verb:e.topic}, k=GATE_KINDS[e.kind]||{};
+  return `<div style="display:flex;gap:8px;padding:7px 0;border-top:1px solid var(--line);font:500 12px system-ui;color:var(--dim)">
+    <span>${m.icon}</span>
+    <span style="flex:1"><b style="color:var(--ink)">${m.verb}</b> ${esc(e.title||k.label||e.kind||"")}${e.changes?` · ${e.changes} change${e.changes===1?"":"s"}`:""}${e.demo?` <span style="opacity:.6">(demo)</span>`:""}</span>
+    <span style="white-space:nowrap">${daysAgo(e.ts)}</span>
+  </div>`;
+}
 function inkClearDemo(){
   const demoIds=new Set();
   DB.proposals=(DB.proposals||[]).filter(p=>{ if(p.demo){ demoIds.add(p.id); return false; } return true; });
   DB.revisions=(DB.revisions||[]).filter(r=>!demoIds.has(r.proposalId));
+  DB.events=(DB.events||[]).filter(e=>!e.demo && !demoIds.has(e.proposalId));
   DB.conversations=(DB.conversations||[]).filter(c=>!String(c.id).startsWith("demo-ink-"));
   if(DB.edgeLabels) Object.keys(DB.edgeLabels).forEach(k=>{ if(k.indexOf("demo-ink")>=0) delete DB.edgeLabels[k]; });
   persist();
@@ -495,6 +521,10 @@ function renderApprovals(){
     if(pend.length){ body+=`<div style="font:800 13px system-ui;color:var(--dim);margin:2px 0 8px">⏳ Waiting for you (${pend.length})</div>`+pend.map(proposalCard).join(""); }
     if(done.length){ body+=`<div style="font:800 13px system-ui;color:var(--dim);margin:18px 0 8px">🕓 Recently applied — reversible</div>`+done.map(appliedCard).join(""); }
   }
+  const evs=(DB.events||[]).slice(-40).reverse();
+  if(evs.length){ body+=`<details style="margin-top:18px"><summary style="cursor:pointer;font:800 13px system-ui;color:var(--dim);padding:6px 0">🧾 Activity log · ${(DB.events||[]).length} event${(DB.events||[]).length===1?"":"s"}</summary>
+    <div class="card" style="margin-top:8px;padding:4px 15px">${evs.map(eventLine).join("")}</div>
+    <div class="sub" style="margin:8px 2px 0;font-size:11px">Append-only — a permanent record of every proposal and decision. Nothing here is ever edited or deleted.</div></details>`; }
   app.innerHTML=chrome(`<div style="max-width:760px;margin:0 auto">
       <div class="card" style="background:linear-gradient(135deg,rgba(240,171,252,.10),transparent);border-color:rgba(240,171,252,.3)">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
