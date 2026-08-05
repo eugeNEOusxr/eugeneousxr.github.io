@@ -521,10 +521,10 @@ function renderApprovals(){
     if(pend.length){ body+=`<div style="font:800 13px system-ui;color:var(--dim);margin:2px 0 8px">⏳ Waiting for you (${pend.length})</div>`+pend.map(proposalCard).join(""); }
     if(done.length){ body+=`<div style="font:800 13px system-ui;color:var(--dim);margin:18px 0 8px">🕓 Recently applied — reversible</div>`+done.map(appliedCard).join(""); }
   }
-  const evs=(DB.events||[]).slice(-40).reverse();
-  if(evs.length){ body+=`<details style="margin-top:18px"><summary style="cursor:pointer;font:800 13px system-ui;color:var(--dim);padding:6px 0">🧾 Activity log · ${(DB.events||[]).length} event${(DB.events||[]).length===1?"":"s"}</summary>
-    <div class="card" style="margin-top:8px;padding:4px 15px">${evs.map(eventLine).join("")}</div>
-    <div class="sub" style="margin:8px 2px 0;font-size:11px">Append-only — a permanent record of every proposal and decision. Nothing here is ever edited or deleted.</div></details>`; }
+  const evs=(DB.events||[]).slice(-40).reverse(), evCount=(DB.events||[]).length;
+  body+=`<details ${evCount?"open":""} style="margin-top:18px"><summary style="cursor:pointer;font:800 13px system-ui;color:var(--dim);padding:6px 0">🧾 Activity log · ${evCount} event${evCount===1?"":"s"}</summary>
+    <div class="card" style="margin-top:8px;padding:4px 15px">${evCount?evs.map(eventLine).join(""):'<div class="sub" style="margin:10px 2px">No activity yet — approve, reject, or undo a proposal (try the demo above) and it will appear here.</div>'}</div>
+    <div class="sub" style="margin:8px 2px 0;font-size:11px">Append-only — a permanent record of every proposal and decision. Nothing here is ever edited or deleted.</div></details>`;
   app.innerHTML=chrome(`<div style="max-width:760px;margin:0 auto">
       <div class="card" style="background:linear-gradient(135deg,rgba(240,171,252,.10),transparent);border-color:rgba(240,171,252,.3)">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
