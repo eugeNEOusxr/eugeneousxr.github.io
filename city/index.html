@@ -23,5 +23,21 @@
   <aside id="info-panel" class="panel" aria-hidden="true"></aside>
   <section id="storybook-panel" class="reader" aria-hidden="true"></section>
 
+  <!-- Visitor analytics (GoatCounter — privacy-friendly, no cookies). Owner self-exclude: ?noviews once per device (?countme to undo). Data: eugeneousxr.goatcounter.com -->
+  <script>
+    (function () {
+      try {
+        var p = new URLSearchParams(location.search);
+        if (p.has("noviews")) localStorage.setItem("skipgc", "t");
+        if (p.has("countme")) localStorage.removeItem("skipgc");
+        if (localStorage.getItem("skipgc") === "t") return;
+      } catch (e) { /* ignore */ }
+      var s = document.createElement("script");
+      s.async = true;
+      s.src = "//gc.zgo.at/count.js";
+      s.setAttribute("data-goatcounter", "https://eugeneousxr.goatcounter.com/count");
+      document.head.appendChild(s);
+    })();
+  </script>
 </body>
 </html>
