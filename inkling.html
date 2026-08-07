@@ -563,7 +563,6 @@ function chrome(inner, active){
         <div class="brand">🌱 Inkling<small>your imported conversations</small></div></button>
       <div class="nav">
         <button class="${active==='imports'?'on':''}" onclick="go({name:'imports'})">📥 Imports</button>
-        <button class="${active==='galaxy'?'on':''}" onclick="go({name:'galaxy'})">🌌 Galaxy</button>
         <button class="${active==='storybook'?'on':''}" onclick="go({name:'storybook'})">📖 Story</button>
         <button class="${active==='graph'?'on':''}" onclick="go({name:'graph'})">🕸️ Graph</button>
         <button onclick="location.href='/city/'">🗺️ Atlas</button>
@@ -586,7 +585,7 @@ function render(){
   if(view.name==="memory") return renderMemory();
   if(view.name==="import") return renderImportChooser(window.__pendingImport);
   if(view.name==="imports") return renderImports();
-  if(view.name==="galaxy") return renderGalaxy();
+  if(view.name==="galaxy") return renderGraph();  // Galaxy retired — Graph is the one map
   if(view.name==="storybook") return renderStorybook();
   if(view.name==="graph") return renderGraph();
   if(view.name==="approvals") return renderApprovals();
@@ -668,7 +667,7 @@ function renderGraph(){
   if(!g.nodes.length){ app.innerHTML=chrome(`<h1>🕸️ Knowledge Graph</h1><div class="empty">Not enough shared concepts yet.<br><span style="opacity:.8">Import more conversations (or run ✨ Improve summaries) and they'll link up here.</span></div>`,"graph"); return; }
   app.innerHTML=chrome(
     `<h1>🕸️ Knowledge Graph</h1>
-     <p class="sub">Walking through your mind — every concept a living node. <b>Click a concept</b> to spread out the conversations inside it; <b>click a conversation</b> (the ringed endpoints) to open its Story. Drag to rearrange.</p>
+     <p class="sub">Walking through your mind — every concept a living node. <b>Click a concept</b> to see the conversations about it (each opens with its own story); tap a <b>connected idea</b> to jump. Drag to rearrange.</p>
      <div style="display:flex;gap:8px;align-items:center;margin:0 0 10px">
        <input id="kgSearch" placeholder="Search a concept…" oninput="window.__kgSearch=(this.value||'').toLowerCase()" style="flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 11px;font:600 12px system-ui">
        <span class="hint" style="margin:0">${g.nodes.length} nodes · ${g.edges.length} links</span>
@@ -716,9 +715,9 @@ function startGraph(g){
   canvas.onmousedown=e=>{ const p=at(e), n=pick(p); if(n){ drag=n; downNode=n; downXY=p; moved=false; n.fixed=true; canvas.style.cursor="grabbing"; } };
   canvas.onmousemove=e=>{ const p=at(e); if(drag){ if(Math.hypot(p.x-downXY.x,p.y-downXY.y)>4) moved=true; drag.x=p.x; drag.y=p.y; drag.vx=drag.vy=0; } else { hover=pick(p); canvas.style.cursor=hover?"pointer":"grab"; } };
   canvas.onmouseup=()=>{ if(!drag) return; drag.fixed=false; const n=downNode; drag=null; downNode=null; canvas.style.cursor="grab";
-    if(n && !moved){ sel=n; if(n.kind==="conv") openConv(n.convId); else { toggle(n.key); traceTrail(g, n.key); } } };
+    if(n && !moved){ sel=n; if(n.kind==="conv") openConv(n.convId); else { toggle(n.key); showGraphNode(n, g); } } };
   canvas.onmouseleave=()=>{ if(drag){ drag.fixed=false; drag=null; downNode=null; } hover=null; };
-  if(window.__kgFocus){ const fk=window.__kgFocus; window.__kgFocus=null; if(byKey[fk]){ toggle(fk); sel=byKey[fk]; const p=byKey[fk]; if(p){ p.x=R.width/2; p.y=R.height*0.42; } } else { window.__kgSearch=fk; const inp=document.getElementById("kgSearch"); if(inp) inp.value=fk; } }
+  if(window.__kgFocus){ const fk=window.__kgFocus; window.__kgFocus=null; if(byKey[fk]){ toggle(fk); sel=byKey[fk]; const p=byKey[fk]; if(p){ p.x=R.width/2; p.y=R.height*0.42; } showGraphNode(byKey[fk], g); } else { window.__kgSearch=fk; const inp=document.getElementById("kgSearch"); if(inp) inp.value=fk; } }
   function step(){
     if(!document.getElementById("kgraph")) return;
     const M=nodes.length;
@@ -760,17 +759,24 @@ function startGraph(g){
 }
 function showGraphNode(n,g){
   const el=document.getElementById("kgInfo"); if(!el) return;
-  const convs=(g.byConcept[n.id]||[]).slice().sort((a,b)=>(b.messageCount||0)-(a.messageCount||0));
-  const rows=convs.slice(0,8).map(c=>`<button class="qrow" style="margin:0 0 5px" onclick="openChapterForConv('${c.id}')"><span class="dot done"></span><span><span class="qt">${esc(c.title)}</span> <span style="color:var(--dim);font-weight:600">· ${fmtDate(c.at)}</span></span></button>`).join("");
+  const convs=(g.byConcept[n.id]||[]).slice().sort((a,b)=>(b.at||0)-(a.at||0));
+  const rows=convs.slice(0,12).map(c=>{
+    const hasStory=!!(DB.elaborations||{})[c.id];
+    const teaser=String(c.summary||"").slice(0,90);
+    return `<button class="qrow" style="margin:0 0 6px;align-items:flex-start" onclick="openConv('${attrJs(c.id)}')">
+      <span class="dot done"></span>
+      <span><span class="qt">${esc(c.title||"Untitled")}</span> <span style="color:var(--dim);font-weight:600">· ${fmtDate(c.at)}</span>${hasStory?` <span style="color:#f0abfc;font:800 10px system-ui">✍️ story ready</span>`:""}
+        ${teaser?`<div class="hint" style="margin:2px 0 0;font-weight:500">${esc(teaser)}${(c.summary||"").length>90?"…":""}</div>`:""}</span></button>`;
+  }).join("");
   const neigh=g.edges.filter(e=>e.a===n.id||e.b===n.id).sort((a,b)=>b.w-a.w).map(e=>e.a===n.id?e.b:e.a).slice(0,8);
   el.innerHTML=`<div class="panel" style="margin:0;background:rgba(8,12,22,.97)">
     <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
       <span class="nn" style="color:${KG_CATCOLOR[n.cat]||'#9ecbff'}">🔷 ${esc(n.label)}</span>
       <button class="back" style="margin:0" onclick="var e=document.getElementById('kgInfo');if(e)e.style.display='none'">✕</button></div>
-    <div class="hint" style="margin:4px 0 0">importance ${n.w} · in ${convs.length} conversation${convs.length===1?"":"s"} · ${neigh.length} linked concept${neigh.length===1?"":"s"}</div>
-    ${neigh.length?`<div class="lab" style="margin-top:8px">Connected concepts</div><div class="links">${neigh.map(x=>`<span class="lk">${esc(titleCase(x))}</span>`).join("")}</div>`:""}
-    <div class="lab" style="margin-top:8px">Conversations</div>
-    <div style="max-height:26vh;overflow:auto">${rows||"<span class='hint'>—</span>"}</div>
+    <div class="hint" style="margin:4px 0 0">${convs.length} conversation${convs.length===1?"":"s"} touch this idea · ${neigh.length} linked concept${neigh.length===1?"":"s"}</div>
+    ${neigh.length?`<div class="lab" style="margin-top:8px">Connected ideas — tap to jump</div><div class="links">${neigh.map(x=>`<span class="lk" style="cursor:pointer" onclick="go({name:'graph',focusConcept:'${attrJs(x)}'})">${esc(titleCase(x))}</span>`).join("")}</div>`:""}
+    <div class="lab" style="margin-top:10px">Conversations about ${esc(n.label)} — tap one to open it and read its story</div>
+    <div style="max-height:34vh;overflow:auto">${rows||"<span class='hint'>—</span>"}</div>
   </div>`;
   el.style.display="block";
 }
@@ -811,7 +817,7 @@ function renderConvDetail(id){
   const extractHTML = ex ? `${sect("💡 Realizations",ex.realizations,"#39d98a")}${sect("❓ Questions",ex.questions,"#9ecbff")}${sect("🔨 Projects",ex.projects,"#ff8a5b")}${sect("👤 People",ex.people,"#f0abfc")}${sect("🛠 Technologies",ex.technologies,"#22d3ee")}`
     : `<div class="hint" style="margin-top:10px">Run <b>🔮 Extract nodes with AI</b> on the Imports page to pull the questions, realizations, projects and people from this conversation.</div>`;
   const focusC=canonConcept((c.concepts||[])[0]||"");
-  const graphBtn=focusC?`<button class="back" style="margin:8px 0 0" onclick="go({name:'graph',focusConcept:'${attrJs(focusC)}'})">🕸️ See where this maps on the graph</button>`:"";
+  const graphBtn=`<button class="back" style="margin:8px 0 0" onclick="go({name:'graph'${focusC?",focusConcept:'"+attrJs(focusC)+"'":""}})">🕸️ See where this maps on the graph</button>`;
   app.innerHTML=chrome(
     `<button class="back" onclick="go({name:'storybook'})">‹ Back to your library</button>
      <h1 style="margin:10px 0 2px">${esc(c.title)}</h1>
