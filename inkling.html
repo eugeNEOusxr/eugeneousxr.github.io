@@ -2045,8 +2045,8 @@ function renderGalaxy(){
     `<h1>🌌 Your conversation galaxy</h1>
      <p class="sub">Each star is a conversation. Shared concepts cluster them — tap a star for its digest, or pull a thread below to see every chat that touched an idea.</p>
      ${conceptBar}
-     <div style="position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:radial-gradient(1000px 520px at 50% 25%,rgba(90,70,180,.18),transparent 62%),#05070e">
-       <canvas id="galaxy" style="display:block;width:100%;height:64vh;cursor:pointer"></canvas>
+     <div style="position:relative;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:radial-gradient(1100px 560px at 50% 22%,rgba(235,125,40,.16),transparent 62%),#0b0704">
+       <canvas id="galaxy" style="display:block;width:100%;height:74vh;cursor:pointer"></canvas>
        <div id="galaxyInfo" style="position:absolute;left:12px;right:12px;bottom:12px;display:none"></div>
      </div>
      <div class="hint" style="margin-top:8px">${convs.length} conversation${convs.length===1?"":"s"} · lines connect chats that share a concept.</div>`, "galaxy");
@@ -2073,7 +2073,7 @@ function drawGalaxy(convs){
   const clusters={}; convs.forEach((c,i)=>{ const r=find(i); (clusters[r]=clusters[r]||[]).push(i); });
   const roots=Object.keys(clusters);
 
-  const cx=W/2, cy=H/2, R=Math.min(W,H)*0.30;
+  const cx=W/2, cy=H/2, R=Math.min(W,H)*0.40;
   const centers={};
   roots.forEach((r,idx)=>{
     centers[r] = roots.length===1 ? {x:cx,y:cy}
@@ -2084,7 +2084,7 @@ function drawGalaxy(convs){
   roots.forEach(r=>{
     const m=clusters[r], c=centers[r];
     m.forEach((idx,k)=>{
-      const ang=k*2.399, rad=m.length===1?0:10+Math.sqrt(k)*18;
+      const ang=k*2.399, rad=m.length===1?0:16+Math.sqrt(k)*30;
       stars[idx]={ x:c.x+Math.cos(ang)*rad, y:c.y+Math.sin(ang)*rad, conv:convs[idx] };
     });
   });
@@ -2105,8 +2105,8 @@ function drawGalaxy(convs){
       const both=matched(i)&&matched(j);
       // when spotlighting in a large map, only draw the matched threads
       if(spot && n>250 && !both) continue;
-      ctx.strokeStyle = spot ? (both?"rgba(240,171,252,.6)":"rgba(150,130,255,.05)")
-                             : "rgba(150,130,255,"+Math.min(.4,.14*shared)+")";
+      ctx.strokeStyle = spot ? (both?"rgba(255,210,120,.65)":"rgba(255,150,70,.05)")
+                             : "rgba(255,150,70,"+Math.min(.42,.14*shared)+")";
       ctx.lineWidth = spot&&both?1.6:1;
       ctx.beginPath(); ctx.moveTo(stars[i].x,stars[i].y); ctx.lineTo(stars[j].x,stars[j].y); ctx.stroke();
       if(++drawn>=MAXL) break outer;
@@ -2118,7 +2118,7 @@ function drawGalaxy(convs){
     const m=clusters[r], counts={};
     m.forEach(idx=>(convs[idx].concepts||[]).forEach(cc=>{ counts[cc]=(counts[cc]||0)+1; }));
     const top=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
-    if(top){ const c=centers[r]; ctx.fillStyle=spot?"rgba(200,190,255,.28)":"rgba(200,190,255,.65)";
+    if(top){ const c=centers[r]; ctx.fillStyle=spot?"rgba(255,215,170,.3)":"rgba(255,215,170,.7)";
       ctx.fillText(top, c.x, c.y-(m.length===1?26:Math.sqrt(m.length)*18+34)); }
   });
   // stars
@@ -2127,12 +2127,12 @@ function drawGalaxy(convs){
     const isM=matched(idx);
     const size=(4+Math.min(7,(s.conv.concepts||[]).length))*(spot&&isM?1.3:1);
     ctx.globalAlpha=(spot&&!isM)?0.16:1;
-    const core=(spot&&isM)?"rgba(245,200,255,1)":"rgba(180,215,255,1)";
-    const halo=(spot&&isM)?"rgba(240,171,252,.7)":"rgba(120,150,255,.65)";
+    const core=(spot&&isM)?"rgba(255,245,225,1)":"rgba(255,225,180,1)";
+    const halo=(spot&&isM)?"rgba(255,200,90,.85)":"rgba(255,150,60,.7)";
     const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,size*2.6);
-    g.addColorStop(0,core); g.addColorStop(.4,halo); g.addColorStop(1,"rgba(120,150,255,0)");
+    g.addColorStop(0,core); g.addColorStop(.4,halo); g.addColorStop(1,"rgba(255,140,50,0)");
     ctx.fillStyle=g; ctx.beginPath(); ctx.arc(s.x,s.y,size*2.6,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle="#eaf2ff"; ctx.beginPath(); ctx.arc(s.x,s.y,size*0.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#fff3e0"; ctx.beginPath(); ctx.arc(s.x,s.y,size*0.6,0,Math.PI*2); ctx.fill();
     ctx.globalAlpha=1; s._r=size*2.6;
   }
   // star labels = the conversation's subject (title). Shown when uncrowded, or
@@ -2144,7 +2144,7 @@ function drawGalaxy(convs){
     if(spot && !isM) continue;
     if(!spot && n>40) continue;
     let t=String(s.conv.title||""); if(t.length>26) t=t.slice(0,25)+"…";
-    ctx.fillStyle=(spot&&isM)?"rgba(245,220,255,.95)":"rgba(230,237,243,.9)";
+    ctx.fillStyle=(spot&&isM)?"rgba(255,235,200,.95)":"rgba(235,235,235,.9)";
     ctx.fillText(t, s.x, s.y + s._r + 13);
   }
 
