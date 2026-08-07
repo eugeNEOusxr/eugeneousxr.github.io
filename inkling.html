@@ -458,19 +458,26 @@ function proposalCard(p){
 }
 function appliedCard(p){
   const k=GATE_KINDS[p.kind]||{icon:"•"}, n=(p.revIds||[]).length;
+  const traceLabel=p.kind==="edge"?"🔗 See in story":"↗ Open";
   return `<div class="card" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;opacity:.9">
     <div><div style="font:700 13px system-ui">${k.icon} ${esc(p.title||"")}</div>
       <div style="color:var(--dim);font:600 11px system-ui">Applied ${daysAgo(p.decidedAt||p.ts)} · ${n} value${n===1?"":"s"} changed · originals kept</div></div>
-    <button class="btn ghost" style="font:800 12px system-ui;white-space:nowrap" onclick="Gate.undo('${p.id}');renderApprovals()">↩ Undo</button>
+    <div style="display:flex;gap:6px;flex-shrink:0">
+      <button class="btn ghost" style="font:800 12px system-ui;white-space:nowrap" onclick="traceProposal('${p.id}')">${traceLabel}</button>
+      <button class="btn ghost" style="font:800 12px system-ui;white-space:nowrap" onclick="Gate.undo('${p.id}');renderApprovals()">↩ Undo</button>
+    </div>
   </div>`;
 }
 function eventLine(e){
   const m=EVENT_META[e.topic]||{icon:"•",verb:e.topic}, k=GATE_KINDS[e.kind]||{};
-  return `<div style="display:flex;gap:8px;padding:7px 0;border-top:1px solid var(--line);font:500 12px system-ui;color:var(--dim)">
-    <span>${m.icon}</span>
-    <span style="flex:1"><b style="color:var(--ink)">${m.verb}</b> ${esc(e.title||k.label||e.kind||"")}${e.changes?` · ${e.changes} change${e.changes===1?"":"s"}`:""}${e.demo?` <span style="opacity:.6">(demo)</span>`:""}</span>
-    <span style="white-space:nowrap">${daysAgo(e.ts)}</span>
-  </div>`;
+  const canTrace=e.topic==="proposal.approved" && e.proposalId && Gate.find(e.proposalId);
+  const inner=`<span>${m.icon}</span>
+    <span style="flex:1"><b style="color:var(--ink)">${m.verb}</b> ${esc(e.title||k.label||e.kind||"")}${e.changes?` · ${e.changes} change${e.changes===1?"":"s"}`:""}${e.demo?` <span style="opacity:.6">(demo)</span>`:""}${canTrace?` <span style="color:#f0abfc">↗ trace</span>`:""}</span>
+    <span style="white-space:nowrap">${daysAgo(e.ts)}</span>`;
+  const base="display:flex;gap:8px;padding:7px 0;border-top:1px solid var(--line);font:500 12px system-ui;color:var(--dim);width:100%;text-align:left";
+  return canTrace
+    ? `<button onclick="traceProposal('${e.proposalId}')" style="${base};background:none;border:0;border-top:1px solid var(--line);cursor:pointer">${inner}</button>`
+    : `<div style="${base}">${inner}</div>`;
 }
 function inkClearDemo(){
   const demoIds=new Set();
@@ -1640,6 +1647,45 @@ function renderLibrary(book){
   window.scrollTo(0,0);
 }
 
+/* ---- "🔗 What Inkling Sees" — approved relationships become readable story ----
+   Every labeled connection between your ideas is narrated and traced back to the
+   conversations it lives in, so you can read what the AI sees in your thinking. */
+function connectionsData(){
+  const g=buildConceptGraph(); const seen=new Set(), out=[];
+  (g.edges||[]).forEach(e=>{ if(!e.a||!e.b) return; const rel=edgeRel(e.a,e.b); if(!rel) return;
+    const k=edgeKey(e.a,e.b); if(seen.has(k)) return; seen.add(k);
+    const b=new Set((g.byConcept[e.b]||[]).map(c=>c.id));
+    const shared=(g.byConcept[e.a]||[]).filter(c=>b.has(c.id));
+    out.push({ a:e.a, b:e.b, rel, shared }); });
+  out.sort((x,y)=>y.shared.length-x.shared.length);
+  return out;
+}
+function connectionsChapter(){
+  const data=connectionsData(); if(!data.length) return "";
+  const lines=data.slice(0,40).map(d=>{
+    const links=d.shared.slice(0,6).map(c=>`<button class="lk" style="cursor:pointer" onclick="openConv('${attrJs(c.id)}')">${esc((c.title||"Untitled").slice(0,42))}</button>`).join("");
+    return `<div style="margin:0 0 16px;padding:11px 14px;border-left:2px solid rgba(240,171,252,.45);background:linear-gradient(90deg,rgba(240,171,252,.06),transparent)">
+      <div style="font:500 15.5px/1.7 Georgia,serif;color:#eef2f8">Inkling sees your thinking about <b style="color:#a78bfa">${esc(titleCase(d.a))}</b> <i style="color:#f0abfc">${esc(d.rel)}</i> <b style="color:#a78bfa">${esc(titleCase(d.b))}</b>${d.shared.length?` — traced across ${d.shared.length} conversation${d.shared.length===1?"":"s"}`:""}.</div>
+      ${links?`<div class="links" style="margin-top:8px">${links}</div>`:""}</div>`;
+  }).join("");
+  return `<section id="ch-connections" style="margin:44px 0 8px;scroll-margin-top:16px">
+    <div style="text-align:center;margin:30px 0 18px">
+      <div style="font:800 11px system-ui;color:#f0abfc;letter-spacing:.18em;text-transform:uppercase">What Inkling Sees</div>
+      <h2 style="font:800 27px/1.2 Georgia,serif;margin:8px 0 0;color:#f3f6fc">🔗 The Connections</h2>
+      <div style="width:44px;height:2px;background:rgba(240,171,252,.5);margin:14px auto 0"></div></div>
+    <p style="font:400 16px/1.9 Georgia,serif;color:#eaeff7;margin:0 auto 18px;text-align:center;max-width:640px">Every link below is a connection you approved — how one idea in your thinking relates to another. Tap a conversation to open where it lives and read its story.</p>
+    ${lines}</section>`;
+}
+// Jump from an approved proposal to where its result lives (the Approval Gate's trace).
+function traceProposal(id){
+  const p=Gate.find(id); if(!p) return;
+  if(p.kind==="edge"){ DB.storyView="read"; persist(); go({name:"storybook"});
+    setTimeout(()=>{ const el=document.getElementById("ch-connections"); if(el) el.scrollIntoView({behavior:"smooth"}); }, 80); return; }
+  const convCh=(p.changes||[]).find(ch=>ch.target.type==="conversation");
+  if(convCh){ openConv(convCh.target.id); return; }
+  go({name:"storybook"});
+}
+
 // The whole book, read straight through — cover, then every chapter in sequence.
 function renderStorybook(){
   const book=buildBook();
@@ -1679,9 +1725,10 @@ function renderStorybook(){
      ${coverWriteBar(book)}
      <details style="margin:0 0 8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0">
        <summary style="cursor:pointer;color:var(--dim);font:700 12px system-ui">Table of contents — ${nCh} chapters (tap a title to jump)</summary>
-       <div style="margin-top:10px;max-height:42vh;overflow:auto">${toc}${book.brief.length?`<a onclick="document.getElementById('brief').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:var(--blue);display:block;padding:2px 0;font-size:13px">✦ Brief threads · ${book.brief.length}</a>`:""}</div>
+       <div style="margin-top:10px;max-height:42vh;overflow:auto">${toc}${connectionsData().length?`<a onclick="document.getElementById('ch-connections').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:#f0abfc;display:block;padding:2px 0;font-size:13px;font-weight:700">🔗 The Connections · what Inkling sees</a>`:""}${book.brief.length?`<a onclick="document.getElementById('brief').scrollIntoView({behavior:'smooth'})" style="cursor:pointer;color:var(--blue);display:block;padding:2px 0;font-size:13px">✦ Brief threads · ${book.brief.length}</a>`:""}</div>
      </details>
      ${chapters}
+     ${connectionsChapter()}
      ${brief}
      <div style="text-align:center;margin:46px 0 12px"><div style="width:60px;height:1px;background:var(--line);margin:0 auto 12px"></div>
        <p class="hint" style="margin:0">The end — for now. Your book keeps writing itself as you explore.</p></div>`, "storybook");
