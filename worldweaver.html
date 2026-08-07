@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>WorldWeaver · Lot 1 — Ground Zero</title>
+<style>
+  :root{ --ink:#e6edf3; --dim:#8b949e; --panel:rgba(8,12,22,.82); --line:rgba(255,255,255,.14); }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#05070e;color:var(--ink);font:400 14px/1.5 system-ui;overflow:hidden}
+  #c{display:block;width:100vw;height:100vh}
+  .hud{position:fixed;pointer-events:none;z-index:5}
+  #title{left:16px;top:14px}
+  #title h1{font:800 18px system-ui;margin:0}
+  #title .sub{color:var(--dim);font:600 12px system-ui;margin-top:2px;max-width:340px}
+  #legend{right:14px;top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;backdrop-filter:blur(6px)}
+  #legend .lgh{font:800 11px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+  .row{display:flex;align-items:center;gap:9px;margin:5px 0;font:600 12px system-ui}
+  .sw{width:16px;height:6px;border-radius:3px;flex:none}
+  #foot{left:16px;bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--dim);font:600 12px system-ui}
+  #foot b{color:var(--ink)}
+  #layers{right:14px;bottom:14px;display:flex;gap:6px;pointer-events:auto}
+  .lbtn{pointer-events:auto;cursor:pointer;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 13px;font:800 12px system-ui;backdrop-filter:blur(6px)}
+  .lbtn.on{border-color:#39d98a;color:#39d98a}
+</style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="title" class="hud">
+    <h1>🏗️ WorldWeaver — Lot 1</h1>
+    <div class="sub">Ground zero: ~2 acres. Systems first — plumbing &amp; electrical laid before the house is framed on the marked slab.</div>
+  </div>
+  <div id="legend" class="hud">
+    <div class="lgh">Systems in the ground</div>
+    <div class="row"><span class="sw" style="background:#3b82f6"></span> Cold water supply</div>
+    <div class="row"><span class="sw" style="background:#ef4444"></span> Hot water supply</div>
+    <div class="row"><span class="sw" style="background:#6b7280"></span> Drain / sewer (DWV)</div>
+    <div class="row"><span class="sw" style="background:#f59e0b"></span> Electrical conduit</div>
+    <div class="row"><span class="sw" style="background:#cbd5e1"></span> Fixture / stub-up</div>
+  </div>
+  <div id="foot" class="hud">Drag to orbit · scroll to zoom · right-drag to pan &nbsp;·&nbsp; <b>Next:</b> walls → baseboards → fixtures</div>
+  <div id="layers" class="hud">
+    <button id="btnSys" class="lbtn on">🔧 Systems</button>
+    <button id="btnFloor" class="lbtn">🪵 Maple floor</button>
+  </div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "/vendor/three/build/three.module.js",
+  "three/addons/": "/vendor/three/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a1018);
+scene.fog = new THREE.Fog(0x0a1018, 90, 200);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 1000);
+camera.position.set(22, 16, 30);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.target.set(0, 0, 2);
+
+// ---- lights ----
+scene.add(new THREE.HemisphereLight(0xbad7ff, 0x25331d, 0.95));
+const sun = new THREE.DirectionalLight(0xfff2d8, 1.15);
+sun.position.set(38, 54, 22);
+scene.add(sun);
+
+// ---- the lot: ~2 acres (2 ac ≈ 8094 m² ≈ 90 m square) ----
+const LOT = 90;
+const lot = new THREE.Mesh(
+  new THREE.PlaneGeometry(LOT, LOT),
+  new THREE.MeshStandardMaterial({ color:0x2f5233, roughness:1 })
+);
+lot.rotation.x = -Math.PI/2;
+scene.add(lot);
+const grid = new THREE.GridHelper(LOT, 45, 0x3a5a34, 0x243a1f);
+grid.position.y = 0.02;
+scene.add(grid);
+
+// street + utility easement along the north edge
+const street = new THREE.Mesh(
+  new THREE.PlaneGeometry(LOT, 8),
+  new THREE.MeshStandardMaterial({ color:0x181a20, roughness:1 })
+);
+street.rotation.x = -Math.PI/2;
+street.position.set(0, 0.015, -LOT/2 + 4);
+scene.add(street);
+
+// house footprint / slab — translucent so the systems read through it
+const SLAB = { w:18, d:13, cx:0, cz:3, y:0.16 };
+const slab = new THREE.Mesh(
+  new THREE.BoxGeometry(SLAB.w, 0.3, SLAB.d),
+  new THREE.MeshStandardMaterial({ color:0x9aa0aa, transparent:true, opacity:0.32, roughness:0.95 })
+);
+slab.position.set(SLAB.cx, SLAB.y, SLAB.cz);
+scene.add(slab);
+// slab outline
+const edges = new THREE.LineSegments(
+  new THREE.EdgesGeometry(new THREE.BoxGeometry(SLAB.w, 0.3, SLAB.d)),
+  new THREE.LineBasicMaterial({ color:0xdfe6ef })
+);
+edges.position.copy(slab.position);
+scene.add(edges);
+
+// ---- layer groups (toggleable) ----
+const systems = new THREE.Group(); scene.add(systems);   // plumbing + electrical rough-in
+const floorGroup = new THREE.Group(); scene.add(floorGroup); // maple hardwood
+let layer = scene;
+
+// ---- helpers ----
+const COL = { cold:0x3b82f6, hot:0xef4444, sewer:0x6b7280, elec:0xf59e0b, stub:0xcbd5e1 };
+function pipe(a, b, r, color){
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const dir = new THREE.Vector3().subVectors(B, A);
+  const len = dir.length();
+  const mesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(r, r, len, 14),
+    new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.28, metalness:0.25, roughness:0.5 })
+  );
+  mesh.position.copy(A).addScaledVector(dir, 0.5);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  layer.add(mesh);
+  return mesh;
+}
+function joint(p, r, color){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12),
+    new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.28, roughness:0.5 }));
+  m.position.set(...p); layer.add(m); return m;
+}
+function box(p, size, color, opts={}){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(...size),
+    new THREE.MeshStandardMaterial({ color, roughness:0.7, ...opts }));
+  m.position.set(...p); layer.add(m); return m;
+}
+function label(text, p, color='#cbd5e1'){
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+  const g = cv.getContext('2d');
+  g.fillStyle = 'rgba(6,10,20,.86)'; roundRect(g,2,2,252,60,10); g.fill();
+  g.strokeStyle = color; g.lineWidth = 3; roundRect(g,2,2,252,60,10); g.stroke();
+  g.fillStyle = '#e6edf3'; g.font = 'bold 26px system-ui'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillText(text, 128, 34);
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(cv), depthTest:false }));
+  spr.position.set(...p); spr.scale.set(4.6, 1.15, 1); scene.add(spr); return spr;
+}
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+
+// ---- fixtures (rough-in points on the slab) ----
+const FIX = {
+  kitchen:  [ 4.5, 0,  8.5],
+  masterBa: [-6.0, 0,  7.5],
+  hallBath: [-6.0, 0,  0.5],
+  laundry:  [ 7.0, 0,  0.0],
+  heater:   [ 7.5, 0,  8.5],
+};
+function stub(name, p, txt){
+  box([p[0], 0.5, p[2]], [0.5, 1.0, 0.5], COL.stub);   // stub-up marker
+  label(txt, [p[0], 1.7, p[2]]);
+}
+stub('kitchen', FIX.kitchen, 'Kitchen');
+stub('masterBa', FIX.masterBa, 'Master Bath');
+stub('hallBath', FIX.hallBath, 'Hall Bath');
+stub('laundry', FIX.laundry, 'Laundry');
+box([FIX.heater[0], 0.9, FIX.heater[2]], [1.1, 1.8, 1.1], 0xb0663a); // water heater
+label('Water Heater', [FIX.heater[0], 2.3, FIX.heater[2]], '#ef4444');
+
+// ---- PLUMBING: supply rough-in (raised so the system reads on the pad) ----
+layer = systems;
+const yW = 0.30, coldMainZ = -0.5;
+pipe([-3, yW, -LOT/2+8], [-3, yW, coldMainZ], 0.09, COL.cold);            // service lateral
+pipe([-3, yW, coldMainZ], [SLAB.cx, yW, coldMainZ], 0.09, COL.cold);     // main run
+joint([SLAB.cx, yW, coldMainZ], 0.16, COL.cold);
+label('Water Main', [-3, 1.3, -LOT/2+9], '#3b82f6');
+[FIX.kitchen, FIX.masterBa, FIX.hallBath, FIX.laundry, FIX.heater].forEach(f=>{
+  pipe([SLAB.cx, yW, coldMainZ], [f[0], yW, coldMainZ], 0.06, COL.cold);
+  pipe([f[0], yW, coldMainZ], [f[0], yW, f[2]], 0.06, COL.cold);
+  pipe([f[0], yW, f[2]], [f[0], 0.72, f[2]], 0.06, COL.cold);            // riser
+});
+const yH = 0.44;
+[FIX.kitchen, FIX.masterBa, FIX.laundry].forEach(f=>{
+  pipe([FIX.heater[0], yH, FIX.heater[2]], [f[0], yH, FIX.heater[2]], 0.055, COL.hot);
+  pipe([f[0], yH, FIX.heater[2]], [f[0], yH, f[2]], 0.055, COL.hot);
+  pipe([f[0], yH, f[2]], [f[0], 0.72, f[2]], 0.055, COL.hot);
+});
+
+// ---- PLUMBING: DWV drains sloped to the sewer main ----
+const sewerZ = 10.5, ySew = 0.18;
+pipe([SLAB.cx, ySew, sewerZ], [SLAB.cx, ySew-0.05, -LOT/2+8], 0.22, COL.sewer);
+joint([SLAB.cx, ySew, sewerZ], 0.3, COL.sewer);
+label('Sewer Main', [SLAB.cx, 1.3, -LOT/2+9], '#9ca3af');
+[FIX.kitchen, FIX.masterBa, FIX.hallBath, FIX.laundry].forEach(f=>{
+  pipe([f[0], ySew, f[2]], [f[0], ySew, sewerZ], 0.13, COL.sewer);
+  pipe([f[0], ySew, sewerZ], [SLAB.cx, ySew, sewerZ], 0.13, COL.sewer);
+  pipe([f[0], 0.72, f[2]], [f[0], ySew, f[2]], 0.13, COL.sewer);
+});
+
+// ---- ELECTRICAL: service → meter → panel → branch conduits ----
+const meter = [9.5, 0, -LOT/2+8];
+box([meter[0], 0.7, meter[2]], [0.7, 1.4, 0.4], 0x2b2f36);
+box([meter[0], 1.15, meter[2]], [0.5, 0.5, 0.42], 0x11141a);
+label('Meter', [meter[0], 2.1, meter[2]], '#f59e0b');
+const panel = [9.5, 1.2, 2.5];
+box(panel, [0.8, 2.0, 0.4], 0x3a3f47);
+box([panel[0], panel[1], panel[2]+0.2], [0.62, 1.7, 0.06], COL.elec, {emissive:0x6b3d00, emissiveIntensity:0.3});
+label('Main Panel', [panel[0], panel[1]+1.6, panel[2]], '#f59e0b');
+const yE = 0.60;
+pipe([meter[0], yE, meter[2]], [meter[0], yE, panel[2]], 0.05, COL.elec);
+pipe([meter[0], yE, panel[2]], [panel[0], panel[1], panel[2]], 0.05, COL.elec);
+[[3,0,7],[-5,0,6],[-5,0,1],[6,0,10]].forEach(t=>{
+  pipe([panel[0], yE, panel[2]], [panel[0], yE, t[2]], 0.04, COL.elec);
+  pipe([panel[0], yE, t[2]], [t[0], yE, t[2]], 0.04, COL.elec);
+  pipe([t[0], yE, t[2]], [t[0], 0.85, t[2]], 0.04, COL.elec);
+});
+layer = scene;
+
+// ---- MAPLE HARDWOOD FLOOR — cut slabs laid at a math angle (θ = 30°), staggered ----
+const FLOOR_ANGLE = Math.PI/6;   // 30° — the angle, from math
+(function mapleFloor(){
+  const cos=Math.cos(FLOOR_ANGLE), sin=Math.sin(FLOOR_ANGLE);
+  const L=1.15, W=0.19, gap=0.014;
+  const tones=[0xC9A26A,0xBE9257,0xD3B07C,0xC29A61,0xCBA774];
+  const halfW=SLAB.w/2-0.12, halfD=SLAB.d/2-0.12;
+  const N=Math.ceil((SLAB.w+SLAB.d)/L)+3;
+  const y=SLAB.y+0.18; let row=0;
+  for(let v=-N; v<=N; v++){
+    const cyc=v*(W+gap), off=(row&1)?(L+gap)*0.5:0;
+    for(let u=-N; u<=N; u++){
+      const cxc=u*(L+gap)+off;
+      const x=cxc*cos-cyc*sin, z=cxc*sin+cyc*cos;
+      if(Math.abs(x)>halfW || Math.abs(z)>halfD) continue;   // cut to fit the room
+      const m=new THREE.Mesh(new THREE.BoxGeometry(L,0.05,W),
+        new THREE.MeshStandardMaterial({color:tones[((u*5+v*3)%tones.length+tones.length)%tones.length], roughness:0.52, metalness:0.02}));
+      m.position.set(SLAB.cx+x, y, SLAB.cz+z); m.rotation.y=FLOOR_ANGLE;
+      floorGroup.add(m);
+    }
+    row++;
+  }
+})();
+floorGroup.visible = false;   // start on the SYSTEMS layer; toggle to reveal the floor
+
+// ---- DIRECTIONAL MAP: compass + dimensions + the angle, called out ----
+label('N', [SLAB.cx, 0.6, -LOT/2+7], '#39d98a');
+label('S', [SLAB.cx, 0.6, LOT/2-7], '#39d98a');
+label('E', [LOT/2-7, 0.6, SLAB.cz], '#39d98a');
+label('W', [-LOT/2+7, 0.6, SLAB.cz], '#39d98a');
+function dimLine(a,b,color){
+  const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
+  scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({color})));
+}
+dimLine([-SLAB.w/2, 0.05, SLAB.cz-SLAB.d/2-1.2], [SLAB.w/2, 0.05, SLAB.cz-SLAB.d/2-1.2], 0x9ecbff);
+label('18.0 m', [0, 0.6, SLAB.cz-SLAB.d/2-1.2], '#9ecbff');
+dimLine([SLAB.w/2+1.4, 0.05, SLAB.cz-SLAB.d/2], [SLAB.w/2+1.4, 0.05, SLAB.cz+SLAB.d/2], 0x9ecbff);
+label('13.0 m', [SLAB.w/2+1.4, 0.6, SLAB.cz], '#9ecbff');
+label('Maple · cut slabs @ 30°', [SLAB.cx, 1.5, SLAB.cz], '#C9A26A');
+label('LOT 1 · 2 acres', [ -SLAB.w/2 - 3, 2.2, -LOT/2 + 12 ], '#39d98a');
+
+// ---- layer toggle (Systems ↔ Floor) ----
+const btnSys=document.getElementById('btnSys'), btnFloor=document.getElementById('btnFloor');
+function syncLayers(){ systems.visible=btnSys.classList.contains('on'); floorGroup.visible=btnFloor.classList.contains('on'); }
+btnSys.onclick=()=>{ btnSys.classList.toggle('on'); syncLayers(); };
+btnFloor.onclick=()=>{ btnFloor.classList.toggle('on'); syncLayers(); };
+syncLayers();
+
+// ---- resize + render loop ----
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+(function loop(){
+  requestAnimationFrame(loop);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+window.__ww = { scene, camera, renderer, THREE };
+</script>
+</body>
+</html>
