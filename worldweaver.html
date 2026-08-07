@@ -5,22 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>WorldWeaver · Lot 1 — Ground Zero</title>
 <style>
-  :root{ --ink:#e6edf3; --dim:#8b949e; --panel:rgba(8,12,22,.82); --line:rgba(255,255,255,.14); }
+  :root{ --ink:#eaf1f8; --dim:#9aa6b2; --panel:rgba(8,12,22,.8); --line:rgba(255,255,255,.14); }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:#05070e;color:var(--ink);font:400 14px/1.5 system-ui;overflow:hidden}
+  html,body{margin:0;height:100%;background:#0a1018;color:var(--ink);font:400 14px/1.5 system-ui;overflow:hidden}
   #c{display:block;width:100vw;height:100vh}
   .hud{position:fixed;pointer-events:none;z-index:5}
   #title{left:16px;top:14px}
   #title h1{font:800 18px system-ui;margin:0}
-  #title .sub{color:var(--dim);font:600 12px system-ui;margin-top:2px;max-width:340px}
+  #title .sub{color:var(--dim);font:600 12px system-ui;margin-top:2px;max-width:360px}
   #legend{right:14px;top:14px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;backdrop-filter:blur(6px)}
   #legend .lgh{font:800 11px system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
   .row{display:flex;align-items:center;gap:9px;margin:5px 0;font:600 12px system-ui}
   .sw{width:16px;height:6px;border-radius:3px;flex:none}
   #foot{left:16px;bottom:14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--dim);font:600 12px system-ui}
   #foot b{color:var(--ink)}
-  #layers{right:14px;bottom:14px;display:flex;gap:6px;pointer-events:auto}
-  .lbtn{pointer-events:auto;cursor:pointer;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 13px;font:800 12px system-ui;backdrop-filter:blur(6px)}
+  #layers{right:14px;bottom:14px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:60vw;pointer-events:auto}
+  .lbtn{pointer-events:auto;cursor:pointer;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 12px;font:800 12px system-ui;backdrop-filter:blur(6px)}
   .lbtn.on{border-color:#39d98a;color:#39d98a}
 </style>
 </head>
@@ -28,20 +28,24 @@
   <canvas id="c"></canvas>
   <div id="title" class="hud">
     <h1>🏗️ WorldWeaver — Lot 1</h1>
-    <div class="sub">Ground zero: ~2 acres. Systems first — plumbing &amp; electrical laid before the house is framed on the marked slab.</div>
+    <div class="sub">Ground zero: ~2 acres. Every system roughed-in before framing — plumbing, electrical, gas, heating, cooling. Toggle a layer to inspect it.</div>
   </div>
   <div id="legend" class="hud">
-    <div class="lgh">Systems in the ground</div>
-    <div class="row"><span class="sw" style="background:#3b82f6"></span> Cold water supply</div>
-    <div class="row"><span class="sw" style="background:#ef4444"></span> Hot water supply</div>
-    <div class="row"><span class="sw" style="background:#6b7280"></span> Drain / sewer (DWV)</div>
+    <div class="lgh">Systems</div>
+    <div class="row"><span class="sw" style="background:#3b82f6"></span> Cold water</div>
+    <div class="row"><span class="sw" style="background:#ef4444"></span> Hot water</div>
+    <div class="row"><span class="sw" style="background:#6b7280"></span> Drain / sewer</div>
     <div class="row"><span class="sw" style="background:#f59e0b"></span> Electrical conduit</div>
-    <div class="row"><span class="sw" style="background:#cbd5e1"></span> Fixture / stub-up</div>
+    <div class="row"><span class="sw" style="background:#eab308"></span> Gas line</div>
+    <div class="row"><span class="sw" style="background:#a8b0ba"></span> HVAC ductwork</div>
+    <div class="row"><span class="sw" style="background:#c9743a"></span> Refrigerant (copper)</div>
   </div>
-  <div id="foot" class="hud">Drag to orbit · scroll to zoom · right-drag to pan &nbsp;·&nbsp; <b>Next:</b> walls → baseboards → fixtures</div>
+  <div id="foot" class="hud">Drag to orbit · scroll to zoom · right-drag to pan &nbsp;·&nbsp; <b>Next:</b> framing → walls → windows</div>
   <div id="layers" class="hud">
-    <button id="btnSys" class="lbtn on">🔧 Systems</button>
-    <button id="btnFloor" class="lbtn">🪵 Maple floor</button>
+    <button id="btnPlumb" class="lbtn on">🚿 Plumbing</button>
+    <button id="btnElec" class="lbtn on">⚡ Electrical</button>
+    <button id="btnHvac" class="lbtn on">❄️ HVAC</button>
+    <button id="btnFloor" class="lbtn">🪵 Floor</button>
   </div>
 
 <script type="importmap">
@@ -58,231 +62,255 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
 renderer.setPixelRatio(Math.min(2, devicePixelRatio));
 renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a1018);
-scene.fog = new THREE.Fog(0x0a1018, 90, 200);
+scene.fog = new THREE.Fog(0xcde0ef, 120, 320);
 
-const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 1000);
-camera.position.set(22, 16, 30);
+// ---- sky dome (vertical gradient) ----
+(function sky(){
+  const cv = document.createElement('canvas'); cv.width = 8; cv.height = 256;
+  const g = cv.getContext('2d'), grd = g.createLinearGradient(0,0,0,256);
+  grd.addColorStop(0,'#2f5d94'); grd.addColorStop(0.5,'#7fb0dd'); grd.addColorStop(1,'#dcecf6');
+  g.fillStyle = grd; g.fillRect(0,0,8,256);
+  const tex = new THREE.CanvasTexture(cv);
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(500,32,16),
+    new THREE.MeshBasicMaterial({ map:tex, side:THREE.BackSide, fog:false })));
+})();
 
+const camera = new THREE.PerspectiveCamera(52, innerWidth/innerHeight, 0.1, 1200);
+camera.position.set(26, 20, 34);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.maxPolarAngle = Math.PI * 0.49;
 controls.target.set(0, 0, 2);
 
 // ---- lights ----
-scene.add(new THREE.HemisphereLight(0xbad7ff, 0x25331d, 0.95));
-const sun = new THREE.DirectionalLight(0xfff2d8, 1.15);
-sun.position.set(38, 54, 22);
+scene.add(new THREE.HemisphereLight(0xcfe3ff, 0x3a4a2a, 0.85));
+const sun = new THREE.DirectionalLight(0xfff1d6, 1.5);
+sun.position.set(34, 46, 24);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 160;
+sun.shadow.camera.left = -40; sun.shadow.camera.right = 40;
+sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40;
+sun.shadow.bias = -0.0004;
 scene.add(sun);
 
-// ---- the lot: ~2 acres (2 ac ≈ 8094 m² ≈ 90 m square) ----
+// ---- lot: ~2 acres (≈ 90 m square) ----
 const LOT = 90;
-const lot = new THREE.Mesh(
-  new THREE.PlaneGeometry(LOT, LOT),
-  new THREE.MeshStandardMaterial({ color:0x2f5233, roughness:1 })
-);
-lot.rotation.x = -Math.PI/2;
-scene.add(lot);
-const grid = new THREE.GridHelper(LOT, 45, 0x3a5a34, 0x243a1f);
-grid.position.y = 0.02;
-scene.add(grid);
+const lot = new THREE.Mesh(new THREE.PlaneGeometry(LOT, LOT),
+  new THREE.MeshStandardMaterial({ color:0x35502e, roughness:1 }));
+lot.rotation.x = -Math.PI/2; lot.receiveShadow = true; scene.add(lot);
+const grid = new THREE.GridHelper(LOT, 45, 0x40602f, 0x28401e); grid.position.y = 0.02; scene.add(grid);
+const street = new THREE.Mesh(new THREE.PlaneGeometry(LOT, 8),
+  new THREE.MeshStandardMaterial({ color:0x20232b, roughness:1 }));
+street.rotation.x = -Math.PI/2; street.position.set(0, 0.015, -LOT/2 + 4); street.receiveShadow = true; scene.add(street);
 
-// street + utility easement along the north edge
-const street = new THREE.Mesh(
-  new THREE.PlaneGeometry(LOT, 8),
-  new THREE.MeshStandardMaterial({ color:0x181a20, roughness:1 })
-);
-street.rotation.x = -Math.PI/2;
-street.position.set(0, 0.015, -LOT/2 + 4);
-scene.add(street);
-
-// house footprint / slab — translucent so the systems read through it
-const SLAB = { w:18, d:13, cx:0, cz:3, y:0.16 };
-const slab = new THREE.Mesh(
-  new THREE.BoxGeometry(SLAB.w, 0.3, SLAB.d),
-  new THREE.MeshStandardMaterial({ color:0x9aa0aa, transparent:true, opacity:0.32, roughness:0.95 })
-);
-slab.position.set(SLAB.cx, SLAB.y, SLAB.cz);
-scene.add(slab);
-// slab outline
-const edges = new THREE.LineSegments(
+// ---- house slab (≈2× original) ----
+const SLAB = { w:26, d:18.5, cx:0, cz:3, y:0.16 };
+const slab = new THREE.Mesh(new THREE.BoxGeometry(SLAB.w, 0.3, SLAB.d),
+  new THREE.MeshStandardMaterial({ color:0x9aa0aa, roughness:0.95, transparent:true, opacity:0.3 }));
+slab.position.set(SLAB.cx, SLAB.y, SLAB.cz); slab.receiveShadow = true; scene.add(slab);
+const slabOutline = new THREE.LineSegments(
   new THREE.EdgesGeometry(new THREE.BoxGeometry(SLAB.w, 0.3, SLAB.d)),
-  new THREE.LineBasicMaterial({ color:0xdfe6ef })
-);
-edges.position.copy(slab.position);
-scene.add(edges);
+  new THREE.LineBasicMaterial({ color:0xdfe6ef }));
+slabOutline.position.copy(slab.position); scene.add(slabOutline);
 
-// ---- layer groups (toggleable) ----
-const systems = new THREE.Group(); scene.add(systems);   // plumbing + electrical rough-in
-const floorGroup = new THREE.Group(); scene.add(floorGroup); // maple hardwood
+// ---- toggleable layer groups ----
+const gPlumb = new THREE.Group(), gElec = new THREE.Group(),
+      gHVAC = new THREE.Group(), gFloor = new THREE.Group();
+scene.add(gPlumb, gElec, gHVAC, gFloor);
 let layer = scene;
 
 // ---- helpers ----
-const COL = { cold:0x3b82f6, hot:0xef4444, sewer:0x6b7280, elec:0xf59e0b, stub:0xcbd5e1 };
-function pipe(a, b, r, color){
-  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
-  const dir = new THREE.Vector3().subVectors(B, A);
-  const len = dir.length();
-  const mesh = new THREE.Mesh(
-    new THREE.CylinderGeometry(r, r, len, 14),
-    new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.28, metalness:0.25, roughness:0.5 })
-  );
-  mesh.position.copy(A).addScaledVector(dir, 0.5);
-  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
-  layer.add(mesh);
-  return mesh;
+const COL = { cold:0x3b82f6, hot:0xef4444, sewer:0x6b7280, elec:0xf59e0b, gas:0xeab308, duct:0xa8b0ba, refrig:0xc9743a, stub:0xcbd5e1 };
+function pipe(a, b, r, color, emis=0.25){
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), dir = new THREE.Vector3().subVectors(B,A);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, dir.length(), 14),
+    new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:emis, metalness:0.3, roughness:0.5 }));
+  m.position.copy(A).addScaledVector(dir, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  layer.add(m); return m;
+}
+function duct(a, b, w, h, color){
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), dir = new THREE.Vector3().subVectors(B,A);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, dir.length(), h),
+    new THREE.MeshStandardMaterial({ color, metalness:0.6, roughness:0.4 }));
+  m.position.copy(A).addScaledVector(dir, 0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  m.castShadow = true; layer.add(m); return m;
 }
 function joint(p, r, color){
   const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 12),
-    new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.28, roughness:0.5 }));
+    new THREE.MeshStandardMaterial({ color, emissive:color, emissiveIntensity:0.25, roughness:0.5 }));
   m.position.set(...p); layer.add(m); return m;
 }
-function box(p, size, color, opts={}){
+function unit(p, size, color, opts={}){
   const m = new THREE.Mesh(new THREE.BoxGeometry(...size),
-    new THREE.MeshStandardMaterial({ color, roughness:0.7, ...opts }));
-  m.position.set(...p); layer.add(m); return m;
+    new THREE.MeshStandardMaterial({ color, roughness:0.55, metalness:0.25, ...opts }));
+  m.position.set(...p); m.castShadow = true; m.receiveShadow = true; layer.add(m); return m;
+}
+function cyl(p, r, h, color, opts={}){
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 20),
+    new THREE.MeshStandardMaterial({ color, roughness:0.5, metalness:0.35, ...opts }));
+  m.position.set(...p); m.castShadow = true; layer.add(m); return m;
 }
 function label(text, p, color='#cbd5e1'){
   const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
   const g = cv.getContext('2d');
-  g.fillStyle = 'rgba(6,10,20,.86)'; roundRect(g,2,2,252,60,10); g.fill();
-  g.strokeStyle = color; g.lineWidth = 3; roundRect(g,2,2,252,60,10); g.stroke();
-  g.fillStyle = '#e6edf3'; g.font = 'bold 26px system-ui'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillStyle = 'rgba(6,10,20,.86)'; rr(g,2,2,252,60,10); g.fill();
+  g.strokeStyle = color; g.lineWidth = 3; rr(g,2,2,252,60,10); g.stroke();
+  g.fillStyle = '#eaf1f8'; g.font = 'bold 26px system-ui'; g.textAlign='center'; g.textBaseline='middle';
   g.fillText(text, 128, 34);
-  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(cv), depthTest:false }));
-  spr.position.set(...p); spr.scale.set(4.6, 1.15, 1); scene.add(spr); return spr;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(cv), depthTest:false }));
+  s.position.set(...p); s.scale.set(4.6, 1.15, 1); scene.add(s); return s;
 }
-function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function rr(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
 
-// ---- fixtures (rough-in points on the slab) ----
+// ---- rough-in fixture points (scale with the slab) ----
+const S = SLAB;
 const FIX = {
-  kitchen:  [ 4.5, 0,  8.5],
-  masterBa: [-6.0, 0,  7.5],
-  hallBath: [-6.0, 0,  0.5],
-  laundry:  [ 7.0, 0,  0.0],
-  heater:   [ 7.5, 0,  8.5],
+  kitchen:  [ S.w*0.16, 0, S.cz + S.d*0.30],
+  masterBa: [-S.w*0.30, 0, S.cz + S.d*0.26],
+  hallBath: [-S.w*0.30, 0, S.cz - S.d*0.28],
+  laundry:  [ S.w*0.26, 0, S.cz - S.d*0.30],
+  heater:   [ S.w*0.34, 0, S.cz + S.d*0.26],
 };
-function stub(name, p, txt){
-  box([p[0], 0.5, p[2]], [0.5, 1.0, 0.5], COL.stub);   // stub-up marker
-  label(txt, [p[0], 1.7, p[2]]);
-}
-stub('kitchen', FIX.kitchen, 'Kitchen');
-stub('masterBa', FIX.masterBa, 'Master Bath');
-stub('hallBath', FIX.hallBath, 'Hall Bath');
-stub('laundry', FIX.laundry, 'Laundry');
-box([FIX.heater[0], 0.9, FIX.heater[2]], [1.1, 1.8, 1.1], 0xb0663a); // water heater
-label('Water Heater', [FIX.heater[0], 2.3, FIX.heater[2]], '#ef4444');
+const FURNACE = [ S.w*0.30, 0, S.cz - S.d*0.14];
 
-// ---- PLUMBING: supply rough-in (raised so the system reads on the pad) ----
-layer = systems;
-const yW = 0.30, coldMainZ = -0.5;
-pipe([-3, yW, -LOT/2+8], [-3, yW, coldMainZ], 0.09, COL.cold);            // service lateral
-pipe([-3, yW, coldMainZ], [SLAB.cx, yW, coldMainZ], 0.09, COL.cold);     // main run
-joint([SLAB.cx, yW, coldMainZ], 0.16, COL.cold);
-label('Water Main', [-3, 1.3, -LOT/2+9], '#3b82f6');
-[FIX.kitchen, FIX.masterBa, FIX.hallBath, FIX.laundry, FIX.heater].forEach(f=>{
-  pipe([SLAB.cx, yW, coldMainZ], [f[0], yW, coldMainZ], 0.06, COL.cold);
-  pipe([f[0], yW, coldMainZ], [f[0], yW, f[2]], 0.06, COL.cold);
-  pipe([f[0], yW, f[2]], [f[0], 0.72, f[2]], 0.06, COL.cold);            // riser
+// ================= PLUMBING =================
+layer = gPlumb;
+function stub(p, txt){ unit([p[0],0.5,p[2]],[0.5,1.0,0.5],COL.stub); label(txt,[p[0],1.7,p[2]]); }
+stub(FIX.kitchen,'Kitchen'); stub(FIX.masterBa,'Master Bath'); stub(FIX.hallBath,'Hall Bath'); stub(FIX.laundry,'Laundry');
+// water heater (tank) + gas + cold in / hot out
+cyl([FIX.heater[0],0.95,FIX.heater[2]],0.55,1.9,0xb45f2e); label('Water Heater',[FIX.heater[0],2.35,FIX.heater[2]],'#ef4444');
+// outside pump on the supply lateral
+const yW = 0.30, coldMainZ = S.cz - S.d*0.34, pumpZ = -LOT/2 + 18;
+unit([-6,0.55,pumpZ],[1.1,1.1,0.9],0x14b8a6); unit([-6,1.15,pumpZ],[0.5,0.4,0.5],0x0f766e); label('Outside Pump',[-6,2.0,pumpZ],'#2dd4bf');
+pipe([-6,yW,-LOT/2+8],[-6,yW,pumpZ],0.09,COL.cold);          // street → pump
+pipe([-6,yW,pumpZ],[-6,yW,coldMainZ],0.09,COL.cold);         // pump → house
+pipe([-6,yW,coldMainZ],[S.cx,yW,coldMainZ],0.09,COL.cold);   // main across the pad
+joint([S.cx,yW,coldMainZ],0.16,COL.cold); label('Water Main',[-6,1.3,-LOT/2+9],'#3b82f6');
+[FIX.kitchen,FIX.masterBa,FIX.hallBath,FIX.laundry,FIX.heater].forEach(f=>{
+  pipe([S.cx,yW,coldMainZ],[f[0],yW,coldMainZ],0.06,COL.cold);
+  pipe([f[0],yW,coldMainZ],[f[0],yW,f[2]],0.06,COL.cold);
+  pipe([f[0],yW,f[2]],[f[0],0.72,f[2]],0.06,COL.cold);        // riser
 });
+// hot from the heater to fixtures
 const yH = 0.44;
-[FIX.kitchen, FIX.masterBa, FIX.laundry].forEach(f=>{
-  pipe([FIX.heater[0], yH, FIX.heater[2]], [f[0], yH, FIX.heater[2]], 0.055, COL.hot);
-  pipe([f[0], yH, FIX.heater[2]], [f[0], yH, f[2]], 0.055, COL.hot);
-  pipe([f[0], yH, f[2]], [f[0], 0.72, f[2]], 0.055, COL.hot);
+[FIX.kitchen,FIX.masterBa,FIX.laundry].forEach(f=>{
+  pipe([FIX.heater[0],yH,FIX.heater[2]],[f[0],yH,FIX.heater[2]],0.055,COL.hot);
+  pipe([f[0],yH,FIX.heater[2]],[f[0],yH,f[2]],0.055,COL.hot);
+  pipe([f[0],yH,f[2]],[f[0],0.72,f[2]],0.055,COL.hot);
+});
+pipe([FIX.heater[0],0.2,FIX.heater[2]],[FIX.heater[0],0.72,FIX.heater[2]],0.06,COL.cold); // cold in
+pipe([FIX.heater[0],1.4,FIX.heater[2]],[FIX.heater[0],1.7,FIX.heater[2]],0.06,COL.hot);   // hot out
+// DWV drains → sewer main (back of lot)
+const sewerZ = S.cz + S.d/2 + 1.2, ySew = 0.18;
+pipe([S.cx,ySew,sewerZ],[S.cx,ySew-0.05,-LOT/2+8],0.22,COL.sewer); joint([S.cx,ySew,sewerZ],0.3,COL.sewer);
+label('Sewer Main',[S.cx,1.3,S.cz+S.d/2+2.4],'#9ca3af');
+[FIX.kitchen,FIX.masterBa,FIX.hallBath,FIX.laundry].forEach(f=>{
+  pipe([f[0],ySew,f[2]],[f[0],ySew,sewerZ],0.13,COL.sewer);
+  pipe([f[0],ySew,sewerZ],[S.cx,ySew,sewerZ],0.13,COL.sewer);
+  pipe([f[0],0.72,f[2]],[f[0],ySew,f[2]],0.13,COL.sewer);
 });
 
-// ---- PLUMBING: DWV drains sloped to the sewer main ----
-const sewerZ = 10.5, ySew = 0.18;
-pipe([SLAB.cx, ySew, sewerZ], [SLAB.cx, ySew-0.05, -LOT/2+8], 0.22, COL.sewer);
-joint([SLAB.cx, ySew, sewerZ], 0.3, COL.sewer);
-label('Sewer Main', [SLAB.cx, 1.3, -LOT/2+9], '#9ca3af');
-[FIX.kitchen, FIX.masterBa, FIX.hallBath, FIX.laundry].forEach(f=>{
-  pipe([f[0], ySew, f[2]], [f[0], ySew, sewerZ], 0.13, COL.sewer);
-  pipe([f[0], ySew, sewerZ], [SLAB.cx, ySew, sewerZ], 0.13, COL.sewer);
-  pipe([f[0], 0.72, f[2]], [f[0], ySew, f[2]], 0.13, COL.sewer);
-});
-
-// ---- ELECTRICAL: service → meter → panel → branch conduits ----
-const meter = [9.5, 0, -LOT/2+8];
-box([meter[0], 0.7, meter[2]], [0.7, 1.4, 0.4], 0x2b2f36);
-box([meter[0], 1.15, meter[2]], [0.5, 0.5, 0.42], 0x11141a);
-label('Meter', [meter[0], 2.1, meter[2]], '#f59e0b');
-const panel = [9.5, 1.2, 2.5];
-box(panel, [0.8, 2.0, 0.4], 0x3a3f47);
-box([panel[0], panel[1], panel[2]+0.2], [0.62, 1.7, 0.06], COL.elec, {emissive:0x6b3d00, emissiveIntensity:0.3});
-label('Main Panel', [panel[0], panel[1]+1.6, panel[2]], '#f59e0b');
+// ================= ELECTRICAL =================
+layer = gElec;
+const meter = [S.w/2+1.2, 0, -LOT/2+8];
+unit([meter[0],0.7,meter[2]],[0.7,1.4,0.4],0x2b2f36); unit([meter[0],1.15,meter[2]],[0.5,0.5,0.42],0x11141a);
+label('Meter',[meter[0],2.1,meter[2]],'#f59e0b');
+const panel = [S.w/2+1.2, 1.2, S.cz-0.5];
+unit(panel,[0.8,2.0,0.4],0x3a3f47); unit([panel[0],panel[1],panel[2]+0.22],[0.62,1.7,0.06],COL.elec,{emissive:0x6b3d00,emissiveIntensity:0.35});
+label('Main Panel',[panel[0],panel[1]+1.6,panel[2]],'#f59e0b');
 const yE = 0.60;
-pipe([meter[0], yE, meter[2]], [meter[0], yE, panel[2]], 0.05, COL.elec);
-pipe([meter[0], yE, panel[2]], [panel[0], panel[1], panel[2]], 0.05, COL.elec);
-[[3,0,7],[-5,0,6],[-5,0,1],[6,0,10]].forEach(t=>{
-  pipe([panel[0], yE, panel[2]], [panel[0], yE, t[2]], 0.04, COL.elec);
-  pipe([panel[0], yE, t[2]], [t[0], yE, t[2]], 0.04, COL.elec);
-  pipe([t[0], yE, t[2]], [t[0], 0.85, t[2]], 0.04, COL.elec);
+pipe([meter[0],yE,meter[2]],[meter[0],yE,panel[2]],0.05,COL.elec);
+pipe([meter[0],yE,panel[2]],[panel[0],panel[1],panel[2]],0.05,COL.elec);
+[[S.w*0.10,0,S.cz+S.d*0.25],[-S.w*0.24,0,S.cz+S.d*0.16],[-S.w*0.24,0,S.cz-S.d*0.20],[S.w*0.20,0,S.cz+S.d*0.34],[FURNACE[0],0,FURNACE[2]]].forEach(t=>{
+  pipe([panel[0],yE,panel[2]],[panel[0],yE,t[2]],0.04,COL.elec);
+  pipe([panel[0],yE,t[2]],[t[0],yE,t[2]],0.04,COL.elec);
+  pipe([t[0],yE,t[2]],[t[0],0.85,t[2]],0.04,COL.elec);
 });
-layer = scene;
 
-// ---- MAPLE HARDWOOD FLOOR — cut slabs laid at a math angle (θ = 30°), staggered ----
-const FLOOR_ANGLE = Math.PI/6;   // 30° — the angle, from math
+// ================= HVAC (heat + cool + air) =================
+layer = gHVAC;
+// gas meter + gas lines to furnace & water heater
+const gmeter = [S.w/2+1.2, 0, -LOT/2+11];
+unit([gmeter[0],0.55,gmeter[2]],[0.55,1.0,0.4],0x8a6d1b); label('Gas Meter',[gmeter[0],1.7,gmeter[2]],'#eab308');
+const yG = 0.12;
+pipe([gmeter[0],yG,gmeter[2]],[gmeter[0],yG,FURNACE[2]],0.05,COL.gas,0.15);
+pipe([gmeter[0],yG,FURNACE[2]],[FURNACE[0],yG,FURNACE[2]],0.05,COL.gas,0.15);
+pipe([FURNACE[0],yG,FURNACE[2]],[FIX.heater[0],yG,FIX.heater[2]],0.045,COL.gas,0.15); // to water heater
+// furnace / air handler (indoor)
+unit([FURNACE[0],1.1,FURNACE[2]],[1.3,2.2,1.1],0x6b7079); label('Furnace',[FURNACE[0],2.6,FURNACE[2]],'#fca5a5');
+// A/C condenser (outdoor, right side) + fan + refrigerant lines
+const ac = [S.w/2+4, 0, S.cz+2];
+unit([ac[0],0.7,ac[2]],[1.7,1.4,1.7],0x3c4048); label('A/C Condenser',[ac[0],2.0,ac[2]],'#7dd3fc');
+cyl([ac[0],1.45,ac[2]],0.7,0.12,0x22262c); // fan shroud
+const fan = cyl([ac[0],1.53,ac[2]],0.6,0.04,0x11141a); fan.__spin = true;
+pipe([ac[0],0.5,ac[2]],[ac[0],0.5,FURNACE[2]],0.05,COL.refrig,0.1);
+pipe([ac[0],0.5,FURNACE[2]],[FURNACE[0]+0.7,0.5,FURNACE[2]],0.05,COL.refrig,0.1);
+pipe([ac[0]-0.15,0.62,ac[2]],[ac[0]-0.15,0.62,FURNACE[2]],0.035,COL.refrig,0.1);
+// swamp cooler (evaporative, left side, on a stand) + water feed + supply duct in
+const sc = [-S.w/2-4, 0, S.cz+1];
+unit([sc[0],1.6,sc[2]],[1.6,1.5,1.6],0x9aa3ad); unit([sc[0],2.45,sc[2]],[1.2,0.25,1.2],0x6b7079); // cooler + top
+[[-0.85,0],[0.85,0]].forEach(o=> unit([sc[0]+o[0],1.6,sc[2]],[0.05,1.2,1.4],0x5b6470)); // louver hint
+cyl([sc[0]-0.6,0.6,sc[2]],0.09,1.2,0x5b6470); cyl([sc[0]+0.6,0.6,sc[2]],0.09,1.2,0x5b6470); // stand legs
+label('Swamp Cooler',[sc[0],3.1,sc[2]],'#7dd3fc');
+pipe([sc[0],0.25,sc[2]],[sc[0],0.25,coldMainZ],0.05,COL.cold);           // water feed to cooler
+pipe([sc[0],0.25,coldMainZ],[S.cx,0.25,coldMainZ],0.05,COL.cold);
+duct([sc[0]+0.8,1.6,sc[2]],[S.cx-6,1.6,sc[2]],0.5,0.5,COL.duct);         // cooler → house
+// ductwork trunk from furnace + supply registers + return
+const yD = 1.5, trunk = [FURNACE[0],yD,FURNACE[2]];
+duct([FURNACE[0],1.9,FURNACE[2]],[FURNACE[0],yD,FURNACE[2]],0.6,0.6,COL.duct);
+duct(trunk,[S.cx-7,yD,FURNACE[2]],0.55,0.45,COL.duct);                   // main trunk (west)
+duct(trunk,[S.cx+7,yD,FURNACE[2]],0.55,0.45,COL.duct);                   // main trunk (east)
+[[S.w*0.12,S.cz+S.d*0.28],[-S.w*0.20,S.cz+S.d*0.22],[-S.w*0.20,S.cz-S.d*0.22],[S.w*0.22,S.cz+S.d*0.30]].forEach(r=>{
+  duct([r[0],yD,FURNACE[2]],[r[0],yD,r[1]],0.32,0.28,COL.duct);          // branch
+  duct([r[0],yD,r[1]],[r[0],0.9,r[1]],0.28,0.28,COL.duct);               // drop to register
+  unit([r[0],0.78,r[1]],[0.5,0.06,0.36],0xcbd5e1);                       // register grille
+});
+duct([FURNACE[0]-0.7,yD,FURNACE[2]],[FURNACE[0]-0.7,yD,S.cz+S.d*0.3],0.6,0.5,0x8b929c); // return air
+
+// ================= MAPLE FLOOR (cut slabs @ 30°) =================
+const FLOOR_ANGLE = Math.PI/6;
 (function mapleFloor(){
   const cos=Math.cos(FLOOR_ANGLE), sin=Math.sin(FLOOR_ANGLE);
-  const L=1.15, W=0.19, gap=0.014;
-  const tones=[0xC9A26A,0xBE9257,0xD3B07C,0xC29A61,0xCBA774];
-  const halfW=SLAB.w/2-0.12, halfD=SLAB.d/2-0.12;
-  const N=Math.ceil((SLAB.w+SLAB.d)/L)+3;
-  const y=SLAB.y+0.18; let row=0;
-  for(let v=-N; v<=N; v++){
-    const cyc=v*(W+gap), off=(row&1)?(L+gap)*0.5:0;
-    for(let u=-N; u<=N; u++){
-      const cxc=u*(L+gap)+off;
-      const x=cxc*cos-cyc*sin, z=cxc*sin+cyc*cos;
-      if(Math.abs(x)>halfW || Math.abs(z)>halfD) continue;   // cut to fit the room
+  const L=1.15, W=0.19, gap=0.014, tones=[0xC9A26A,0xBE9257,0xD3B07C,0xC29A61,0xCBA774];
+  const halfW=S.w/2-0.12, halfD=S.d/2-0.12, N=Math.ceil((S.w+S.d)/L)+3, y=S.y+0.18; let row=0;
+  for(let v=-N;v<=N;v++){ const cyc=v*(W+gap), off=(row&1)?(L+gap)*0.5:0;
+    for(let u=-N;u<=N;u++){ const cxc=u*(L+gap)+off, x=cxc*cos-cyc*sin, z=cxc*sin+cyc*cos;
+      if(Math.abs(x)>halfW||Math.abs(z)>halfD) continue;
       const m=new THREE.Mesh(new THREE.BoxGeometry(L,0.05,W),
-        new THREE.MeshStandardMaterial({color:tones[((u*5+v*3)%tones.length+tones.length)%tones.length], roughness:0.52, metalness:0.02}));
-      m.position.set(SLAB.cx+x, y, SLAB.cz+z); m.rotation.y=FLOOR_ANGLE;
-      floorGroup.add(m);
-    }
-    row++;
-  }
+        new THREE.MeshStandardMaterial({color:tones[((u*5+v*3)%tones.length+tones.length)%tones.length],roughness:0.5,metalness:0.02}));
+      m.position.set(S.cx+x,y,S.cz+z); m.rotation.y=FLOOR_ANGLE; m.receiveShadow=true; gFloor.add(m);
+    } row++; }
 })();
-floorGroup.visible = false;   // start on the SYSTEMS layer; toggle to reveal the floor
+gFloor.visible = false;
 
-// ---- DIRECTIONAL MAP: compass + dimensions + the angle, called out ----
-label('N', [SLAB.cx, 0.6, -LOT/2+7], '#39d98a');
-label('S', [SLAB.cx, 0.6, LOT/2-7], '#39d98a');
-label('E', [LOT/2-7, 0.6, SLAB.cz], '#39d98a');
-label('W', [-LOT/2+7, 0.6, SLAB.cz], '#39d98a');
-function dimLine(a,b,color){
-  const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
-  scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({color})));
-}
-dimLine([-SLAB.w/2, 0.05, SLAB.cz-SLAB.d/2-1.2], [SLAB.w/2, 0.05, SLAB.cz-SLAB.d/2-1.2], 0x9ecbff);
-label('18.0 m', [0, 0.6, SLAB.cz-SLAB.d/2-1.2], '#9ecbff');
-dimLine([SLAB.w/2+1.4, 0.05, SLAB.cz-SLAB.d/2], [SLAB.w/2+1.4, 0.05, SLAB.cz+SLAB.d/2], 0x9ecbff);
-label('13.0 m', [SLAB.w/2+1.4, 0.6, SLAB.cz], '#9ecbff');
-label('Maple · cut slabs @ 30°', [SLAB.cx, 1.5, SLAB.cz], '#C9A26A');
-label('LOT 1 · 2 acres', [ -SLAB.w/2 - 3, 2.2, -LOT/2 + 12 ], '#39d98a');
+// ---- directional map ----
+label('N',[S.cx,0.6,-LOT/2+7],'#39d98a'); label('S',[S.cx,0.6,LOT/2-7],'#39d98a');
+label('E',[LOT/2-7,0.6,S.cz],'#39d98a');  label('W',[-LOT/2+7,0.6,S.cz],'#39d98a');
+function dimLine(a,b){ scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a),new THREE.Vector3(...b)]), new THREE.LineBasicMaterial({color:0x9ecbff}))); }
+dimLine([-S.w/2,0.05,S.cz-S.d/2-1.2],[S.w/2,0.05,S.cz-S.d/2-1.2]); label(S.w.toFixed(1)+' m',[0,0.6,S.cz-S.d/2-1.2],'#9ecbff');
+dimLine([S.w/2+1.4,0.05,S.cz-S.d/2],[S.w/2+1.4,0.05,S.cz+S.d/2]);  label(S.d.toFixed(1)+' m',[S.w/2+1.4,0.6,S.cz],'#9ecbff');
+label('Maple · cut slabs @ 30°',[S.cx,1.5,S.cz],'#C9A26A');
+label('LOT 1 · 2 acres',[-S.w/2-3,2.2,-LOT/2+12],'#39d98a');
 
-// ---- layer toggle (Systems ↔ Floor) ----
-const btnSys=document.getElementById('btnSys'), btnFloor=document.getElementById('btnFloor');
-function syncLayers(){ systems.visible=btnSys.classList.contains('on'); floorGroup.visible=btnFloor.classList.contains('on'); }
-btnSys.onclick=()=>{ btnSys.classList.toggle('on'); syncLayers(); };
-btnFloor.onclick=()=>{ btnFloor.classList.toggle('on'); syncLayers(); };
-syncLayers();
+// ---- layer toggles ----
+const T = { btnPlumb:gPlumb, btnElec:gElec, btnHvac:gHVAC, btnFloor:gFloor };
+function sync(){ for(const id in T){ T[id].visible = document.getElementById(id).classList.contains('on'); } }
+for(const id in T){ document.getElementById(id).onclick = e => { e.currentTarget.classList.toggle('on'); sync(); }; }
+sync();
 
-// ---- resize + render loop ----
-addEventListener('resize', ()=>{
-  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-(function loop(){
-  requestAnimationFrame(loop);
-  controls.update();
-  renderer.render(scene, camera);
-})();
-window.__ww = { scene, camera, renderer, THREE };
+// ---- loop ----
+addEventListener('resize', ()=>{ camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+(function loop(){ requestAnimationFrame(loop); if(fan && gHVAC.visible) fan.rotation.y += 0.25; controls.update(); renderer.render(scene, camera); })();
+window.__ww = { scene, camera, renderer, THREE, gPlumb, gElec, gHVAC, gFloor };
 </script>
 </body>
 </html>
